@@ -1,0 +1,459 @@
+{
+  "name": "snd-vscode",
+  "displayName": "Snd – programmable sound editor in VS Code",
+  "description": "Snd (Bill Schottstaedt's sound editor) as a VS Code session: the inferior s7 of inf-snd.el, plus the channel graph and the spectrum as editor panels.",
+  "version": "0.1.0",
+  "publisher": "elvis-budingensis",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "snd",
+    "s7",
+    "scheme",
+    "clm",
+    "computer music",
+    "dsp"
+  ],
+  "activationEvents": [
+    "onLanguage:scheme",
+    "workspaceContains:**/*.scm"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "snd.start",
+        "title": "Snd: Start",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.stop",
+        "title": "Snd: Stop",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.restart",
+        "title": "Snd: Restart",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.openRepl",
+        "title": "Snd: Open REPL (inferior Snd)",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.openLog",
+        "title": "Snd: Open Log",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.showStatus",
+        "title": "Snd: Show Session Status",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.evalSelection",
+        "title": "Snd: Evaluate Selection or Line",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.evalTopLevel",
+        "title": "Snd: Evaluate Top-Level Form",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.evalFile",
+        "title": "Snd: Evaluate File (form by form)",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.evalLastExpression",
+        "title": "Snd: Evaluate Last Expression",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.evalPrint",
+        "title": "Snd: Evaluate and Print into Buffer",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.showSource",
+        "title": "Snd: Show Source of Symbol",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.loadFile",
+        "title": "Snd: Load File",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.openSound",
+        "title": "Snd: Open Sound File",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.showWaveform",
+        "title": "Snd: Show Waveform",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.showSpectrum",
+        "title": "Snd: Show Spectrum",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.transformOptions",
+        "title": "Snd: Transform Options",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.controlPanel",
+        "title": "Snd: Control Panel",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.viewOptions",
+        "title": "Snd: View Options",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.preferences",
+        "title": "Snd: Preferences",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.play",
+        "title": "Snd: Play",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.stopPlaying",
+        "title": "Snd: Stop Playing",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.edit.delete",
+        "title": "Snd: Delete Selection",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.edit.delete-smooth",
+        "title": "Snd: Delete Selection and Smooth",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.edit.insert",
+        "title": "Snd: Insert Selection at Cursor",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.edit.mix",
+        "title": "Snd: Mix Selection at Cursor",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.edit.reverse",
+        "title": "Snd: Reverse Selection",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.edit.smooth",
+        "title": "Snd: Smooth Selection",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.edit.select-all",
+        "title": "Snd: Select All",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.edit.unselect-all",
+        "title": "Snd: Unselect All",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.scale",
+        "title": "Snd: Scale Amplitude",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.resample",
+        "title": "Snd: Resample",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.saveSelection",
+        "title": "Snd: Save Selection As",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.saveSound",
+        "title": "Snd: Save Sound",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.saveState",
+        "title": "Snd: Save Session State",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.help",
+        "title": "Snd: Help for Symbol",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.apropos",
+        "title": "Snd: Apropos",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.refreshSounds",
+        "title": "Snd: Refresh Sounds",
+        "category": "Snd",
+        "icon": "$(refresh)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "snd.evalTopLevel",
+        "key": "ctrl+c ctrl+e",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.evalSelection",
+        "key": "ctrl+c ctrl+r",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.evalFile",
+        "key": "ctrl+c ctrl+o",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.loadFile",
+        "key": "ctrl+c ctrl+l",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.openRepl",
+        "key": "ctrl+c ctrl+z",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.openSound",
+        "key": "ctrl+c ctrl+f",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.play",
+        "key": "ctrl+c ctrl+p",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.stopPlaying",
+        "key": "ctrl+c ctrl+t",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.help",
+        "key": "ctrl+c ctrl+i",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.start",
+        "key": "ctrl+c ctrl+s",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.controlPanel",
+        "key": "ctrl+c ctrl+c",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.evalLastExpression",
+        "key": "ctrl+x ctrl+e",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.evalTopLevel",
+        "key": "ctrl+alt+x",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.evalSelection",
+        "key": "ctrl+c ctrl+r",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.evalPrint",
+        "key": "ctrl+c ctrl+p",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.evalFile",
+        "key": "ctrl+c ctrl+c",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.loadFile",
+        "key": "ctrl+c ctrl+k",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.loadFile",
+        "key": "ctrl+c ctrl+l",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.showSource",
+        "key": "alt+.",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.help",
+        "key": "ctrl+c ctrl+d ctrl+d",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.apropos",
+        "key": "ctrl+c ctrl+d ctrl+a",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.openRepl",
+        "key": "ctrl+c ctrl+z",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.restart",
+        "key": "ctrl+c ctrl+shift+r",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.openSound",
+        "key": "ctrl+c ctrl+f",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.showWaveform",
+        "key": "ctrl+c ctrl+w",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.stopPlaying",
+        "key": "ctrl+c ctrl+t",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "sndSounds",
+          "name": "Snd Sounds"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "snd.refreshSounds",
+          "when": "view == sndSounds",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "snd.showSpectrum",
+          "when": "view == sndSounds && viewItem == sndChannel"
+        },
+        {
+          "command": "snd.saveSound",
+          "when": "view == sndSounds && viewItem == sndSound"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Snd",
+      "properties": {
+        "snd.path": {
+          "type": "string",
+          "default": "snd",
+          "markdownDescription": "The Snd executable. Left at `snd`, the extension prefers a binary bundled under `bin/<platform>-<arch>/` (see `tools/build-snd.sh`) and falls back to `PATH`. Set an absolute path to override both — that wins over everything. Whether a build has a GUI is decided when it is compiled (`--with-motif`); this setting picks a binary, it cannot switch a GUI on."
+        },
+        "snd.mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "nogui",
+            "gui"
+          ],
+          "default": "auto",
+          "markdownDescription": "Which binary to guess when `snd.path` is left at `snd`: `nogui` tries `snd-nogui`, `gui` tries `snd-motif`. Both modes are driven the same way; in `gui` mode Snd's own window comes up as well and stays usable."
+        },
+        "snd.args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra arguments for Snd. The bridge is appended with `-l` afterwards. `~/.snd` is deliberately NOT suppressed — add `-noinit` here if you want a bare session."
+        },
+        "snd.startOnActivation": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start a Snd session as soon as a Scheme file is opened. Off by default: Snd claims the audio device on startup."
+        },
+        "snd.keymap": {
+          "type": "string",
+          "enum": [
+            "inf-snd",
+            "slime",
+            "none"
+          ],
+          "default": "inf-snd",
+          "markdownEnumDescriptions": [
+            "`inf-snd.el`, Snd's own Emacs mode: `C-c C-e` definition, `C-c C-r` region, `C-c C-o` file, `C-c C-l` load, `C-c C-i` help, `C-c C-p` play, `C-c C-t` stop, `C-c C-z` REPL, `C-c C-f` open sound.",
+            "SLIME/SLY: `C-x C-e` last expression, `C-M-x` definition, `C-c C-r` region, `C-c C-p` eval and print, `C-c C-k` load, `M-.` source, `C-c C-d C-d` describe, `C-c C-d C-a` apropos.",
+            "No keybindings; everything stays reachable from the command palette."
+          ],
+          "markdownDescription": "Which keymap to use. The default is `inf-snd.el`'s, because it is Snd's own: these chords are what a Snd user's hands already do, and `C-c C-p` for *play* and `C-c C-t` for *stop* only exist in a keymap written for a sound editor. The setting is exclusive rather than additive, because three chords disagree between the two: `C-c C-p` is eval-and-print in SLIME, `C-c C-t` is trace, and `C-c C-e` is an eval prompt. Two meanings on one chord is worse than either choice."
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "scheme",
+        "extensions": [
+          ".scm",
+          ".ss",
+          ".sc"
+        ],
+        "aliases": [
+          "Scheme",
+          "scheme"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "index": "node tools/make-index.mjs",
+    "test:node": "node --test test/bridge.test.js test/session.test.js",
+    "test:scheme": "node tools/run-scheme-tests.mjs",
+    "gates": "node tools/gates.mjs",
+    "build:snd": "tools/build-snd.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.5.4"
+  }
+}

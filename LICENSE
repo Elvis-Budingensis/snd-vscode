@@ -1,0 +1,22 @@
+snd-vscode — Snd as a VS Code session
+Copyright (C) 2026 Daniel Hensel
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+more details.
+
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see <https://www.gnu.org/licenses/>.
+
+NOTE: the full text of the GPL-3.0 must accompany this file before the
+extension is distributed; add COPYING from https://www.gnu.org/licenses/gpl-3.0.txt.
+
+scheme/snd-vscode.scm is loaded into Snd and forms part of the same program
+when running.  Snd and s7 are by Bill Schottstaedt.  The command set and key
+chords follow inf-snd.el by Michael Scholz.  Neither is included here.

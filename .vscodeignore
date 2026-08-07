@@ -1,0 +1,12 @@
+.vscode/**
+node_modules/**
+src/**
+test/**
+tools/**
+out/**/*.map
+s7
+.build/
+**/*.ts
+tsconfig.json
+ARCHITECTURE.md
+ROADMAP.md

@@ -1,0 +1,61 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // The name matters. With more than one extension project open -- or
+      // one having been open recently -- VS Code remembers the LAST
+      // configuration used, across projects, and F5 launches that one. A
+      // configuration called "Extension" in two projects is then
+      // indistinguishable in the dropdown, and the wrong extension starts
+      // while the right project's files are on screen.
+      "name": "Run snd-vscode",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+      // The FOLDER argument is not optional in practice. The development
+      // host remembers ITS OWN last opened folder, independently of which
+      // extension is being launched -- so without this it reopens whatever
+      // project it had last, and that looks exactly like the wrong
+      // extension having started. Naming a folder here makes the launch
+      // deterministic.
+      //
+      // examples/ also becomes Snd's working directory for the session,
+      // which is what (open-sound "x.wav") without a path means.
+        "${workspaceFolder}/examples",
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/out/**/*.js"
+      ],
+      "preLaunchTask": "npm: compile"
+    },
+    {
+      // Use this one when another extension is suspected.
+      //
+      // NOT --disable-extensions, which was wrong here and cost a round
+      // trip: it disables the BUILT-IN extensions too, including the Scheme
+      // language support. A .scm file then opens as Plain Text, so
+      // onLanguage:scheme never fires and every keybinding guarded by
+      // editorLangId == scheme is dead. The symptom is that nothing at all
+      // responds -- which looks like a broken extension rather than a
+      // missing language.
+      //
+      // One extension by id instead. (clamps-vscode turns out to claim only
+      // .lisp, .cl, .asd and .lsp, so on .scm files it was never the
+      // problem -- but naming it is still the right shape for "rule out the
+      // other extension".)
+      "name": "Run snd-vscode (without clamps-vscode)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--disable-extension=elvis-budingensis.clamps-vscode",
+        "${workspaceFolder}/examples",
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/out/**/*.js"
+      ],
+      "preLaunchTask": "npm: compile"
+    }
+  ]
+}

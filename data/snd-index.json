@@ -1,0 +1,8259 @@
+{
+ "generatedFrom": "snd-26.5",
+ "sndVersion": "26.5",
+ "note": "Names from snd-xref.c (help_names) and s7.c. Fallback for hover and completion without a running session; the live symbol table of a session is always preferred.",
+ "entries": [
+  {
+   "name": "*",
+   "source": "s7"
+  },
+  {
+   "name": "*#readers*",
+   "source": "snd"
+  },
+  {
+   "name": "*autoload*",
+   "source": "s7"
+  },
+  {
+   "name": "*autoload-hook*",
+   "source": "s7"
+  },
+  {
+   "name": "*cload-directory*",
+   "source": "s7"
+  },
+  {
+   "name": "*error-hook*",
+   "source": "snd"
+  },
+  {
+   "name": "*features*",
+   "source": "snd"
+  },
+  {
+   "name": "*function*",
+   "source": "snd"
+  },
+  {
+   "name": "*libraries*",
+   "source": "s7"
+  },
+  {
+   "name": "*load-hook*",
+   "source": "snd"
+  },
+  {
+   "name": "*load-path*",
+   "source": "snd"
+  },
+  {
+   "name": "*missing-close-paren-hook*",
+   "source": "s7"
+  },
+  {
+   "name": "*output*",
+   "source": "snd"
+  },
+  {
+   "name": "*read-error-hook*",
+   "source": "snd"
+  },
+  {
+   "name": "*reverb*",
+   "source": "snd"
+  },
+  {
+   "name": "*rootlet-redefinition-hook*",
+   "source": "snd"
+  },
+  {
+   "name": "*s7*",
+   "source": "s7"
+  },
+  {
+   "name": "*snd-opened-sound*",
+   "source": "snd"
+  },
+  {
+   "name": "*stderr*",
+   "source": "s7"
+  },
+  {
+   "name": "*stdin*",
+   "source": "s7"
+  },
+  {
+   "name": "*stdout*",
+   "source": "s7"
+  },
+  {
+   "name": "*unbound-variable-hook*",
+   "source": "snd"
+  },
+  {
+   "name": "+",
+   "source": "s7"
+  },
+  {
+   "name": "-",
+   "source": "s7"
+  },
+  {
+   "name": "/",
+   "source": "s7"
+  },
+  {
+   "name": "<",
+   "source": "s7"
+  },
+  {
+   "name": "<=",
+   "source": "s7"
+  },
+  {
+   "name": "<list*>",
+   "source": "s7"
+  },
+  {
+   "name": "=",
+   "source": "s7"
+  },
+  {
+   "name": ">",
+   "source": "s7"
+  },
+  {
+   "name": ">=",
+   "source": "s7"
+  },
+  {
+   "name": "abcos",
+   "source": "snd"
+  },
+  {
+   "name": "abcos?",
+   "source": "snd"
+  },
+  {
+   "name": "abort",
+   "source": "snd"
+  },
+  {
+   "name": "abs",
+   "source": "s7"
+  },
+  {
+   "name": "absin",
+   "source": "snd"
+  },
+  {
+   "name": "absin?",
+   "source": "snd"
+  },
+  {
+   "name": "acos",
+   "source": "s7"
+  },
+  {
+   "name": "acosh",
+   "source": "s7"
+  },
+  {
+   "name": "add-amp-controls",
+   "source": "snd"
+  },
+  {
+   "name": "add-colormap",
+   "source": "snd"
+  },
+  {
+   "name": "add-delete-option",
+   "source": "snd"
+  },
+  {
+   "name": "add-directory-to-view-files-list",
+   "source": "snd"
+  },
+  {
+   "name": "add-file-filter",
+   "source": "snd"
+  },
+  {
+   "name": "add-file-sorter",
+   "source": "snd"
+  },
+  {
+   "name": "add-file-to-view-files-list",
+   "source": "snd"
+  },
+  {
+   "name": "add-mark",
+   "source": "snd"
+  },
+  {
+   "name": "add-mark-pane",
+   "source": "snd"
+  },
+  {
+   "name": "add-player",
+   "source": "snd"
+  },
+  {
+   "name": "add-sound-file-extension",
+   "source": "snd"
+  },
+  {
+   "name": "add-source-file-extension",
+   "source": "snd"
+  },
+  {
+   "name": "add-to-main-menu",
+   "source": "snd"
+  },
+  {
+   "name": "add-to-menu",
+   "source": "snd"
+  },
+  {
+   "name": "add-tooltip",
+   "source": "snd"
+  },
+  {
+   "name": "add-transform",
+   "source": "snd"
+  },
+  {
+   "name": "adjustable-sawtooth-wave",
+   "source": "snd"
+  },
+  {
+   "name": "adjustable-sawtooth-wave?",
+   "source": "snd"
+  },
+  {
+   "name": "adjustable-square-wave",
+   "source": "snd"
+  },
+  {
+   "name": "adjustable-square-wave?",
+   "source": "snd"
+  },
+  {
+   "name": "adjustable-triangle-wave",
+   "source": "snd"
+  },
+  {
+   "name": "adjustable-triangle-wave?",
+   "source": "snd"
+  },
+  {
+   "name": "after-apply-controls-hook",
+   "source": "snd"
+  },
+  {
+   "name": "after-edit-hook",
+   "source": "snd"
+  },
+  {
+   "name": "after-graph-hook",
+   "source": "snd"
+  },
+  {
+   "name": "after-lisp-graph-hook",
+   "source": "snd"
+  },
+  {
+   "name": "after-open-hook",
+   "source": "snd"
+  },
+  {
+   "name": "after-save-as-hook",
+   "source": "snd"
+  },
+  {
+   "name": "after-save-state-hook",
+   "source": "snd"
+  },
+  {
+   "name": "after-transform-hook",
+   "source": "snd"
+  },
+  {
+   "name": "all-chans",
+   "source": "snd"
+  },
+  {
+   "name": "all-pass",
+   "source": "snd"
+  },
+  {
+   "name": "all-pass-bank",
+   "source": "snd"
+  },
+  {
+   "name": "all-pass-bank?",
+   "source": "snd"
+  },
+  {
+   "name": "all-pass?",
+   "source": "snd"
+  },
+  {
+   "name": "amp-control",
+   "source": "snd"
+  },
+  {
+   "name": "amp-control-bounds",
+   "source": "snd"
+  },
+  {
+   "name": "amplitude-modulate",
+   "source": "snd"
+  },
+  {
+   "name": "analyse-ladspa",
+   "source": "snd"
+  },
+  {
+   "name": "angle",
+   "source": "s7"
+  },
+  {
+   "name": "anoi",
+   "source": "snd"
+  },
+  {
+   "name": "any-env-channel",
+   "source": "snd"
+  },
+  {
+   "name": "any-random",
+   "source": "snd"
+  },
+  {
+   "name": "append",
+   "source": "s7"
+  },
+  {
+   "name": "apply",
+   "source": "s7"
+  },
+  {
+   "name": "apply-controls",
+   "source": "snd"
+  },
+  {
+   "name": "apply-ladspa",
+   "source": "snd"
+  },
+  {
+   "name": "apply-values",
+   "source": "s7"
+  },
+  {
+   "name": "aritable?",
+   "source": "snd"
+  },
+  {
+   "name": "arity",
+   "source": "snd"
+  },
+  {
+   "name": "array->file",
+   "source": "snd"
+  },
+  {
+   "name": "array-interp",
+   "source": "snd"
+  },
+  {
+   "name": "as-one-edit",
+   "source": "snd"
+  },
+  {
+   "name": "ash",
+   "source": "s7"
+  },
+  {
+   "name": "asin",
+   "source": "s7"
+  },
+  {
+   "name": "asinh",
+   "source": "s7"
+  },
+  {
+   "name": "ask-about-unsaved-edits",
+   "source": "snd"
+  },
+  {
+   "name": "ask-before-overwrite",
+   "source": "snd"
+  },
+  {
+   "name": "assoc",
+   "source": "s7"
+  },
+  {
+   "name": "assq",
+   "source": "s7"
+  },
+  {
+   "name": "assv",
+   "source": "s7"
+  },
+  {
+   "name": "asyfm-I",
+   "source": "snd"
+  },
+  {
+   "name": "asyfm-J",
+   "source": "snd"
+  },
+  {
+   "name": "asyfm?",
+   "source": "snd"
+  },
+  {
+   "name": "asymmetric-fm",
+   "source": "snd"
+  },
+  {
+   "name": "asymmetric-fm?",
+   "source": "snd"
+  },
+  {
+   "name": "atan",
+   "source": "s7"
+  },
+  {
+   "name": "atanh",
+   "source": "s7"
+  },
+  {
+   "name": "auto-resize",
+   "source": "snd"
+  },
+  {
+   "name": "auto-save",
+   "source": "snd"
+  },
+  {
+   "name": "auto-update",
+   "source": "snd"
+  },
+  {
+   "name": "auto-update-interval",
+   "source": "snd"
+  },
+  {
+   "name": "autocorrelate",
+   "source": "snd"
+  },
+  {
+   "name": "autocorrelation",
+   "source": "snd-constant"
+  },
+  {
+   "name": "autoload",
+   "source": "s7"
+  },
+  {
+   "name": "axis-color",
+   "source": "snd"
+  },
+  {
+   "name": "axis-info",
+   "source": "snd"
+  },
+  {
+   "name": "axis-label-font",
+   "source": "snd"
+  },
+  {
+   "name": "axis-numbers-font",
+   "source": "snd"
+  },
+  {
+   "name": "background-gradient",
+   "source": "snd"
+  },
+  {
+   "name": "bad-header-hook",
+   "source": "snd"
+  },
+  {
+   "name": "bagpipe",
+   "source": "snd"
+  },
+  {
+   "name": "bartlett-hann-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "bartlett-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "basic-color",
+   "source": "snd"
+  },
+  {
+   "name": "beats-per-measure",
+   "source": "snd"
+  },
+  {
+   "name": "beats-per-minute",
+   "source": "snd"
+  },
+  {
+   "name": "before-close-hook",
+   "source": "snd"
+  },
+  {
+   "name": "before-exit-hook",
+   "source": "snd"
+  },
+  {
+   "name": "before-save-as-hook",
+   "source": "snd"
+  },
+  {
+   "name": "before-save-state-hook",
+   "source": "snd"
+  },
+  {
+   "name": "before-transform-hook",
+   "source": "snd"
+  },
+  {
+   "name": "bes-j0",
+   "source": "snd"
+  },
+  {
+   "name": "bess",
+   "source": "snd"
+  },
+  {
+   "name": "bess?",
+   "source": "snd"
+  },
+  {
+   "name": "bigbird",
+   "source": "snd"
+  },
+  {
+   "name": "bignum",
+   "source": "snd"
+  },
+  {
+   "name": "bignum?",
+   "source": "snd"
+  },
+  {
+   "name": "bind-key",
+   "source": "snd"
+  },
+  {
+   "name": "bird",
+   "source": "snd"
+  },
+  {
+   "name": "blackman",
+   "source": "snd"
+  },
+  {
+   "name": "blackman10-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman2-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman3-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman4-env-channel",
+   "source": "snd"
+  },
+  {
+   "name": "blackman4-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman5-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman6-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman7-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman8-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman9-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "blackman?",
+   "source": "snd"
+  },
+  {
+   "name": "bohman-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "bold-peaks-font",
+   "source": "snd"
+  },
+  {
+   "name": "boolean?",
+   "source": "s7"
+  },
+  {
+   "name": "break",
+   "source": "snd"
+  },
+  {
+   "name": "brown-noise",
+   "source": "snd"
+  },
+  {
+   "name": "brown-noise?",
+   "source": "snd"
+  },
+  {
+   "name": "byte-vector",
+   "source": "snd"
+  },
+  {
+   "name": "byte-vector->string",
+   "source": "snd"
+  },
+  {
+   "name": "byte-vector-ref",
+   "source": "snd"
+  },
+  {
+   "name": "byte-vector-set!",
+   "source": "snd"
+  },
+  {
+   "name": "byte-vector?",
+   "source": "snd"
+  },
+  {
+   "name": "byte?",
+   "source": "snd"
+  },
+  {
+   "name": "c-define",
+   "source": "snd"
+  },
+  {
+   "name": "c-g?",
+   "source": "snd"
+  },
+  {
+   "name": "c-object-let",
+   "source": "s7"
+  },
+  {
+   "name": "c-object-type",
+   "source": "snd"
+  },
+  {
+   "name": "c-object?",
+   "source": "snd"
+  },
+  {
+   "name": "c-pointer",
+   "source": "snd"
+  },
+  {
+   "name": "c-pointer->list",
+   "source": "snd"
+  },
+  {
+   "name": "c-pointer-info",
+   "source": "snd"
+  },
+  {
+   "name": "c-pointer-type",
+   "source": "snd"
+  },
+  {
+   "name": "c-pointer-weak1",
+   "source": "snd"
+  },
+  {
+   "name": "c-pointer-weak2",
+   "source": "s7"
+  },
+  {
+   "name": "c-pointer?",
+   "source": "snd"
+  },
+  {
+   "name": "caaaar",
+   "source": "s7"
+  },
+  {
+   "name": "caaadr",
+   "source": "s7"
+  },
+  {
+   "name": "caaar",
+   "source": "s7"
+  },
+  {
+   "name": "caadar",
+   "source": "s7"
+  },
+  {
+   "name": "caaddr",
+   "source": "s7"
+  },
+  {
+   "name": "caadr",
+   "source": "s7"
+  },
+  {
+   "name": "caar",
+   "source": "s7"
+  },
+  {
+   "name": "cadaar",
+   "source": "s7"
+  },
+  {
+   "name": "cadadr",
+   "source": "s7"
+  },
+  {
+   "name": "cadar",
+   "source": "s7"
+  },
+  {
+   "name": "caddar",
+   "source": "s7"
+  },
+  {
+   "name": "cadddr",
+   "source": "s7"
+  },
+  {
+   "name": "caddr",
+   "source": "s7"
+  },
+  {
+   "name": "cadr",
+   "source": "s7"
+  },
+  {
+   "name": "call-in",
+   "source": "snd-constant"
+  },
+  {
+   "name": "call-with-current-continuation",
+   "source": "s7"
+  },
+  {
+   "name": "call-with-exit",
+   "source": "snd"
+  },
+  {
+   "name": "call-with-input-file",
+   "source": "s7"
+  },
+  {
+   "name": "call-with-input-string",
+   "source": "s7"
+  },
+  {
+   "name": "call-with-output-file",
+   "source": "s7"
+  },
+  {
+   "name": "call-with-output-string",
+   "source": "s7"
+  },
+  {
+   "name": "call/cc",
+   "source": "s7"
+  },
+  {
+   "name": "canter",
+   "source": "snd"
+  },
+  {
+   "name": "car",
+   "source": "s7"
+  },
+  {
+   "name": "cascade->canonical",
+   "source": "snd"
+  },
+  {
+   "name": "catch",
+   "source": "snd"
+  },
+  {
+   "name": "cauchy-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "cdaaar",
+   "source": "s7"
+  },
+  {
+   "name": "cdaadr",
+   "source": "s7"
+  },
+  {
+   "name": "cdaar",
+   "source": "s7"
+  },
+  {
+   "name": "cdadar",
+   "source": "s7"
+  },
+  {
+   "name": "cdaddr",
+   "source": "s7"
+  },
+  {
+   "name": "cdadr",
+   "source": "s7"
+  },
+  {
+   "name": "cdar",
+   "source": "s7"
+  },
+  {
+   "name": "cddaar",
+   "source": "s7"
+  },
+  {
+   "name": "cddadr",
+   "source": "s7"
+  },
+  {
+   "name": "cddar",
+   "source": "s7"
+  },
+  {
+   "name": "cdddar",
+   "source": "s7"
+  },
+  {
+   "name": "cddddr",
+   "source": "s7"
+  },
+  {
+   "name": "cdddr",
+   "source": "s7"
+  },
+  {
+   "name": "cddr",
+   "source": "s7"
+  },
+  {
+   "name": "cdr",
+   "source": "s7"
+  },
+  {
+   "name": "ceiling",
+   "source": "s7"
+  },
+  {
+   "name": "cellon",
+   "source": "snd"
+  },
+  {
+   "name": "cepstrum",
+   "source": "snd-constant"
+  },
+  {
+   "name": "chain-dsps",
+   "source": "snd"
+  },
+  {
+   "name": "channel->float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "channel->vct",
+   "source": "snd-constant"
+  },
+  {
+   "name": "channel-amp-envs",
+   "source": "snd"
+  },
+  {
+   "name": "channel-data",
+   "source": "snd"
+  },
+  {
+   "name": "channel-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "channel-polynomial",
+   "source": "snd"
+  },
+  {
+   "name": "channel-properties",
+   "source": "snd"
+  },
+  {
+   "name": "channel-property",
+   "source": "snd"
+  },
+  {
+   "name": "channel-rms",
+   "source": "snd"
+  },
+  {
+   "name": "channel-style",
+   "source": "snd"
+  },
+  {
+   "name": "channel-sync",
+   "source": "snd"
+  },
+  {
+   "name": "channel-widgets",
+   "source": "snd"
+  },
+  {
+   "name": "channels",
+   "source": "snd"
+  },
+  {
+   "name": "channels-combined",
+   "source": "snd-constant"
+  },
+  {
+   "name": "channels-equal?",
+   "source": "snd"
+  },
+  {
+   "name": "channels-separate",
+   "source": "snd-constant"
+  },
+  {
+   "name": "channels-superimposed",
+   "source": "snd-constant"
+  },
+  {
+   "name": "channels=?",
+   "source": "snd"
+  },
+  {
+   "name": "chans",
+   "source": "snd"
+  },
+  {
+   "name": "char->integer",
+   "source": "s7"
+  },
+  {
+   "name": "char-alphabetic?",
+   "source": "s7"
+  },
+  {
+   "name": "char-ci<=?",
+   "source": "s7"
+  },
+  {
+   "name": "char-ci<?",
+   "source": "s7"
+  },
+  {
+   "name": "char-ci=?",
+   "source": "s7"
+  },
+  {
+   "name": "char-ci>=?",
+   "source": "s7"
+  },
+  {
+   "name": "char-ci>?",
+   "source": "s7"
+  },
+  {
+   "name": "char-downcase",
+   "source": "s7"
+  },
+  {
+   "name": "char-lower-case?",
+   "source": "s7"
+  },
+  {
+   "name": "char-numeric?",
+   "source": "s7"
+  },
+  {
+   "name": "char-position",
+   "source": "snd"
+  },
+  {
+   "name": "char-ready?",
+   "source": "s7"
+  },
+  {
+   "name": "char-upcase",
+   "source": "s7"
+  },
+  {
+   "name": "char-upper-case?",
+   "source": "s7"
+  },
+  {
+   "name": "char-whitespace?",
+   "source": "s7"
+  },
+  {
+   "name": "char<=?",
+   "source": "s7"
+  },
+  {
+   "name": "char<?",
+   "source": "s7"
+  },
+  {
+   "name": "char=?",
+   "source": "s7"
+  },
+  {
+   "name": "char>=?",
+   "source": "s7"
+  },
+  {
+   "name": "char>?",
+   "source": "s7"
+  },
+  {
+   "name": "char?",
+   "source": "s7"
+  },
+  {
+   "name": "cheby-hka",
+   "source": "snd"
+  },
+  {
+   "name": "check-mix-tags",
+   "source": "snd"
+  },
+  {
+   "name": "chordalize",
+   "source": "snd"
+  },
+  {
+   "name": "chorus",
+   "source": "snd"
+  },
+  {
+   "name": "clean-channel",
+   "source": "snd"
+  },
+  {
+   "name": "clean-sound",
+   "source": "snd"
+  },
+  {
+   "name": "clear-listener",
+   "source": "snd"
+  },
+  {
+   "name": "clear-sincs",
+   "source": "snd-constant"
+  },
+  {
+   "name": "clip-hook",
+   "source": "snd"
+  },
+  {
+   "name": "clipping",
+   "source": "snd"
+  },
+  {
+   "name": "clm-channel",
+   "source": "snd"
+  },
+  {
+   "name": "clm-expsrc",
+   "source": "snd"
+  },
+  {
+   "name": "clm-table-size",
+   "source": "snd-constant"
+  },
+  {
+   "name": "close-hook",
+   "source": "snd"
+  },
+  {
+   "name": "close-input-port",
+   "source": "s7"
+  },
+  {
+   "name": "close-output-port",
+   "source": "s7"
+  },
+  {
+   "name": "close-sound",
+   "source": "snd"
+  },
+  {
+   "name": "color->list",
+   "source": "snd"
+  },
+  {
+   "name": "color-cutoff",
+   "source": "snd"
+  },
+  {
+   "name": "color-hook",
+   "source": "snd"
+  },
+  {
+   "name": "color-inverted",
+   "source": "snd"
+  },
+  {
+   "name": "color-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "color-orientation-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "color-scale",
+   "source": "snd"
+  },
+  {
+   "name": "color?",
+   "source": "snd"
+  },
+  {
+   "name": "colormap",
+   "source": "snd"
+  },
+  {
+   "name": "colormap->integer",
+   "source": "snd"
+  },
+  {
+   "name": "colormap-name",
+   "source": "snd"
+  },
+  {
+   "name": "colormap-ref",
+   "source": "snd"
+  },
+  {
+   "name": "colormap-size",
+   "source": "snd"
+  },
+  {
+   "name": "colormap?",
+   "source": "snd"
+  },
+  {
+   "name": "comb",
+   "source": "snd"
+  },
+  {
+   "name": "comb-bank",
+   "source": "snd"
+  },
+  {
+   "name": "comb-bank?",
+   "source": "snd"
+  },
+  {
+   "name": "comb?",
+   "source": "snd"
+  },
+  {
+   "name": "combined-data-color",
+   "source": "snd"
+  },
+  {
+   "name": "comment",
+   "source": "snd"
+  },
+  {
+   "name": "complex",
+   "source": "s7"
+  },
+  {
+   "name": "complex-vector",
+   "source": "snd"
+  },
+  {
+   "name": "complex-vector-ref",
+   "source": "snd"
+  },
+  {
+   "name": "complex-vector-set!",
+   "source": "snd"
+  },
+  {
+   "name": "complex-vector?",
+   "source": "snd"
+  },
+  {
+   "name": "complex?",
+   "source": "s7"
+  },
+  {
+   "name": "complexify",
+   "source": "snd"
+  },
+  {
+   "name": "concatenate-envelopes",
+   "source": "snd"
+  },
+  {
+   "name": "connes-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "cons",
+   "source": "s7"
+  },
+  {
+   "name": "constant?",
+   "source": "snd"
+  },
+  {
+   "name": "continuation?",
+   "source": "snd"
+  },
+  {
+   "name": "continue-frample->file",
+   "source": "snd"
+  },
+  {
+   "name": "continue-sample->file",
+   "source": "snd"
+  },
+  {
+   "name": "contrast-channel",
+   "source": "snd"
+  },
+  {
+   "name": "contrast-control",
+   "source": "snd"
+  },
+  {
+   "name": "contrast-control-amp",
+   "source": "snd"
+  },
+  {
+   "name": "contrast-control-bounds",
+   "source": "snd"
+  },
+  {
+   "name": "contrast-control?",
+   "source": "snd"
+  },
+  {
+   "name": "contrast-enhancement",
+   "source": "snd"
+  },
+  {
+   "name": "contrast-sound",
+   "source": "snd"
+  },
+  {
+   "name": "controls->channel",
+   "source": "snd"
+  },
+  {
+   "name": "convolution",
+   "source": "snd"
+  },
+  {
+   "name": "convolve",
+   "source": "snd"
+  },
+  {
+   "name": "convolve-files",
+   "source": "snd"
+  },
+  {
+   "name": "convolve-selection-with",
+   "source": "snd"
+  },
+  {
+   "name": "convolve-with",
+   "source": "snd"
+  },
+  {
+   "name": "convolve?",
+   "source": "snd"
+  },
+  {
+   "name": "copy",
+   "source": "snd"
+  },
+  {
+   "name": "copy-context",
+   "source": "snd"
+  },
+  {
+   "name": "copy-sampler",
+   "source": "snd"
+  },
+  {
+   "name": "correlate",
+   "source": "snd"
+  },
+  {
+   "name": "cos",
+   "source": "s7"
+  },
+  {
+   "name": "cosh",
+   "source": "s7"
+  },
+  {
+   "name": "count-matches",
+   "source": "snd-constant"
+  },
+  {
+   "name": "coverlet",
+   "source": "snd"
+  },
+  {
+   "name": "cross-synthesis",
+   "source": "snd"
+  },
+  {
+   "name": "curlet",
+   "source": "snd"
+  },
+  {
+   "name": "current-edit-position",
+   "source": "snd-constant"
+  },
+  {
+   "name": "current-error-port",
+   "source": "s7"
+  },
+  {
+   "name": "current-font",
+   "source": "snd"
+  },
+  {
+   "name": "current-input-port",
+   "source": "s7"
+  },
+  {
+   "name": "current-output-port",
+   "source": "s7"
+  },
+  {
+   "name": "cursor",
+   "source": "snd"
+  },
+  {
+   "name": "cursor-color",
+   "source": "snd"
+  },
+  {
+   "name": "cursor-context",
+   "source": "snd"
+  },
+  {
+   "name": "cursor-cross",
+   "source": "snd-constant"
+  },
+  {
+   "name": "cursor-in-middle",
+   "source": "snd-constant"
+  },
+  {
+   "name": "cursor-in-view",
+   "source": "snd-constant"
+  },
+  {
+   "name": "cursor-line",
+   "source": "snd-constant"
+  },
+  {
+   "name": "cursor-location-offset",
+   "source": "snd"
+  },
+  {
+   "name": "cursor-on-left",
+   "source": "snd-constant"
+  },
+  {
+   "name": "cursor-on-right",
+   "source": "snd-constant"
+  },
+  {
+   "name": "cursor-position",
+   "source": "snd"
+  },
+  {
+   "name": "cursor-size",
+   "source": "snd"
+  },
+  {
+   "name": "cursor-style",
+   "source": "snd"
+  },
+  {
+   "name": "cursor-update-interval",
+   "source": "snd"
+  },
+  {
+   "name": "cutlet",
+   "source": "snd"
+  },
+  {
+   "name": "cyclic-sequences",
+   "source": "snd"
+  },
+  {
+   "name": "dac-combines-channels",
+   "source": "snd"
+  },
+  {
+   "name": "dac-size",
+   "source": "snd"
+  },
+  {
+   "name": "data-color",
+   "source": "snd"
+  },
+  {
+   "name": "data-location",
+   "source": "snd"
+  },
+  {
+   "name": "data-size",
+   "source": "snd"
+  },
+  {
+   "name": "db->linear",
+   "source": "snd"
+  },
+  {
+   "name": "default-output-chans",
+   "source": "snd"
+  },
+  {
+   "name": "default-output-header-type",
+   "source": "snd"
+  },
+  {
+   "name": "default-output-sample-type",
+   "source": "snd"
+  },
+  {
+   "name": "default-output-srate",
+   "source": "snd"
+  },
+  {
+   "name": "defgenerator",
+   "source": "snd"
+  },
+  {
+   "name": "define*",
+   "source": "snd"
+  },
+  {
+   "name": "define-bacro",
+   "source": "snd"
+  },
+  {
+   "name": "define-bacro*",
+   "source": "snd"
+  },
+  {
+   "name": "define-constant",
+   "source": "snd"
+  },
+  {
+   "name": "define-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "define-expansion",
+   "source": "snd"
+  },
+  {
+   "name": "define-macro",
+   "source": "snd"
+  },
+  {
+   "name": "define-macro*",
+   "source": "snd"
+  },
+  {
+   "name": "define-selection-via-marks",
+   "source": "snd"
+  },
+  {
+   "name": "defined?",
+   "source": "snd"
+  },
+  {
+   "name": "degrees->radians",
+   "source": "snd"
+  },
+  {
+   "name": "delay",
+   "source": "snd"
+  },
+  {
+   "name": "delay-channel-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "delay-tick",
+   "source": "snd"
+  },
+  {
+   "name": "delay?",
+   "source": "snd"
+  },
+  {
+   "name": "delete-colormap",
+   "source": "snd"
+  },
+  {
+   "name": "delete-file",
+   "source": "s7"
+  },
+  {
+   "name": "delete-file-filter",
+   "source": "snd"
+  },
+  {
+   "name": "delete-file-sorter",
+   "source": "snd"
+  },
+  {
+   "name": "delete-mark",
+   "source": "snd"
+  },
+  {
+   "name": "delete-marks",
+   "source": "snd"
+  },
+  {
+   "name": "delete-sample",
+   "source": "snd"
+  },
+  {
+   "name": "delete-samples",
+   "source": "snd"
+  },
+  {
+   "name": "delete-samples-and-smooth",
+   "source": "snd"
+  },
+  {
+   "name": "delete-selection",
+   "source": "snd"
+  },
+  {
+   "name": "delete-selection-and-smooth",
+   "source": "snd"
+  },
+  {
+   "name": "delete-transform",
+   "source": "snd"
+  },
+  {
+   "name": "denominator",
+   "source": "s7"
+  },
+  {
+   "name": "describe-hook",
+   "source": "snd"
+  },
+  {
+   "name": "describe-mark",
+   "source": "snd"
+  },
+  {
+   "name": "dht",
+   "source": "snd"
+  },
+  {
+   "name": "dialog-widgets",
+   "source": "snd"
+  },
+  {
+   "name": "dilambda",
+   "source": "snd"
+  },
+  {
+   "name": "dilambda?",
+   "source": "s7"
+  },
+  {
+   "name": "directory->list",
+   "source": "s7"
+  },
+  {
+   "name": "directory?",
+   "source": "s7"
+  },
+  {
+   "name": "disable-control-panel",
+   "source": "snd"
+  },
+  {
+   "name": "display",
+   "source": "s7"
+  },
+  {
+   "name": "display-bark-fft",
+   "source": "snd"
+  },
+  {
+   "name": "display-correlation",
+   "source": "snd"
+  },
+  {
+   "name": "display-db",
+   "source": "snd"
+  },
+  {
+   "name": "display-edits",
+   "source": "snd"
+  },
+  {
+   "name": "display-energy",
+   "source": "snd"
+  },
+  {
+   "name": "dissolve-fade",
+   "source": "snd"
+  },
+  {
+   "name": "dither-channel",
+   "source": "snd"
+  },
+  {
+   "name": "dither-sound",
+   "source": "snd"
+  },
+  {
+   "name": "documentation",
+   "source": "snd"
+  },
+  {
+   "name": "dolph",
+   "source": "snd"
+  },
+  {
+   "name": "dolph-chebyshev-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "dont-normalize",
+   "source": "snd-constant"
+  },
+  {
+   "name": "dot-product",
+   "source": "snd"
+  },
+  {
+   "name": "dot-size",
+   "source": "snd"
+  },
+  {
+   "name": "down-oct",
+   "source": "snd"
+  },
+  {
+   "name": "dpss-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "draw-axes",
+   "source": "snd"
+  },
+  {
+   "name": "draw-dot",
+   "source": "snd"
+  },
+  {
+   "name": "draw-dots",
+   "source": "snd"
+  },
+  {
+   "name": "draw-line",
+   "source": "snd"
+  },
+  {
+   "name": "draw-lines",
+   "source": "snd"
+  },
+  {
+   "name": "draw-mark-hook",
+   "source": "snd"
+  },
+  {
+   "name": "draw-mix-hook",
+   "source": "snd"
+  },
+  {
+   "name": "draw-string",
+   "source": "snd"
+  },
+  {
+   "name": "drone",
+   "source": "snd"
+  },
+  {
+   "name": "drop-hook",
+   "source": "snd"
+  },
+  {
+   "name": "during-open-hook",
+   "source": "snd"
+  },
+  {
+   "name": "dynamic-unwind",
+   "source": "snd"
+  },
+  {
+   "name": "dynamic-wind",
+   "source": "s7"
+  },
+  {
+   "name": "edit-fragment",
+   "source": "snd"
+  },
+  {
+   "name": "edit-header-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "edit-hook",
+   "source": "snd"
+  },
+  {
+   "name": "edit-list->function",
+   "source": "snd"
+  },
+  {
+   "name": "edit-position",
+   "source": "snd"
+  },
+  {
+   "name": "edit-properties",
+   "source": "snd"
+  },
+  {
+   "name": "edit-property",
+   "source": "snd"
+  },
+  {
+   "name": "edit-tree",
+   "source": "snd"
+  },
+  {
+   "name": "edits",
+   "source": "snd"
+  },
+  {
+   "name": "edot-product",
+   "source": "snd"
+  },
+  {
+   "name": "effects-hook",
+   "source": "snd"
+  },
+  {
+   "name": "emergency-exit",
+   "source": "s7"
+  },
+  {
+   "name": "env",
+   "source": "snd"
+  },
+  {
+   "name": "env-any",
+   "source": "snd"
+  },
+  {
+   "name": "env-channel",
+   "source": "snd"
+  },
+  {
+   "name": "env-channel-with-base",
+   "source": "snd"
+  },
+  {
+   "name": "env-expt-channel",
+   "source": "snd"
+  },
+  {
+   "name": "env-interp",
+   "source": "snd"
+  },
+  {
+   "name": "env-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "env-selection",
+   "source": "snd"
+  },
+  {
+   "name": "env-sound",
+   "source": "snd"
+  },
+  {
+   "name": "env-sound-interp",
+   "source": "snd"
+  },
+  {
+   "name": "env-squared-channel",
+   "source": "snd"
+  },
+  {
+   "name": "env?",
+   "source": "snd"
+  },
+  {
+   "name": "enved-add-point",
+   "source": "snd-constant"
+  },
+  {
+   "name": "enved-amplitude",
+   "source": "snd-constant"
+  },
+  {
+   "name": "enved-base",
+   "source": "snd"
+  },
+  {
+   "name": "enved-clip?",
+   "source": "snd"
+  },
+  {
+   "name": "enved-delete-point",
+   "source": "snd-constant"
+  },
+  {
+   "name": "enved-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "enved-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "enved-filter",
+   "source": "snd"
+  },
+  {
+   "name": "enved-filter-order",
+   "source": "snd"
+  },
+  {
+   "name": "enved-hook",
+   "source": "snd"
+  },
+  {
+   "name": "enved-in-dB",
+   "source": "snd"
+  },
+  {
+   "name": "enved-move-point",
+   "source": "snd-constant"
+  },
+  {
+   "name": "enved-power",
+   "source": "snd"
+  },
+  {
+   "name": "enved-spectrum",
+   "source": "snd-constant"
+  },
+  {
+   "name": "enved-srate",
+   "source": "snd-constant"
+  },
+  {
+   "name": "enved-style",
+   "source": "snd"
+  },
+  {
+   "name": "enved-target",
+   "source": "snd"
+  },
+  {
+   "name": "enved-wave?",
+   "source": "snd"
+  },
+  {
+   "name": "enved-waveform-color",
+   "source": "snd"
+  },
+  {
+   "name": "envelope-exponential",
+   "source": "snd-constant"
+  },
+  {
+   "name": "envelope-interp",
+   "source": "snd"
+  },
+  {
+   "name": "envelope-linear",
+   "source": "snd-constant"
+  },
+  {
+   "name": "enveloped-mix",
+   "source": "snd"
+  },
+  {
+   "name": "eoddcos",
+   "source": "snd"
+  },
+  {
+   "name": "eoddcos?",
+   "source": "snd"
+  },
+  {
+   "name": "eof-object?",
+   "source": "s7"
+  },
+  {
+   "name": "eps-bottom-margin",
+   "source": "snd"
+  },
+  {
+   "name": "eps-file",
+   "source": "snd"
+  },
+  {
+   "name": "eps-left-margin",
+   "source": "snd"
+  },
+  {
+   "name": "eps-size",
+   "source": "snd"
+  },
+  {
+   "name": "eq?",
+   "source": "s7"
+  },
+  {
+   "name": "equal?",
+   "source": "s7"
+  },
+  {
+   "name": "equivalent?",
+   "source": "snd"
+  },
+  {
+   "name": "eqv?",
+   "source": "s7"
+  },
+  {
+   "name": "ercos",
+   "source": "snd"
+  },
+  {
+   "name": "ercos?",
+   "source": "snd"
+  },
+  {
+   "name": "error",
+   "source": "s7"
+  },
+  {
+   "name": "erssb",
+   "source": "snd"
+  },
+  {
+   "name": "erssb?",
+   "source": "snd"
+  },
+  {
+   "name": "eval",
+   "source": "s7"
+  },
+  {
+   "name": "eval-string",
+   "source": "s7"
+  },
+  {
+   "name": "even-multiple",
+   "source": "snd"
+  },
+  {
+   "name": "even-weight",
+   "source": "snd"
+  },
+  {
+   "name": "even?",
+   "source": "s7"
+  },
+  {
+   "name": "every-sample?",
+   "source": "snd"
+  },
+  {
+   "name": "exact->inexact",
+   "source": "s7"
+  },
+  {
+   "name": "exact?",
+   "source": "s7"
+  },
+  {
+   "name": "exit",
+   "source": "snd"
+  },
+  {
+   "name": "exit-hook",
+   "source": "snd"
+  },
+  {
+   "name": "exp",
+   "source": "s7"
+  },
+  {
+   "name": "expand-control",
+   "source": "snd"
+  },
+  {
+   "name": "expand-control-bounds",
+   "source": "snd"
+  },
+  {
+   "name": "expand-control-hop",
+   "source": "snd"
+  },
+  {
+   "name": "expand-control-jitter",
+   "source": "snd"
+  },
+  {
+   "name": "expand-control-length",
+   "source": "snd"
+  },
+  {
+   "name": "expand-control-ramp",
+   "source": "snd"
+  },
+  {
+   "name": "expand-control?",
+   "source": "snd"
+  },
+  {
+   "name": "explode-sf2",
+   "source": "snd"
+  },
+  {
+   "name": "exponential-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "exponentially-weighted-moving-average",
+   "source": "snd"
+  },
+  {
+   "name": "expsnd",
+   "source": "snd"
+  },
+  {
+   "name": "expsrc",
+   "source": "snd"
+  },
+  {
+   "name": "expt",
+   "source": "s7"
+  },
+  {
+   "name": "fft",
+   "source": "snd"
+  },
+  {
+   "name": "fft-cancel",
+   "source": "snd"
+  },
+  {
+   "name": "fft-edit",
+   "source": "snd"
+  },
+  {
+   "name": "fft-env-edit",
+   "source": "snd"
+  },
+  {
+   "name": "fft-env-interp",
+   "source": "snd"
+  },
+  {
+   "name": "fft-log-frequency",
+   "source": "snd"
+  },
+  {
+   "name": "fft-log-magnitude",
+   "source": "snd"
+  },
+  {
+   "name": "fft-smoother",
+   "source": "snd"
+  },
+  {
+   "name": "fft-squelch",
+   "source": "snd"
+  },
+  {
+   "name": "fft-window",
+   "source": "snd"
+  },
+  {
+   "name": "fft-window-alpha",
+   "source": "snd"
+  },
+  {
+   "name": "fft-window-beta",
+   "source": "snd"
+  },
+  {
+   "name": "fft-with-phases",
+   "source": "snd"
+  },
+  {
+   "name": "file->array",
+   "source": "snd"
+  },
+  {
+   "name": "file->frample",
+   "source": "snd"
+  },
+  {
+   "name": "file->frample?",
+   "source": "snd"
+  },
+  {
+   "name": "file->sample",
+   "source": "snd"
+  },
+  {
+   "name": "file->sample?",
+   "source": "snd"
+  },
+  {
+   "name": "file-exists?",
+   "source": "s7"
+  },
+  {
+   "name": "file-mtime",
+   "source": "s7"
+  },
+  {
+   "name": "file-name",
+   "source": "snd"
+  },
+  {
+   "name": "fill!",
+   "source": "snd"
+  },
+  {
+   "name": "fill-polygon",
+   "source": "snd"
+  },
+  {
+   "name": "fill-rectangle",
+   "source": "snd"
+  },
+  {
+   "name": "filter",
+   "source": "snd"
+  },
+  {
+   "name": "filter-channel",
+   "source": "snd"
+  },
+  {
+   "name": "filter-control-coeffs",
+   "source": "snd"
+  },
+  {
+   "name": "filter-control-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "filter-control-in-dB",
+   "source": "snd"
+  },
+  {
+   "name": "filter-control-in-hz",
+   "source": "snd"
+  },
+  {
+   "name": "filter-control-order",
+   "source": "snd"
+  },
+  {
+   "name": "filter-control-waveform-color",
+   "source": "snd"
+  },
+  {
+   "name": "filter-control?",
+   "source": "snd"
+  },
+  {
+   "name": "filter-fft",
+   "source": "snd"
+  },
+  {
+   "name": "filter-selection",
+   "source": "snd"
+  },
+  {
+   "name": "filter-selection-and-smooth",
+   "source": "snd"
+  },
+  {
+   "name": "filter-sound",
+   "source": "snd"
+  },
+  {
+   "name": "filter?",
+   "source": "snd"
+  },
+  {
+   "name": "filtered-comb",
+   "source": "snd"
+  },
+  {
+   "name": "filtered-comb-bank",
+   "source": "snd"
+  },
+  {
+   "name": "filtered-comb-bank?",
+   "source": "snd"
+  },
+  {
+   "name": "filtered-comb?",
+   "source": "snd"
+  },
+  {
+   "name": "find-channel",
+   "source": "snd-constant"
+  },
+  {
+   "name": "find-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "find-mark",
+   "source": "snd"
+  },
+  {
+   "name": "find-mix",
+   "source": "snd"
+  },
+  {
+   "name": "find-sound",
+   "source": "snd"
+  },
+  {
+   "name": "finfo",
+   "source": "snd"
+  },
+  {
+   "name": "finish-progress-report",
+   "source": "snd"
+  },
+  {
+   "name": "fir-filter",
+   "source": "snd"
+  },
+  {
+   "name": "fir-filter?",
+   "source": "snd"
+  },
+  {
+   "name": "firmant",
+   "source": "snd"
+  },
+  {
+   "name": "firmant?",
+   "source": "snd"
+  },
+  {
+   "name": "fit-selection-between-marks",
+   "source": "snd"
+  },
+  {
+   "name": "flat-top-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "flatten-partials",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector*",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector+",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector->channel",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector->list",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector->string",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-abs!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-add!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-equal?",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-fill!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-length",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-max",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-min",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-move!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-multiply!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-offset!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-peak",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-polynomial",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-ref",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-reverse!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-scale!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-set!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-subseq",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector-subtract!",
+   "source": "snd"
+  },
+  {
+   "name": "float-vector?",
+   "source": "snd"
+  },
+  {
+   "name": "float?",
+   "source": "s7"
+  },
+  {
+   "name": "flocsig",
+   "source": "snd"
+  },
+  {
+   "name": "flocsig?",
+   "source": "snd"
+  },
+  {
+   "name": "floor",
+   "source": "s7"
+  },
+  {
+   "name": "flush-output-port",
+   "source": "s7"
+  },
+  {
+   "name": "fm-bell",
+   "source": "snd"
+  },
+  {
+   "name": "fm-drum",
+   "source": "snd"
+  },
+  {
+   "name": "fm-noise",
+   "source": "snd"
+  },
+  {
+   "name": "fm-parallel-component",
+   "source": "snd"
+  },
+  {
+   "name": "fm-talker",
+   "source": "snd"
+  },
+  {
+   "name": "fm-trumpet",
+   "source": "snd"
+  },
+  {
+   "name": "fm-violin",
+   "source": "snd"
+  },
+  {
+   "name": "fm-voice",
+   "source": "snd"
+  },
+  {
+   "name": "fmssb",
+   "source": "snd"
+  },
+  {
+   "name": "fmssb?",
+   "source": "snd"
+  },
+  {
+   "name": "focus-widget",
+   "source": "snd"
+  },
+  {
+   "name": "fofins",
+   "source": "snd"
+  },
+  {
+   "name": "for-each",
+   "source": "s7"
+  },
+  {
+   "name": "for-each-child",
+   "source": "snd"
+  },
+  {
+   "name": "for-each-sound-file",
+   "source": "snd"
+  },
+  {
+   "name": "foreground-color",
+   "source": "snd"
+  },
+  {
+   "name": "forget-region",
+   "source": "snd"
+  },
+  {
+   "name": "formant",
+   "source": "snd"
+  },
+  {
+   "name": "formant-bank",
+   "source": "snd"
+  },
+  {
+   "name": "formant-bank?",
+   "source": "snd"
+  },
+  {
+   "name": "formant?",
+   "source": "snd"
+  },
+  {
+   "name": "format",
+   "source": "snd"
+  },
+  {
+   "name": "fourier-transform",
+   "source": "snd-constant"
+  },
+  {
+   "name": "fp",
+   "source": "snd"
+  },
+  {
+   "name": "fractional-fourier-transform",
+   "source": "snd"
+  },
+  {
+   "name": "frample->file",
+   "source": "snd"
+  },
+  {
+   "name": "frample->file?",
+   "source": "snd"
+  },
+  {
+   "name": "frample->frample",
+   "source": "snd"
+  },
+  {
+   "name": "framples",
+   "source": "snd"
+  },
+  {
+   "name": "free-player",
+   "source": "snd"
+  },
+  {
+   "name": "free-sampler",
+   "source": "snd"
+  },
+  {
+   "name": "freeverb",
+   "source": "snd"
+  },
+  {
+   "name": "fullmix",
+   "source": "snd"
+  },
+  {
+   "name": "funclet",
+   "source": "snd"
+  },
+  {
+   "name": "funclet?",
+   "source": "snd"
+  },
+  {
+   "name": "gaussian-distribution",
+   "source": "snd"
+  },
+  {
+   "name": "gaussian-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "gc",
+   "source": "s7"
+  },
+  {
+   "name": "gc-off",
+   "source": "snd"
+  },
+  {
+   "name": "gc-on",
+   "source": "snd"
+  },
+  {
+   "name": "gcd",
+   "source": "s7"
+  },
+  {
+   "name": "gensym",
+   "source": "snd"
+  },
+  {
+   "name": "gensym?",
+   "source": "snd"
+  },
+  {
+   "name": "get-output-string",
+   "source": "s7"
+  },
+  {
+   "name": "getenv",
+   "source": "s7"
+  },
+  {
+   "name": "gl-graph->ps",
+   "source": "snd"
+  },
+  {
+   "name": "glSpectrogram",
+   "source": "snd"
+  },
+  {
+   "name": "goertzel",
+   "source": "snd"
+  },
+  {
+   "name": "goto-active?",
+   "source": "s7"
+  },
+  {
+   "name": "goto-listener-end",
+   "source": "snd"
+  },
+  {
+   "name": "goto?",
+   "source": "s7"
+  },
+  {
+   "name": "grani",
+   "source": "snd"
+  },
+  {
+   "name": "granulate",
+   "source": "snd"
+  },
+  {
+   "name": "granulate?",
+   "source": "snd"
+  },
+  {
+   "name": "granulated-sound-interp",
+   "source": "snd"
+  },
+  {
+   "name": "graph",
+   "source": "snd"
+  },
+  {
+   "name": "graph->ps",
+   "source": "snd"
+  },
+  {
+   "name": "graph-as-sonogram",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-as-spectrogram",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-as-wavogram",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-color",
+   "source": "snd"
+  },
+  {
+   "name": "graph-cursor",
+   "source": "snd"
+  },
+  {
+   "name": "graph-data",
+   "source": "snd"
+  },
+  {
+   "name": "graph-dots",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-dots-and-lines",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-filled",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-hook",
+   "source": "snd"
+  },
+  {
+   "name": "graph-lines",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-lollipops",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-once",
+   "source": "snd-constant"
+  },
+  {
+   "name": "graph-style",
+   "source": "snd"
+  },
+  {
+   "name": "graphs-horizontal",
+   "source": "snd"
+  },
+  {
+   "name": "green-noise",
+   "source": "snd"
+  },
+  {
+   "name": "green-noise-interp",
+   "source": "snd"
+  },
+  {
+   "name": "green-noise-interp?",
+   "source": "snd"
+  },
+  {
+   "name": "green-noise?",
+   "source": "snd"
+  },
+  {
+   "name": "grid-density",
+   "source": "snd"
+  },
+  {
+   "name": "haar-transform",
+   "source": "snd-constant"
+  },
+  {
+   "name": "hamming-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "hann-poisson-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "hann-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "harmonicizer",
+   "source": "snd"
+  },
+  {
+   "name": "hash-code",
+   "source": "snd"
+  },
+  {
+   "name": "hash-table",
+   "source": "snd"
+  },
+  {
+   "name": "hash-table-entries",
+   "source": "snd"
+  },
+  {
+   "name": "hash-table-key-typer",
+   "source": "snd"
+  },
+  {
+   "name": "hash-table-ref",
+   "source": "snd"
+  },
+  {
+   "name": "hash-table-set!",
+   "source": "snd"
+  },
+  {
+   "name": "hash-table-value-typer",
+   "source": "snd"
+  },
+  {
+   "name": "hash-table?",
+   "source": "snd"
+  },
+  {
+   "name": "header-type",
+   "source": "snd"
+  },
+  {
+   "name": "heap-analyze",
+   "source": "s7"
+  },
+  {
+   "name": "heap-holder",
+   "source": "s7"
+  },
+  {
+   "name": "heap-holders",
+   "source": "s7"
+  },
+  {
+   "name": "heap-scan",
+   "source": "s7"
+  },
+  {
+   "name": "hello-dentist",
+   "source": "snd"
+  },
+  {
+   "name": "help",
+   "source": "s7"
+  },
+  {
+   "name": "help-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "help-hook",
+   "source": "snd"
+  },
+  {
+   "name": "hide-widget",
+   "source": "snd"
+  },
+  {
+   "name": "highlight-color",
+   "source": "snd"
+  },
+  {
+   "name": "hilbert-transform",
+   "source": "snd"
+  },
+  {
+   "name": "hook-functions",
+   "source": "snd"
+  },
+  {
+   "name": "hook-member",
+   "source": "snd"
+  },
+  {
+   "name": "html",
+   "source": "snd"
+  },
+  {
+   "name": "html-dir",
+   "source": "snd"
+  },
+  {
+   "name": "html-program",
+   "source": "snd"
+  },
+  {
+   "name": "hz->radians",
+   "source": "snd"
+  },
+  {
+   "name": "iir-filter",
+   "source": "snd"
+  },
+  {
+   "name": "iir-filter?",
+   "source": "snd"
+  },
+  {
+   "name": "imag-part",
+   "source": "s7"
+  },
+  {
+   "name": "immutable!",
+   "source": "snd"
+  },
+  {
+   "name": "immutable?",
+   "source": "snd"
+  },
+  {
+   "name": "in",
+   "source": "snd"
+  },
+  {
+   "name": "in-any",
+   "source": "snd"
+  },
+  {
+   "name": "ina",
+   "source": "snd"
+  },
+  {
+   "name": "inb",
+   "source": "snd"
+  },
+  {
+   "name": "inexact->exact",
+   "source": "s7"
+  },
+  {
+   "name": "inexact?",
+   "source": "s7"
+  },
+  {
+   "name": "infinite?",
+   "source": "s7"
+  },
+  {
+   "name": "info-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "init-ladspa",
+   "source": "snd"
+  },
+  {
+   "name": "initial-beg",
+   "source": "snd"
+  },
+  {
+   "name": "initial-dur",
+   "source": "snd"
+  },
+  {
+   "name": "initial-graph-hook",
+   "source": "snd"
+  },
+  {
+   "name": "inlet",
+   "source": "snd"
+  },
+  {
+   "name": "input-port?",
+   "source": "s7"
+  },
+  {
+   "name": "insert-channel",
+   "source": "snd"
+  },
+  {
+   "name": "insert-file-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "insert-region",
+   "source": "snd"
+  },
+  {
+   "name": "insert-sample",
+   "source": "snd"
+  },
+  {
+   "name": "insert-samples",
+   "source": "snd"
+  },
+  {
+   "name": "insert-selection",
+   "source": "snd"
+  },
+  {
+   "name": "insert-silence",
+   "source": "snd"
+  },
+  {
+   "name": "insert-sound",
+   "source": "snd"
+  },
+  {
+   "name": "int-vector",
+   "source": "snd"
+  },
+  {
+   "name": "int-vector-ref",
+   "source": "snd"
+  },
+  {
+   "name": "int-vector-set!",
+   "source": "snd"
+  },
+  {
+   "name": "int-vector?",
+   "source": "snd"
+  },
+  {
+   "name": "integer->char",
+   "source": "s7"
+  },
+  {
+   "name": "integer->colormap",
+   "source": "snd"
+  },
+  {
+   "name": "integer->mark",
+   "source": "snd"
+  },
+  {
+   "name": "integer->mix",
+   "source": "snd"
+  },
+  {
+   "name": "integer->region",
+   "source": "snd"
+  },
+  {
+   "name": "integer->sound",
+   "source": "snd"
+  },
+  {
+   "name": "integer->transform",
+   "source": "snd"
+  },
+  {
+   "name": "integer-decode-float",
+   "source": "s7"
+  },
+  {
+   "name": "integer-length",
+   "source": "s7"
+  },
+  {
+   "name": "integer?",
+   "source": "s7"
+  },
+  {
+   "name": "integrate-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "invert-filter",
+   "source": "snd"
+  },
+  {
+   "name": "iterate",
+   "source": "snd"
+  },
+  {
+   "name": "iterator-at-end?",
+   "source": "snd"
+  },
+  {
+   "name": "iterator-sequence",
+   "source": "snd"
+  },
+  {
+   "name": "iterator?",
+   "source": "snd"
+  },
+  {
+   "name": "izcos",
+   "source": "snd"
+  },
+  {
+   "name": "izcos?",
+   "source": "snd"
+  },
+  {
+   "name": "j0evencos",
+   "source": "snd"
+  },
+  {
+   "name": "j0evencos?",
+   "source": "snd"
+  },
+  {
+   "name": "j0j1cos",
+   "source": "snd"
+  },
+  {
+   "name": "j0j1cos?",
+   "source": "snd"
+  },
+  {
+   "name": "j2cos",
+   "source": "snd"
+  },
+  {
+   "name": "j2cos?",
+   "source": "snd"
+  },
+  {
+   "name": "jc-reverb",
+   "source": "snd"
+  },
+  {
+   "name": "jjcos",
+   "source": "snd"
+  },
+  {
+   "name": "jjcos?",
+   "source": "snd"
+  },
+  {
+   "name": "jncos",
+   "source": "snd"
+  },
+  {
+   "name": "jncos?",
+   "source": "snd"
+  },
+  {
+   "name": "jpcos",
+   "source": "snd"
+  },
+  {
+   "name": "jpcos?",
+   "source": "snd"
+  },
+  {
+   "name": "just-sounds",
+   "source": "snd"
+  },
+  {
+   "name": "jycos",
+   "source": "snd"
+  },
+  {
+   "name": "jycos?",
+   "source": "snd"
+  },
+  {
+   "name": "k2cos",
+   "source": "snd"
+  },
+  {
+   "name": "k2cos?",
+   "source": "snd"
+  },
+  {
+   "name": "k2sin",
+   "source": "snd"
+  },
+  {
+   "name": "k2sin?",
+   "source": "snd"
+  },
+  {
+   "name": "k2ssb",
+   "source": "snd"
+  },
+  {
+   "name": "k2ssb?",
+   "source": "snd"
+  },
+  {
+   "name": "k3sin",
+   "source": "snd"
+  },
+  {
+   "name": "k3sin?",
+   "source": "snd"
+  },
+  {
+   "name": "kaiser-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "kalman-filter-channel",
+   "source": "snd"
+  },
+  {
+   "name": "key",
+   "source": "snd"
+  },
+  {
+   "name": "key-binding",
+   "source": "snd"
+  },
+  {
+   "name": "key-press-hook",
+   "source": "snd"
+  },
+  {
+   "name": "keyboard-no-action",
+   "source": "snd-constant"
+  },
+  {
+   "name": "keyword->symbol",
+   "source": "s7"
+  },
+  {
+   "name": "keyword?",
+   "source": "s7"
+  },
+  {
+   "name": "krksin",
+   "source": "snd"
+  },
+  {
+   "name": "krksin?",
+   "source": "snd"
+  },
+  {
+   "name": "ladspa-descriptor",
+   "source": "snd"
+  },
+  {
+   "name": "ladspa-dir",
+   "source": "snd"
+  },
+  {
+   "name": "lambda*",
+   "source": "snd"
+  },
+  {
+   "name": "lbj-piano",
+   "source": "snd"
+  },
+  {
+   "name": "lcm",
+   "source": "s7"
+  },
+  {
+   "name": "left-sample",
+   "source": "snd"
+  },
+  {
+   "name": "length",
+   "source": "s7"
+  },
+  {
+   "name": "let->list",
+   "source": "snd"
+  },
+  {
+   "name": "let-ref",
+   "source": "snd"
+  },
+  {
+   "name": "let-set!",
+   "source": "snd"
+  },
+  {
+   "name": "let-temporarily",
+   "source": "snd"
+  },
+  {
+   "name": "let?",
+   "source": "snd"
+  },
+  {
+   "name": "linear->db",
+   "source": "snd"
+  },
+  {
+   "name": "linear-src-channel",
+   "source": "snd"
+  },
+  {
+   "name": "lisp-graph",
+   "source": "snd-constant"
+  },
+  {
+   "name": "lisp-graph-hook",
+   "source": "snd"
+  },
+  {
+   "name": "lisp-graph-style",
+   "source": "snd"
+  },
+  {
+   "name": "lisp-graph?",
+   "source": "snd"
+  },
+  {
+   "name": "list",
+   "source": "s7"
+  },
+  {
+   "name": "list->float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "list->string",
+   "source": "s7"
+  },
+  {
+   "name": "list->vector",
+   "source": "s7"
+  },
+  {
+   "name": "list-ladspa",
+   "source": "snd"
+  },
+  {
+   "name": "list-ref",
+   "source": "s7"
+  },
+  {
+   "name": "list-set!",
+   "source": "s7"
+  },
+  {
+   "name": "list-tail",
+   "source": "s7"
+  },
+  {
+   "name": "list-values",
+   "source": "s7"
+  },
+  {
+   "name": "list?",
+   "source": "s7"
+  },
+  {
+   "name": "listener-click-hook",
+   "source": "snd"
+  },
+  {
+   "name": "listener-color",
+   "source": "snd"
+  },
+  {
+   "name": "listener-colorized",
+   "source": "snd"
+  },
+  {
+   "name": "listener-font",
+   "source": "snd"
+  },
+  {
+   "name": "listener-prompt",
+   "source": "snd"
+  },
+  {
+   "name": "listener-selection",
+   "source": "snd"
+  },
+  {
+   "name": "listener-text-color",
+   "source": "snd"
+  },
+  {
+   "name": "little-endian?",
+   "source": "snd"
+  },
+  {
+   "name": "load",
+   "source": "s7"
+  },
+  {
+   "name": "locate-zero",
+   "source": "snd"
+  },
+  {
+   "name": "locsig",
+   "source": "snd"
+  },
+  {
+   "name": "locsig-ref",
+   "source": "snd"
+  },
+  {
+   "name": "locsig-reverb-ref",
+   "source": "snd"
+  },
+  {
+   "name": "locsig-reverb-set!",
+   "source": "snd"
+  },
+  {
+   "name": "locsig-set!",
+   "source": "snd"
+  },
+  {
+   "name": "locsig-type",
+   "source": "snd"
+  },
+  {
+   "name": "locsig?",
+   "source": "snd"
+  },
+  {
+   "name": "log",
+   "source": "s7"
+  },
+  {
+   "name": "log-freq-start",
+   "source": "snd"
+  },
+  {
+   "name": "logand",
+   "source": "s7"
+  },
+  {
+   "name": "logbit?",
+   "source": "s7"
+  },
+  {
+   "name": "logior",
+   "source": "s7"
+  },
+  {
+   "name": "lognot",
+   "source": "s7"
+  },
+  {
+   "name": "logxor",
+   "source": "s7"
+  },
+  {
+   "name": "lpc-coeffs",
+   "source": "snd"
+  },
+  {
+   "name": "lpc-predict",
+   "source": "snd"
+  },
+  {
+   "name": "macro?",
+   "source": "snd"
+  },
+  {
+   "name": "macroexpand",
+   "source": "snd"
+  },
+  {
+   "name": "magnitude",
+   "source": "s7"
+  },
+  {
+   "name": "main-menu",
+   "source": "snd"
+  },
+  {
+   "name": "main-widgets",
+   "source": "snd"
+  },
+  {
+   "name": "make-abcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-absin",
+   "source": "snd"
+  },
+  {
+   "name": "make-adjustable-sawtooth-wave",
+   "source": "snd"
+  },
+  {
+   "name": "make-adjustable-square-wave",
+   "source": "snd"
+  },
+  {
+   "name": "make-adjustable-triangle-wave",
+   "source": "snd"
+  },
+  {
+   "name": "make-all-pass",
+   "source": "snd"
+  },
+  {
+   "name": "make-all-pass-bank",
+   "source": "snd"
+  },
+  {
+   "name": "make-asyfm",
+   "source": "snd"
+  },
+  {
+   "name": "make-asymmetric-fm",
+   "source": "snd"
+  },
+  {
+   "name": "make-bandpass",
+   "source": "snd"
+  },
+  {
+   "name": "make-bandstop",
+   "source": "snd"
+  },
+  {
+   "name": "make-bess",
+   "source": "snd"
+  },
+  {
+   "name": "make-biquad",
+   "source": "snd"
+  },
+  {
+   "name": "make-birds",
+   "source": "snd"
+  },
+  {
+   "name": "make-blackman",
+   "source": "snd"
+  },
+  {
+   "name": "make-brown-noise",
+   "source": "snd"
+  },
+  {
+   "name": "make-byte-vector",
+   "source": "snd"
+  },
+  {
+   "name": "make-channel-drop-site",
+   "source": "snd"
+  },
+  {
+   "name": "make-color",
+   "source": "snd"
+  },
+  {
+   "name": "make-comb",
+   "source": "snd"
+  },
+  {
+   "name": "make-comb-bank",
+   "source": "snd"
+  },
+  {
+   "name": "make-complex-vector",
+   "source": "snd"
+  },
+  {
+   "name": "make-convolve",
+   "source": "snd"
+  },
+  {
+   "name": "make-delay",
+   "source": "snd"
+  },
+  {
+   "name": "make-differentiator",
+   "source": "snd"
+  },
+  {
+   "name": "make-env",
+   "source": "snd"
+  },
+  {
+   "name": "make-eoddcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-ercos",
+   "source": "snd"
+  },
+  {
+   "name": "make-erssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-fft-window",
+   "source": "snd"
+  },
+  {
+   "name": "make-file->frample",
+   "source": "snd"
+  },
+  {
+   "name": "make-file->sample",
+   "source": "snd"
+  },
+  {
+   "name": "make-filter",
+   "source": "snd"
+  },
+  {
+   "name": "make-filtered-comb",
+   "source": "snd"
+  },
+  {
+   "name": "make-filtered-comb-bank",
+   "source": "snd"
+  },
+  {
+   "name": "make-fir-coeffs",
+   "source": "snd"
+  },
+  {
+   "name": "make-fir-filter",
+   "source": "snd"
+  },
+  {
+   "name": "make-firmant",
+   "source": "snd"
+  },
+  {
+   "name": "make-float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "make-flocsig",
+   "source": "snd"
+  },
+  {
+   "name": "make-fmssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-formant",
+   "source": "snd"
+  },
+  {
+   "name": "make-formant-bank",
+   "source": "snd"
+  },
+  {
+   "name": "make-frample->file",
+   "source": "snd"
+  },
+  {
+   "name": "make-granulate",
+   "source": "snd"
+  },
+  {
+   "name": "make-graph-data",
+   "source": "snd"
+  },
+  {
+   "name": "make-green-noise",
+   "source": "snd"
+  },
+  {
+   "name": "make-green-noise-interp",
+   "source": "snd"
+  },
+  {
+   "name": "make-hash-table",
+   "source": "snd"
+  },
+  {
+   "name": "make-highpass",
+   "source": "snd"
+  },
+  {
+   "name": "make-hilbert-transform",
+   "source": "snd"
+  },
+  {
+   "name": "make-hook",
+   "source": "snd"
+  },
+  {
+   "name": "make-iir-filter",
+   "source": "snd"
+  },
+  {
+   "name": "make-int-vector",
+   "source": "snd"
+  },
+  {
+   "name": "make-iterator",
+   "source": "snd"
+  },
+  {
+   "name": "make-izcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-j0evencos",
+   "source": "snd"
+  },
+  {
+   "name": "make-j0j1cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-j2cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-jjcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-jncos",
+   "source": "snd"
+  },
+  {
+   "name": "make-jpcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-jycos",
+   "source": "snd"
+  },
+  {
+   "name": "make-k2cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-k2sin",
+   "source": "snd"
+  },
+  {
+   "name": "make-k2ssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-k3sin",
+   "source": "snd"
+  },
+  {
+   "name": "make-krksin",
+   "source": "snd"
+  },
+  {
+   "name": "make-list",
+   "source": "s7"
+  },
+  {
+   "name": "make-locsig",
+   "source": "snd"
+  },
+  {
+   "name": "make-lowpass",
+   "source": "snd"
+  },
+  {
+   "name": "make-mix-sampler",
+   "source": "snd"
+  },
+  {
+   "name": "make-move-sound",
+   "source": "snd"
+  },
+  {
+   "name": "make-moving-autocorrelation",
+   "source": "snd"
+  },
+  {
+   "name": "make-moving-average",
+   "source": "snd"
+  },
+  {
+   "name": "make-moving-fft",
+   "source": "snd"
+  },
+  {
+   "name": "make-moving-max",
+   "source": "snd"
+  },
+  {
+   "name": "make-moving-norm",
+   "source": "snd"
+  },
+  {
+   "name": "make-moving-pitch",
+   "source": "snd"
+  },
+  {
+   "name": "make-moving-scentroid",
+   "source": "snd"
+  },
+  {
+   "name": "make-moving-spectrum",
+   "source": "snd"
+  },
+  {
+   "name": "make-n1cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-nchoosekcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-ncos",
+   "source": "snd"
+  },
+  {
+   "name": "make-nkssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-noddcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-noddsin",
+   "source": "snd"
+  },
+  {
+   "name": "make-noddssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-noid",
+   "source": "snd"
+  },
+  {
+   "name": "make-notch",
+   "source": "snd"
+  },
+  {
+   "name": "make-nrcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-nrsin",
+   "source": "snd"
+  },
+  {
+   "name": "make-nrssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-nrxycos",
+   "source": "snd"
+  },
+  {
+   "name": "make-nrxysin",
+   "source": "snd"
+  },
+  {
+   "name": "make-nsin",
+   "source": "snd"
+  },
+  {
+   "name": "make-nsincos",
+   "source": "snd"
+  },
+  {
+   "name": "make-nssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-nxy1cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-nxy1sin",
+   "source": "snd"
+  },
+  {
+   "name": "make-nxycos",
+   "source": "snd"
+  },
+  {
+   "name": "make-nxysin",
+   "source": "snd"
+  },
+  {
+   "name": "make-one-pole",
+   "source": "snd"
+  },
+  {
+   "name": "make-one-pole-all-pass",
+   "source": "snd"
+  },
+  {
+   "name": "make-one-zero",
+   "source": "snd"
+  },
+  {
+   "name": "make-oscil",
+   "source": "snd"
+  },
+  {
+   "name": "make-oscil-bank",
+   "source": "snd"
+  },
+  {
+   "name": "make-phase-vocoder",
+   "source": "snd"
+  },
+  {
+   "name": "make-pink-noise",
+   "source": "snd"
+  },
+  {
+   "name": "make-pixmap",
+   "source": "snd"
+  },
+  {
+   "name": "make-player",
+   "source": "snd"
+  },
+  {
+   "name": "make-polar",
+   "source": "s7"
+  },
+  {
+   "name": "make-polyoid",
+   "source": "snd"
+  },
+  {
+   "name": "make-polyshape",
+   "source": "snd"
+  },
+  {
+   "name": "make-polywave",
+   "source": "snd"
+  },
+  {
+   "name": "make-pulse-train",
+   "source": "snd"
+  },
+  {
+   "name": "make-pulsed-env",
+   "source": "snd"
+  },
+  {
+   "name": "make-r2k!cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-r2k2cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-ramp",
+   "source": "snd"
+  },
+  {
+   "name": "make-rand",
+   "source": "snd"
+  },
+  {
+   "name": "make-rand-interp",
+   "source": "snd"
+  },
+  {
+   "name": "make-rcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-readin",
+   "source": "snd"
+  },
+  {
+   "name": "make-rectangular",
+   "source": "s7"
+  },
+  {
+   "name": "make-region",
+   "source": "snd"
+  },
+  {
+   "name": "make-region-sampler",
+   "source": "snd"
+  },
+  {
+   "name": "make-rk!cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-rk!ssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-rkcos",
+   "source": "snd"
+  },
+  {
+   "name": "make-rkoddssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-rksin",
+   "source": "snd"
+  },
+  {
+   "name": "make-rkssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-round-interp",
+   "source": "snd"
+  },
+  {
+   "name": "make-rssb",
+   "source": "snd"
+  },
+  {
+   "name": "make-rxycos",
+   "source": "snd"
+  },
+  {
+   "name": "make-rxyk!cos",
+   "source": "snd"
+  },
+  {
+   "name": "make-rxyk!sin",
+   "source": "snd"
+  },
+  {
+   "name": "make-rxysin",
+   "source": "snd"
+  },
+  {
+   "name": "make-sample->file",
+   "source": "snd"
+  },
+  {
+   "name": "make-sampler",
+   "source": "snd"
+  },
+  {
+   "name": "make-sawtooth-wave",
+   "source": "snd"
+  },
+  {
+   "name": "make-selection",
+   "source": "snd"
+  },
+  {
+   "name": "make-sinc-train",
+   "source": "snd"
+  },
+  {
+   "name": "make-snd->sample",
+   "source": "snd"
+  },
+  {
+   "name": "make-sound-box",
+   "source": "snd"
+  },
+  {
+   "name": "make-spencer-filter",
+   "source": "snd"
+  },
+  {
+   "name": "make-square-wave",
+   "source": "snd"
+  },
+  {
+   "name": "make-src",
+   "source": "snd"
+  },
+  {
+   "name": "make-ssb-am",
+   "source": "snd"
+  },
+  {
+   "name": "make-string",
+   "source": "s7"
+  },
+  {
+   "name": "make-table-lookup",
+   "source": "snd"
+  },
+  {
+   "name": "make-table-lookup-with-env",
+   "source": "snd"
+  },
+  {
+   "name": "make-tanhsin",
+   "source": "snd"
+  },
+  {
+   "name": "make-triangle-wave",
+   "source": "snd"
+  },
+  {
+   "name": "make-two-pole",
+   "source": "snd"
+  },
+  {
+   "name": "make-two-zero",
+   "source": "snd"
+  },
+  {
+   "name": "make-variable-display",
+   "source": "snd"
+  },
+  {
+   "name": "make-variable-graph",
+   "source": "snd"
+  },
+  {
+   "name": "make-vector",
+   "source": "snd"
+  },
+  {
+   "name": "make-wave-train",
+   "source": "snd"
+  },
+  {
+   "name": "make-wave-train-with-env",
+   "source": "snd"
+  },
+  {
+   "name": "make-weak-hash-table",
+   "source": "snd"
+  },
+  {
+   "name": "map",
+   "source": "s7"
+  },
+  {
+   "name": "map-chan",
+   "source": "snd-constant"
+  },
+  {
+   "name": "map-channel",
+   "source": "snd"
+  },
+  {
+   "name": "map-sound-files",
+   "source": "snd"
+  },
+  {
+   "name": "maracas",
+   "source": "snd"
+  },
+  {
+   "name": "mark->integer",
+   "source": "snd"
+  },
+  {
+   "name": "mark-click-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mark-click-info",
+   "source": "snd"
+  },
+  {
+   "name": "mark-color",
+   "source": "snd"
+  },
+  {
+   "name": "mark-context",
+   "source": "snd"
+  },
+  {
+   "name": "mark-drag-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mark-explode",
+   "source": "snd"
+  },
+  {
+   "name": "mark-home",
+   "source": "snd"
+  },
+  {
+   "name": "mark-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mark-loops",
+   "source": "snd"
+  },
+  {
+   "name": "mark-name",
+   "source": "snd"
+  },
+  {
+   "name": "mark-name->id",
+   "source": "snd"
+  },
+  {
+   "name": "mark-properties",
+   "source": "snd"
+  },
+  {
+   "name": "mark-property",
+   "source": "snd"
+  },
+  {
+   "name": "mark-sample",
+   "source": "snd"
+  },
+  {
+   "name": "mark-sync",
+   "source": "snd"
+  },
+  {
+   "name": "mark-sync-color",
+   "source": "snd"
+  },
+  {
+   "name": "mark-sync-max",
+   "source": "snd"
+  },
+  {
+   "name": "mark-tag-height",
+   "source": "snd"
+  },
+  {
+   "name": "mark-tag-width",
+   "source": "snd"
+  },
+  {
+   "name": "mark?",
+   "source": "snd"
+  },
+  {
+   "name": "marks",
+   "source": "snd"
+  },
+  {
+   "name": "match-sound-files",
+   "source": "snd"
+  },
+  {
+   "name": "max",
+   "source": "s7"
+  },
+  {
+   "name": "max-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "max-regions",
+   "source": "snd"
+  },
+  {
+   "name": "max-transform-peaks",
+   "source": "snd"
+  },
+  {
+   "name": "maxamp",
+   "source": "snd"
+  },
+  {
+   "name": "maxamp-position",
+   "source": "snd"
+  },
+  {
+   "name": "member",
+   "source": "s7"
+  },
+  {
+   "name": "memq",
+   "source": "s7"
+  },
+  {
+   "name": "memv",
+   "source": "s7"
+  },
+  {
+   "name": "menu-widgets",
+   "source": "snd"
+  },
+  {
+   "name": "min",
+   "source": "s7"
+  },
+  {
+   "name": "min-dB",
+   "source": "snd"
+  },
+  {
+   "name": "mix",
+   "source": "snd"
+  },
+  {
+   "name": "mix->float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "mix->integer",
+   "source": "snd"
+  },
+  {
+   "name": "mix-amp",
+   "source": "snd"
+  },
+  {
+   "name": "mix-amp-env",
+   "source": "snd"
+  },
+  {
+   "name": "mix-channel",
+   "source": "snd"
+  },
+  {
+   "name": "mix-click-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mix-click-info",
+   "source": "snd"
+  },
+  {
+   "name": "mix-click-sets-amp",
+   "source": "snd"
+  },
+  {
+   "name": "mix-color",
+   "source": "snd"
+  },
+  {
+   "name": "mix-dialog-mix",
+   "source": "snd"
+  },
+  {
+   "name": "mix-drag-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mix-file-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "mix-float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "mix-home",
+   "source": "snd"
+  },
+  {
+   "name": "mix-length",
+   "source": "snd"
+  },
+  {
+   "name": "mix-maxamp",
+   "source": "snd"
+  },
+  {
+   "name": "mix-name",
+   "source": "snd"
+  },
+  {
+   "name": "mix-name->id",
+   "source": "snd"
+  },
+  {
+   "name": "mix-position",
+   "source": "snd"
+  },
+  {
+   "name": "mix-properties",
+   "source": "snd"
+  },
+  {
+   "name": "mix-property",
+   "source": "snd"
+  },
+  {
+   "name": "mix-region",
+   "source": "snd"
+  },
+  {
+   "name": "mix-release-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mix-sampler?",
+   "source": "snd"
+  },
+  {
+   "name": "mix-selection",
+   "source": "snd"
+  },
+  {
+   "name": "mix-sound",
+   "source": "snd"
+  },
+  {
+   "name": "mix-speed",
+   "source": "snd"
+  },
+  {
+   "name": "mix-sync",
+   "source": "snd"
+  },
+  {
+   "name": "mix-sync-max",
+   "source": "snd"
+  },
+  {
+   "name": "mix-tag-height",
+   "source": "snd"
+  },
+  {
+   "name": "mix-tag-width",
+   "source": "snd"
+  },
+  {
+   "name": "mix-tag-y",
+   "source": "snd"
+  },
+  {
+   "name": "mix-vct",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mix-waveform-height",
+   "source": "snd"
+  },
+  {
+   "name": "mix?",
+   "source": "snd"
+  },
+  {
+   "name": "mixes",
+   "source": "snd"
+  },
+  {
+   "name": "mlt-sine-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "modulo",
+   "source": "s7"
+  },
+  {
+   "name": "mono->stereo",
+   "source": "snd"
+  },
+  {
+   "name": "moog-filter",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-click-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-drag-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-enter-graph-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-enter-label-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-enter-listener-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-enter-text-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-leave-graph-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-leave-label-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-leave-listener-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-leave-text-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mouse-press-hook",
+   "source": "snd"
+  },
+  {
+   "name": "move-locsig",
+   "source": "snd"
+  },
+  {
+   "name": "move-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "move-sound",
+   "source": "snd"
+  },
+  {
+   "name": "move-sound?",
+   "source": "snd"
+  },
+  {
+   "name": "move-syncd-marks",
+   "source": "snd"
+  },
+  {
+   "name": "moving-autocorrelation",
+   "source": "snd"
+  },
+  {
+   "name": "moving-autocorrelation?",
+   "source": "snd"
+  },
+  {
+   "name": "moving-average",
+   "source": "snd"
+  },
+  {
+   "name": "moving-average?",
+   "source": "snd"
+  },
+  {
+   "name": "moving-fft",
+   "source": "snd"
+  },
+  {
+   "name": "moving-fft?",
+   "source": "snd"
+  },
+  {
+   "name": "moving-length",
+   "source": "snd"
+  },
+  {
+   "name": "moving-max",
+   "source": "snd"
+  },
+  {
+   "name": "moving-max?",
+   "source": "snd"
+  },
+  {
+   "name": "moving-norm",
+   "source": "snd"
+  },
+  {
+   "name": "moving-norm?",
+   "source": "snd"
+  },
+  {
+   "name": "moving-pitch",
+   "source": "snd"
+  },
+  {
+   "name": "moving-pitch?",
+   "source": "snd"
+  },
+  {
+   "name": "moving-rms",
+   "source": "snd"
+  },
+  {
+   "name": "moving-scentroid",
+   "source": "snd"
+  },
+  {
+   "name": "moving-scentroid?",
+   "source": "snd"
+  },
+  {
+   "name": "moving-spectrum",
+   "source": "snd"
+  },
+  {
+   "name": "moving-spectrum?",
+   "source": "snd"
+  },
+  {
+   "name": "moving-sum",
+   "source": "snd"
+  },
+  {
+   "name": "mpg",
+   "source": "snd"
+  },
+  {
+   "name": "mus-aifc",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-aiff",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-alaw",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-alsa-buffer-size",
+   "source": "snd"
+  },
+  {
+   "name": "mus-alsa-buffers",
+   "source": "snd"
+  },
+  {
+   "name": "mus-alsa-capture-device",
+   "source": "snd"
+  },
+  {
+   "name": "mus-alsa-device",
+   "source": "snd"
+  },
+  {
+   "name": "mus-alsa-playback-device",
+   "source": "snd"
+  },
+  {
+   "name": "mus-alsa-squelch-warning",
+   "source": "snd"
+  },
+  {
+   "name": "mus-apply",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-array-print-length",
+   "source": "snd"
+  },
+  {
+   "name": "mus-b24int",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bdouble",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bdouble-unscaled",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bfloat",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bfloat-unscaled",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bicsf",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bint",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bintn",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bshort",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-byte",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-bytes-per-sample",
+   "source": "snd"
+  },
+  {
+   "name": "mus-caff",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-channel",
+   "source": "snd"
+  },
+  {
+   "name": "mus-channels",
+   "source": "snd"
+  },
+  {
+   "name": "mus-chebyshev-both-kinds",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-chebyshev-first-kind",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-chebyshev-second-kind",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-chebyshev-t-sum",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-chebyshev-tu-sum",
+   "source": "snd"
+  },
+  {
+   "name": "mus-chebyshev-u-sum",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-clipping",
+   "source": "snd"
+  },
+  {
+   "name": "mus-close",
+   "source": "snd"
+  },
+  {
+   "name": "mus-copy",
+   "source": "snd"
+  },
+  {
+   "name": "mus-data",
+   "source": "snd"
+  },
+  {
+   "name": "mus-describe",
+   "source": "snd"
+  },
+  {
+   "name": "mus-error-hook",
+   "source": "snd"
+  },
+  {
+   "name": "mus-error-type->string",
+   "source": "snd"
+  },
+  {
+   "name": "mus-expand-filename",
+   "source": "snd"
+  },
+  {
+   "name": "mus-feedback",
+   "source": "snd"
+  },
+  {
+   "name": "mus-feedforward",
+   "source": "snd"
+  },
+  {
+   "name": "mus-fft",
+   "source": "snd"
+  },
+  {
+   "name": "mus-file-buffer-size",
+   "source": "snd"
+  },
+  {
+   "name": "mus-file-clipping",
+   "source": "snd"
+  },
+  {
+   "name": "mus-file-mix",
+   "source": "snd"
+  },
+  {
+   "name": "mus-file-mix-with-envs",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-file-name",
+   "source": "snd"
+  },
+  {
+   "name": "mus-float-equal-fudge-factor",
+   "source": "snd"
+  },
+  {
+   "name": "mus-frequency",
+   "source": "snd"
+  },
+  {
+   "name": "mus-generator?",
+   "source": "snd"
+  },
+  {
+   "name": "mus-header-raw-defaults",
+   "source": "snd"
+  },
+  {
+   "name": "mus-header-type->string",
+   "source": "snd"
+  },
+  {
+   "name": "mus-header-type-name",
+   "source": "snd"
+  },
+  {
+   "name": "mus-header-writable",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-hop",
+   "source": "snd"
+  },
+  {
+   "name": "mus-increment",
+   "source": "snd"
+  },
+  {
+   "name": "mus-input?",
+   "source": "snd"
+  },
+  {
+   "name": "mus-interp-all-pass",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-interp-bezier",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-interp-hermite",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-interp-lagrange",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-interp-linear",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-interp-none",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-interp-sinusoidal",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-interp-type",
+   "source": "snd"
+  },
+  {
+   "name": "mus-interpolate",
+   "source": "snd"
+  },
+  {
+   "name": "mus-ircam",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-l24int",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-ldouble",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-ldouble-unscaled",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-length",
+   "source": "snd"
+  },
+  {
+   "name": "mus-lfloat",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-lfloat-unscaled",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-lint",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-lintn",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-location",
+   "source": "snd"
+  },
+  {
+   "name": "mus-lshort",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-max-malloc",
+   "source": "snd"
+  },
+  {
+   "name": "mus-max-table-size",
+   "source": "snd"
+  },
+  {
+   "name": "mus-mulaw",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-name",
+   "source": "snd"
+  },
+  {
+   "name": "mus-next",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-nist",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-offset",
+   "source": "snd"
+  },
+  {
+   "name": "mus-order",
+   "source": "snd"
+  },
+  {
+   "name": "mus-oss-set-buffers",
+   "source": "snd"
+  },
+  {
+   "name": "mus-out-format",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-output?",
+   "source": "snd"
+  },
+  {
+   "name": "mus-phase",
+   "source": "snd"
+  },
+  {
+   "name": "mus-ramp",
+   "source": "snd"
+  },
+  {
+   "name": "mus-rand-seed",
+   "source": "snd"
+  },
+  {
+   "name": "mus-random",
+   "source": "snd"
+  },
+  {
+   "name": "mus-raw",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-reset",
+   "source": "snd"
+  },
+  {
+   "name": "mus-rf64",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-riff",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-run",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sample-type->string",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sample-type-name",
+   "source": "snd"
+  },
+  {
+   "name": "mus-scaler",
+   "source": "snd"
+  },
+  {
+   "name": "mus-set-formant-frequency",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-set-formant-radius-and-frequency",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-sound-chans",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-comment",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-data-location",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-datum-size",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-duration",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-forget",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-framples",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-header-type",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-length",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-loop-info",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-mark-info",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-maxamp",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-maxamp-exists?",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-path",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-preload",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-prune",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-report-cache",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-sample-type",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-samples",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-srate",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-type-specifier",
+   "source": "snd"
+  },
+  {
+   "name": "mus-sound-write-date",
+   "source": "snd"
+  },
+  {
+   "name": "mus-soundfont",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-srate",
+   "source": "snd"
+  },
+  {
+   "name": "mus-svx",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-type",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-ubshort",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-ubyte",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-ulshort",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-unknown-header",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-unknown-sample",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-voc",
+   "source": "snd-constant"
+  },
+  {
+   "name": "mus-width",
+   "source": "snd"
+  },
+  {
+   "name": "mus-xcoeff",
+   "source": "snd"
+  },
+  {
+   "name": "mus-xcoeffs",
+   "source": "snd"
+  },
+  {
+   "name": "mus-ycoeff",
+   "source": "snd"
+  },
+  {
+   "name": "mus-ycoeffs",
+   "source": "snd"
+  },
+  {
+   "name": "n1cos",
+   "source": "snd"
+  },
+  {
+   "name": "n1cos?",
+   "source": "snd"
+  },
+  {
+   "name": "name-click-hook",
+   "source": "snd"
+  },
+  {
+   "name": "nan",
+   "source": "s7"
+  },
+  {
+   "name": "nan-payload",
+   "source": "s7"
+  },
+  {
+   "name": "nan?",
+   "source": "s7"
+  },
+  {
+   "name": "nchoosekcos",
+   "source": "snd"
+  },
+  {
+   "name": "nchoosekcos?",
+   "source": "snd"
+  },
+  {
+   "name": "ncos",
+   "source": "snd"
+  },
+  {
+   "name": "ncos2?",
+   "source": "snd"
+  },
+  {
+   "name": "ncos4?",
+   "source": "snd"
+  },
+  {
+   "name": "ncos?",
+   "source": "snd"
+  },
+  {
+   "name": "negative?",
+   "source": "s7"
+  },
+  {
+   "name": "new-sound",
+   "source": "snd"
+  },
+  {
+   "name": "new-sound-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "new-sound-hook",
+   "source": "snd"
+  },
+  {
+   "name": "new-widget-hook",
+   "source": "snd"
+  },
+  {
+   "name": "newline",
+   "source": "s7"
+  },
+  {
+   "name": "next-sample",
+   "source": "snd"
+  },
+  {
+   "name": "nkssb",
+   "source": "snd"
+  },
+  {
+   "name": "nkssb-interp",
+   "source": "snd"
+  },
+  {
+   "name": "nkssb?",
+   "source": "snd"
+  },
+  {
+   "name": "noddcos",
+   "source": "snd"
+  },
+  {
+   "name": "noddcos?",
+   "source": "snd"
+  },
+  {
+   "name": "noddsin",
+   "source": "snd"
+  },
+  {
+   "name": "noddsin?",
+   "source": "snd"
+  },
+  {
+   "name": "noddssb",
+   "source": "snd"
+  },
+  {
+   "name": "noddssb?",
+   "source": "snd"
+  },
+  {
+   "name": "noid",
+   "source": "snd"
+  },
+  {
+   "name": "normalize-by-channel",
+   "source": "snd-constant"
+  },
+  {
+   "name": "normalize-by-sound",
+   "source": "snd-constant"
+  },
+  {
+   "name": "normalize-channel",
+   "source": "snd"
+  },
+  {
+   "name": "normalize-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "normalize-globally",
+   "source": "snd-constant"
+  },
+  {
+   "name": "normalize-partials",
+   "source": "snd"
+  },
+  {
+   "name": "normalize-sound",
+   "source": "snd"
+  },
+  {
+   "name": "normalized-mix",
+   "source": "snd"
+  },
+  {
+   "name": "not",
+   "source": "s7"
+  },
+  {
+   "name": "notch",
+   "source": "snd"
+  },
+  {
+   "name": "notch-channel",
+   "source": "snd"
+  },
+  {
+   "name": "notch-selection",
+   "source": "snd"
+  },
+  {
+   "name": "notch-sound",
+   "source": "snd"
+  },
+  {
+   "name": "notch?",
+   "source": "snd"
+  },
+  {
+   "name": "npcos?",
+   "source": "snd"
+  },
+  {
+   "name": "nrcos",
+   "source": "snd"
+  },
+  {
+   "name": "nrcos?",
+   "source": "snd"
+  },
+  {
+   "name": "nrev",
+   "source": "snd"
+  },
+  {
+   "name": "nrsin",
+   "source": "snd"
+  },
+  {
+   "name": "nrsin?",
+   "source": "snd"
+  },
+  {
+   "name": "nrssb",
+   "source": "snd"
+  },
+  {
+   "name": "nrssb-interp",
+   "source": "snd"
+  },
+  {
+   "name": "nrssb?",
+   "source": "snd"
+  },
+  {
+   "name": "nrxycos",
+   "source": "snd"
+  },
+  {
+   "name": "nrxycos?",
+   "source": "snd"
+  },
+  {
+   "name": "nrxysin",
+   "source": "snd"
+  },
+  {
+   "name": "nrxysin?",
+   "source": "snd"
+  },
+  {
+   "name": "nsin",
+   "source": "snd"
+  },
+  {
+   "name": "nsin?",
+   "source": "snd"
+  },
+  {
+   "name": "nsincos",
+   "source": "snd"
+  },
+  {
+   "name": "nsincos?",
+   "source": "snd"
+  },
+  {
+   "name": "nssb",
+   "source": "snd"
+  },
+  {
+   "name": "nssb?",
+   "source": "snd"
+  },
+  {
+   "name": "null?",
+   "source": "s7"
+  },
+  {
+   "name": "number->string",
+   "source": "s7"
+  },
+  {
+   "name": "number?",
+   "source": "s7"
+  },
+  {
+   "name": "numerator",
+   "source": "s7"
+  },
+  {
+   "name": "nxy1cos",
+   "source": "snd"
+  },
+  {
+   "name": "nxy1cos?",
+   "source": "snd"
+  },
+  {
+   "name": "nxy1sin",
+   "source": "snd"
+  },
+  {
+   "name": "nxy1sin?",
+   "source": "snd"
+  },
+  {
+   "name": "nxycos",
+   "source": "snd"
+  },
+  {
+   "name": "nxycos?",
+   "source": "snd"
+  },
+  {
+   "name": "nxysin",
+   "source": "snd"
+  },
+  {
+   "name": "nxysin?",
+   "source": "snd"
+  },
+  {
+   "name": "object->let",
+   "source": "snd"
+  },
+  {
+   "name": "object->string",
+   "source": "snd"
+  },
+  {
+   "name": "odd-multiple",
+   "source": "snd"
+  },
+  {
+   "name": "odd-weight",
+   "source": "snd"
+  },
+  {
+   "name": "odd?",
+   "source": "s7"
+  },
+  {
+   "name": "offset-channel",
+   "source": "snd"
+  },
+  {
+   "name": "offset-sound",
+   "source": "snd"
+  },
+  {
+   "name": "one-pole",
+   "source": "snd"
+  },
+  {
+   "name": "one-pole-all-pass",
+   "source": "snd"
+  },
+  {
+   "name": "one-pole-all-pass?",
+   "source": "snd"
+  },
+  {
+   "name": "one-pole?",
+   "source": "snd"
+  },
+  {
+   "name": "one-zero",
+   "source": "snd"
+  },
+  {
+   "name": "one-zero?",
+   "source": "snd"
+  },
+  {
+   "name": "op-stack?",
+   "source": "s7"
+  },
+  {
+   "name": "open-file-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "open-file-dialog-directory",
+   "source": "snd"
+  },
+  {
+   "name": "open-hook",
+   "source": "snd"
+  },
+  {
+   "name": "open-input-file",
+   "source": "s7"
+  },
+  {
+   "name": "open-input-function",
+   "source": "snd"
+  },
+  {
+   "name": "open-input-string",
+   "source": "s7"
+  },
+  {
+   "name": "open-next-file-in-directory",
+   "source": "snd"
+  },
+  {
+   "name": "open-output-file",
+   "source": "s7"
+  },
+  {
+   "name": "open-output-function",
+   "source": "snd"
+  },
+  {
+   "name": "open-output-string",
+   "source": "s7"
+  },
+  {
+   "name": "open-raw-sound",
+   "source": "snd"
+  },
+  {
+   "name": "open-raw-sound-hook",
+   "source": "snd"
+  },
+  {
+   "name": "open-sound",
+   "source": "snd"
+  },
+  {
+   "name": "openlet",
+   "source": "snd"
+  },
+  {
+   "name": "openlet?",
+   "source": "snd"
+  },
+  {
+   "name": "orientation-hook",
+   "source": "snd"
+  },
+  {
+   "name": "oscil",
+   "source": "snd"
+  },
+  {
+   "name": "oscil-bank",
+   "source": "snd"
+  },
+  {
+   "name": "oscil-bank?",
+   "source": "snd"
+  },
+  {
+   "name": "oscil?",
+   "source": "snd"
+  },
+  {
+   "name": "out-any",
+   "source": "snd"
+  },
+  {
+   "name": "out-bank",
+   "source": "snd"
+  },
+  {
+   "name": "outa",
+   "source": "snd"
+  },
+  {
+   "name": "outb",
+   "source": "snd-constant"
+  },
+  {
+   "name": "outc",
+   "source": "snd-constant"
+  },
+  {
+   "name": "outd",
+   "source": "snd-constant"
+  },
+  {
+   "name": "outlet",
+   "source": "snd"
+  },
+  {
+   "name": "output-comment-hook",
+   "source": "snd"
+  },
+  {
+   "name": "output-port?",
+   "source": "s7"
+  },
+  {
+   "name": "overlay-rms-env",
+   "source": "snd"
+  },
+  {
+   "name": "owlet",
+   "source": "snd"
+  },
+  {
+   "name": "pad-channel",
+   "source": "snd"
+  },
+  {
+   "name": "pad-marks",
+   "source": "snd"
+  },
+  {
+   "name": "pad-sound",
+   "source": "snd"
+  },
+  {
+   "name": "pair-filename",
+   "source": "snd"
+  },
+  {
+   "name": "pair-line-number",
+   "source": "snd"
+  },
+  {
+   "name": "pair?",
+   "source": "s7"
+  },
+  {
+   "name": "pan-mix",
+   "source": "snd"
+  },
+  {
+   "name": "pan-mix-float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "papoulis-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "partials->polynomial",
+   "source": "snd"
+  },
+  {
+   "name": "partials->wave",
+   "source": "snd"
+  },
+  {
+   "name": "parzen-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "pausing",
+   "source": "snd"
+  },
+  {
+   "name": "peak-env-dir",
+   "source": "snd"
+  },
+  {
+   "name": "peaks",
+   "source": "snd"
+  },
+  {
+   "name": "peaks-font",
+   "source": "snd"
+  },
+  {
+   "name": "peek-char",
+   "source": "s7"
+  },
+  {
+   "name": "phase-partials->wave",
+   "source": "snd"
+  },
+  {
+   "name": "phase-vocoder",
+   "source": "snd"
+  },
+  {
+   "name": "phase-vocoder-amp-increments",
+   "source": "snd-constant"
+  },
+  {
+   "name": "phase-vocoder-amps",
+   "source": "snd-constant"
+  },
+  {
+   "name": "phase-vocoder-freqs",
+   "source": "snd-constant"
+  },
+  {
+   "name": "phase-vocoder-phase-increments",
+   "source": "snd-constant"
+  },
+  {
+   "name": "phase-vocoder-phases",
+   "source": "snd-constant"
+  },
+  {
+   "name": "phase-vocoder?",
+   "source": "snd"
+  },
+  {
+   "name": "pi",
+   "source": "s7"
+  },
+  {
+   "name": "pink-noise",
+   "source": "snd"
+  },
+  {
+   "name": "pink-noise?",
+   "source": "snd"
+  },
+  {
+   "name": "pins",
+   "source": "snd"
+  },
+  {
+   "name": "place-sound",
+   "source": "snd"
+  },
+  {
+   "name": "play",
+   "source": "snd"
+  },
+  {
+   "name": "play-arrow-size",
+   "source": "snd"
+  },
+  {
+   "name": "play-between-marks",
+   "source": "snd"
+  },
+  {
+   "name": "play-hook",
+   "source": "snd"
+  },
+  {
+   "name": "play-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "play-often",
+   "source": "snd"
+  },
+  {
+   "name": "play-region-forever",
+   "source": "snd"
+  },
+  {
+   "name": "play-sine",
+   "source": "snd"
+  },
+  {
+   "name": "play-sines",
+   "source": "snd"
+  },
+  {
+   "name": "play-syncd-marks",
+   "source": "snd"
+  },
+  {
+   "name": "play-until-c-g",
+   "source": "snd"
+  },
+  {
+   "name": "play-with-envs",
+   "source": "snd"
+  },
+  {
+   "name": "player-home",
+   "source": "snd"
+  },
+  {
+   "name": "player?",
+   "source": "snd"
+  },
+  {
+   "name": "players",
+   "source": "snd"
+  },
+  {
+   "name": "playing",
+   "source": "snd"
+  },
+  {
+   "name": "pluck",
+   "source": "snd"
+  },
+  {
+   "name": "poisson-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "polar->rectangular",
+   "source": "snd"
+  },
+  {
+   "name": "polynomial",
+   "source": "snd"
+  },
+  {
+   "name": "polyoid",
+   "source": "snd"
+  },
+  {
+   "name": "polyoid-env",
+   "source": "snd"
+  },
+  {
+   "name": "polyoid?",
+   "source": "snd"
+  },
+  {
+   "name": "polyshape",
+   "source": "snd"
+  },
+  {
+   "name": "polyshape?",
+   "source": "snd"
+  },
+  {
+   "name": "polywave",
+   "source": "snd"
+  },
+  {
+   "name": "polywave?",
+   "source": "snd"
+  },
+  {
+   "name": "port-closed?",
+   "source": "s7"
+  },
+  {
+   "name": "port-file",
+   "source": "snd"
+  },
+  {
+   "name": "port-filename",
+   "source": "snd"
+  },
+  {
+   "name": "port-line-number",
+   "source": "snd"
+  },
+  {
+   "name": "port-position",
+   "source": "snd"
+  },
+  {
+   "name": "port-string",
+   "source": "snd"
+  },
+  {
+   "name": "position->x",
+   "source": "snd"
+  },
+  {
+   "name": "position->y",
+   "source": "snd"
+  },
+  {
+   "name": "position-color",
+   "source": "snd"
+  },
+  {
+   "name": "positive?",
+   "source": "s7"
+  },
+  {
+   "name": "power-env",
+   "source": "snd"
+  },
+  {
+   "name": "pqw",
+   "source": "snd"
+  },
+  {
+   "name": "pqw-vox",
+   "source": "snd"
+  },
+  {
+   "name": "preferences-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "previous-sample",
+   "source": "snd"
+  },
+  {
+   "name": "print-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "print-length",
+   "source": "snd"
+  },
+  {
+   "name": "procedure-arglist",
+   "source": "snd"
+  },
+  {
+   "name": "procedure-source",
+   "source": "snd"
+  },
+  {
+   "name": "procedure?",
+   "source": "s7"
+  },
+  {
+   "name": "profile-in",
+   "source": "s7"
+  },
+  {
+   "name": "progress-report",
+   "source": "snd"
+  },
+  {
+   "name": "proper-list?",
+   "source": "s7"
+  },
+  {
+   "name": "provide",
+   "source": "s7"
+  },
+  {
+   "name": "provided?",
+   "source": "s7"
+  },
+  {
+   "name": "pulse-train",
+   "source": "snd"
+  },
+  {
+   "name": "pulse-train?",
+   "source": "snd"
+  },
+  {
+   "name": "pulsed-env",
+   "source": "snd"
+  },
+  {
+   "name": "pulsed-env?",
+   "source": "snd"
+  },
+  {
+   "name": "quotient",
+   "source": "s7"
+  },
+  {
+   "name": "r2k!cos",
+   "source": "snd"
+  },
+  {
+   "name": "r2k!cos?",
+   "source": "snd"
+  },
+  {
+   "name": "r2k2cos",
+   "source": "snd"
+  },
+  {
+   "name": "r2k2cos?",
+   "source": "snd"
+  },
+  {
+   "name": "radians->degrees",
+   "source": "snd"
+  },
+  {
+   "name": "radians->hz",
+   "source": "snd"
+  },
+  {
+   "name": "ramp-channel",
+   "source": "snd"
+  },
+  {
+   "name": "rand",
+   "source": "snd"
+  },
+  {
+   "name": "rand-interp",
+   "source": "snd"
+  },
+  {
+   "name": "rand-interp?",
+   "source": "snd"
+  },
+  {
+   "name": "rand?",
+   "source": "snd"
+  },
+  {
+   "name": "random",
+   "source": "snd"
+  },
+  {
+   "name": "random-state",
+   "source": "snd"
+  },
+  {
+   "name": "random-state->list",
+   "source": "s7"
+  },
+  {
+   "name": "random-state?",
+   "source": "snd"
+  },
+  {
+   "name": "rational?",
+   "source": "s7"
+  },
+  {
+   "name": "rationalize",
+   "source": "s7"
+  },
+  {
+   "name": "rcos",
+   "source": "snd"
+  },
+  {
+   "name": "rcos?",
+   "source": "snd"
+  },
+  {
+   "name": "read",
+   "source": "s7"
+  },
+  {
+   "name": "read-byte",
+   "source": "s7"
+  },
+  {
+   "name": "read-bytes",
+   "source": "s7"
+  },
+  {
+   "name": "read-char",
+   "source": "s7"
+  },
+  {
+   "name": "read-hook",
+   "source": "snd"
+  },
+  {
+   "name": "read-line",
+   "source": "s7"
+  },
+  {
+   "name": "read-mix-sample",
+   "source": "snd"
+  },
+  {
+   "name": "read-only",
+   "source": "snd"
+  },
+  {
+   "name": "read-region-sample",
+   "source": "snd"
+  },
+  {
+   "name": "read-sample",
+   "source": "snd"
+  },
+  {
+   "name": "read-sample-with-direction",
+   "source": "snd"
+  },
+  {
+   "name": "read-string",
+   "source": "s7"
+  },
+  {
+   "name": "reader-cond",
+   "source": "snd"
+  },
+  {
+   "name": "readin",
+   "source": "snd"
+  },
+  {
+   "name": "readin?",
+   "source": "snd"
+  },
+  {
+   "name": "real-part",
+   "source": "s7"
+  },
+  {
+   "name": "real?",
+   "source": "s7"
+  },
+  {
+   "name": "rectangular->magnitudes",
+   "source": "snd"
+  },
+  {
+   "name": "rectangular->polar",
+   "source": "snd"
+  },
+  {
+   "name": "rectangular-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "redo",
+   "source": "snd"
+  },
+  {
+   "name": "redo-edit",
+   "source": "snd-constant"
+  },
+  {
+   "name": "region->float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "region->integer",
+   "source": "snd"
+  },
+  {
+   "name": "region->vct",
+   "source": "snd-constant"
+  },
+  {
+   "name": "region-chans",
+   "source": "snd"
+  },
+  {
+   "name": "region-framples",
+   "source": "snd"
+  },
+  {
+   "name": "region-graph-style",
+   "source": "snd"
+  },
+  {
+   "name": "region-home",
+   "source": "snd"
+  },
+  {
+   "name": "region-maxamp",
+   "source": "snd"
+  },
+  {
+   "name": "region-maxamp-position",
+   "source": "snd"
+  },
+  {
+   "name": "region-play-list",
+   "source": "snd"
+  },
+  {
+   "name": "region-position",
+   "source": "snd"
+  },
+  {
+   "name": "region-rms",
+   "source": "snd"
+  },
+  {
+   "name": "region-sample",
+   "source": "snd"
+  },
+  {
+   "name": "region-sampler?",
+   "source": "snd"
+  },
+  {
+   "name": "region-srate",
+   "source": "snd"
+  },
+  {
+   "name": "region?",
+   "source": "snd"
+  },
+  {
+   "name": "regions",
+   "source": "snd"
+  },
+  {
+   "name": "remainder",
+   "source": "s7"
+  },
+  {
+   "name": "remember-sound-state",
+   "source": "snd"
+  },
+  {
+   "name": "remove-clicks",
+   "source": "snd"
+  },
+  {
+   "name": "remove-from-menu",
+   "source": "snd"
+  },
+  {
+   "name": "replace-with-selection",
+   "source": "snd"
+  },
+  {
+   "name": "report-mark-names",
+   "source": "snd"
+  },
+  {
+   "name": "require",
+   "source": "snd"
+  },
+  {
+   "name": "reset-all-hooks",
+   "source": "snd"
+  },
+  {
+   "name": "reset-controls",
+   "source": "snd"
+  },
+  {
+   "name": "reset-listener-cursor",
+   "source": "snd"
+  },
+  {
+   "name": "reson",
+   "source": "snd"
+  },
+  {
+   "name": "restore-controls",
+   "source": "snd"
+  },
+  {
+   "name": "restore-region",
+   "source": "snd-constant"
+  },
+  {
+   "name": "reverb-control-decay",
+   "source": "snd"
+  },
+  {
+   "name": "reverb-control-feedback",
+   "source": "snd"
+  },
+  {
+   "name": "reverb-control-length",
+   "source": "snd"
+  },
+  {
+   "name": "reverb-control-length-bounds",
+   "source": "snd"
+  },
+  {
+   "name": "reverb-control-lowpass",
+   "source": "snd"
+  },
+  {
+   "name": "reverb-control-scale",
+   "source": "snd"
+  },
+  {
+   "name": "reverb-control-scale-bounds",
+   "source": "snd"
+  },
+  {
+   "name": "reverb-control?",
+   "source": "snd"
+  },
+  {
+   "name": "reverse",
+   "source": "s7"
+  },
+  {
+   "name": "reverse!",
+   "source": "snd"
+  },
+  {
+   "name": "reverse-by-blocks",
+   "source": "snd"
+  },
+  {
+   "name": "reverse-channel",
+   "source": "snd"
+  },
+  {
+   "name": "reverse-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "reverse-selection",
+   "source": "snd"
+  },
+  {
+   "name": "reverse-sound",
+   "source": "snd"
+  },
+  {
+   "name": "revert-sound",
+   "source": "snd"
+  },
+  {
+   "name": "riemann-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "right-sample",
+   "source": "snd"
+  },
+  {
+   "name": "ring-modulate",
+   "source": "snd"
+  },
+  {
+   "name": "rk!cos",
+   "source": "snd"
+  },
+  {
+   "name": "rk!cos?",
+   "source": "snd"
+  },
+  {
+   "name": "rk!ssb",
+   "source": "snd"
+  },
+  {
+   "name": "rk!ssb?",
+   "source": "snd"
+  },
+  {
+   "name": "rkcos",
+   "source": "snd"
+  },
+  {
+   "name": "rkcos?",
+   "source": "snd"
+  },
+  {
+   "name": "rkoddssb",
+   "source": "snd"
+  },
+  {
+   "name": "rkoddssb?",
+   "source": "snd"
+  },
+  {
+   "name": "rksin",
+   "source": "snd"
+  },
+  {
+   "name": "rksin?",
+   "source": "snd"
+  },
+  {
+   "name": "rkssb",
+   "source": "snd"
+  },
+  {
+   "name": "rkssb?",
+   "source": "snd"
+  },
+  {
+   "name": "rms",
+   "source": "snd"
+  },
+  {
+   "name": "rms-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "rootlet",
+   "source": "snd"
+  },
+  {
+   "name": "round",
+   "source": "s7"
+  },
+  {
+   "name": "round-interp",
+   "source": "snd"
+  },
+  {
+   "name": "round-interp?",
+   "source": "snd"
+  },
+  {
+   "name": "rssb",
+   "source": "snd"
+  },
+  {
+   "name": "rssb-interp",
+   "source": "snd"
+  },
+  {
+   "name": "rssb?",
+   "source": "snd"
+  },
+  {
+   "name": "rubber-sound",
+   "source": "snd"
+  },
+  {
+   "name": "rv2-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "rv3-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "rv4-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "rxycos",
+   "source": "snd"
+  },
+  {
+   "name": "rxycos?",
+   "source": "snd"
+  },
+  {
+   "name": "rxyk!cos",
+   "source": "snd"
+  },
+  {
+   "name": "rxyk!cos?",
+   "source": "snd"
+  },
+  {
+   "name": "rxyk!sin",
+   "source": "snd"
+  },
+  {
+   "name": "rxyk!sin?",
+   "source": "snd"
+  },
+  {
+   "name": "rxysin",
+   "source": "snd"
+  },
+  {
+   "name": "rxysin?",
+   "source": "snd"
+  },
+  {
+   "name": "samaraki-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "sample",
+   "source": "snd"
+  },
+  {
+   "name": "sample->file",
+   "source": "snd"
+  },
+  {
+   "name": "sample->file+",
+   "source": "snd-constant"
+  },
+  {
+   "name": "sample->file?",
+   "source": "snd"
+  },
+  {
+   "name": "sample-type",
+   "source": "snd"
+  },
+  {
+   "name": "sampler-at-end?",
+   "source": "snd"
+  },
+  {
+   "name": "sampler-home",
+   "source": "snd"
+  },
+  {
+   "name": "sampler-position",
+   "source": "snd"
+  },
+  {
+   "name": "sampler?",
+   "source": "snd"
+  },
+  {
+   "name": "samples",
+   "source": "snd"
+  },
+  {
+   "name": "samples->seconds",
+   "source": "snd"
+  },
+  {
+   "name": "sash-color",
+   "source": "snd"
+  },
+  {
+   "name": "save-as-dialog-auto-comment",
+   "source": "snd"
+  },
+  {
+   "name": "save-as-dialog-src",
+   "source": "snd"
+  },
+  {
+   "name": "save-controls",
+   "source": "snd"
+  },
+  {
+   "name": "save-dir",
+   "source": "snd"
+  },
+  {
+   "name": "save-edit-history",
+   "source": "snd"
+  },
+  {
+   "name": "save-envelopes",
+   "source": "snd"
+  },
+  {
+   "name": "save-hook",
+   "source": "snd"
+  },
+  {
+   "name": "save-listener",
+   "source": "snd"
+  },
+  {
+   "name": "save-mark-properties",
+   "source": "snd"
+  },
+  {
+   "name": "save-marks",
+   "source": "snd"
+  },
+  {
+   "name": "save-mix",
+   "source": "snd"
+  },
+  {
+   "name": "save-region",
+   "source": "snd"
+  },
+  {
+   "name": "save-region-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "save-selection",
+   "source": "snd"
+  },
+  {
+   "name": "save-selection-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "save-sound",
+   "source": "snd"
+  },
+  {
+   "name": "save-sound-as",
+   "source": "snd"
+  },
+  {
+   "name": "save-sound-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "save-state",
+   "source": "snd"
+  },
+  {
+   "name": "save-state-file",
+   "source": "snd"
+  },
+  {
+   "name": "save-state-hook",
+   "source": "snd"
+  },
+  {
+   "name": "savitzky-golay-filter",
+   "source": "snd"
+  },
+  {
+   "name": "sawtooth-wave",
+   "source": "snd"
+  },
+  {
+   "name": "sawtooth-wave?",
+   "source": "snd"
+  },
+  {
+   "name": "scale-by",
+   "source": "snd"
+  },
+  {
+   "name": "scale-channel",
+   "source": "snd"
+  },
+  {
+   "name": "scale-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "scale-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "scale-selection-by",
+   "source": "snd"
+  },
+  {
+   "name": "scale-selection-to",
+   "source": "snd"
+  },
+  {
+   "name": "scale-sound",
+   "source": "snd"
+  },
+  {
+   "name": "scale-tempo",
+   "source": "snd"
+  },
+  {
+   "name": "scale-to",
+   "source": "snd"
+  },
+  {
+   "name": "scan-chan",
+   "source": "snd-constant"
+  },
+  {
+   "name": "scan-channel",
+   "source": "snd"
+  },
+  {
+   "name": "scentroid",
+   "source": "snd"
+  },
+  {
+   "name": "scratch",
+   "source": "snd"
+  },
+  {
+   "name": "script-arg",
+   "source": "snd"
+  },
+  {
+   "name": "script-args",
+   "source": "snd"
+  },
+  {
+   "name": "search-for-click",
+   "source": "snd"
+  },
+  {
+   "name": "search-procedure",
+   "source": "snd"
+  },
+  {
+   "name": "seconds->samples",
+   "source": "snd"
+  },
+  {
+   "name": "select-all",
+   "source": "snd"
+  },
+  {
+   "name": "select-channel",
+   "source": "snd"
+  },
+  {
+   "name": "select-channel-hook",
+   "source": "snd"
+  },
+  {
+   "name": "select-sound",
+   "source": "snd"
+  },
+  {
+   "name": "select-sound-hook",
+   "source": "snd"
+  },
+  {
+   "name": "selected-channel",
+   "source": "snd"
+  },
+  {
+   "name": "selected-data-color",
+   "source": "snd"
+  },
+  {
+   "name": "selected-graph-color",
+   "source": "snd"
+  },
+  {
+   "name": "selected-sound",
+   "source": "snd"
+  },
+  {
+   "name": "selection",
+   "source": "snd"
+  },
+  {
+   "name": "selection->mix",
+   "source": "snd"
+  },
+  {
+   "name": "selection-chans",
+   "source": "snd"
+  },
+  {
+   "name": "selection-color",
+   "source": "snd"
+  },
+  {
+   "name": "selection-context",
+   "source": "snd"
+  },
+  {
+   "name": "selection-creates-region",
+   "source": "snd"
+  },
+  {
+   "name": "selection-framples",
+   "source": "snd"
+  },
+  {
+   "name": "selection-maxamp",
+   "source": "snd"
+  },
+  {
+   "name": "selection-maxamp-position",
+   "source": "snd"
+  },
+  {
+   "name": "selection-member?",
+   "source": "snd"
+  },
+  {
+   "name": "selection-members",
+   "source": "snd"
+  },
+  {
+   "name": "selection-position",
+   "source": "snd"
+  },
+  {
+   "name": "selection-rms",
+   "source": "snd"
+  },
+  {
+   "name": "selection-srate",
+   "source": "snd"
+  },
+  {
+   "name": "selection?",
+   "source": "snd"
+  },
+  {
+   "name": "sequence?",
+   "source": "s7"
+  },
+  {
+   "name": "set-car!",
+   "source": "s7"
+  },
+  {
+   "name": "set-cdr!",
+   "source": "s7"
+  },
+  {
+   "name": "set-current-error-port",
+   "source": "s7"
+  },
+  {
+   "name": "set-current-input-port",
+   "source": "s7"
+  },
+  {
+   "name": "set-current-output-port",
+   "source": "s7"
+  },
+  {
+   "name": "set-samples",
+   "source": "snd"
+  },
+  {
+   "name": "setter",
+   "source": "snd"
+  },
+  {
+   "name": "short-file-name",
+   "source": "snd"
+  },
+  {
+   "name": "show-all-axes",
+   "source": "snd-constant"
+  },
+  {
+   "name": "show-all-axes-unlabelled",
+   "source": "snd-constant"
+  },
+  {
+   "name": "show-axes",
+   "source": "snd"
+  },
+  {
+   "name": "show-bare-x-axis",
+   "source": "snd-constant"
+  },
+  {
+   "name": "show-controls",
+   "source": "snd"
+  },
+  {
+   "name": "show-disk-space",
+   "source": "snd"
+  },
+  {
+   "name": "show-full-duration",
+   "source": "snd"
+  },
+  {
+   "name": "show-full-range",
+   "source": "snd"
+  },
+  {
+   "name": "show-grid",
+   "source": "snd"
+  },
+  {
+   "name": "show-indices",
+   "source": "snd"
+  },
+  {
+   "name": "show-listener",
+   "source": "snd"
+  },
+  {
+   "name": "show-marks",
+   "source": "snd"
+  },
+  {
+   "name": "show-mix-waveforms",
+   "source": "snd"
+  },
+  {
+   "name": "show-no-axes",
+   "source": "snd-constant"
+  },
+  {
+   "name": "show-op-stack",
+   "source": "s7"
+  },
+  {
+   "name": "show-selection",
+   "source": "snd"
+  },
+  {
+   "name": "show-selection-transform",
+   "source": "snd"
+  },
+  {
+   "name": "show-sonogram-cursor",
+   "source": "snd"
+  },
+  {
+   "name": "show-stack",
+   "source": "s7"
+  },
+  {
+   "name": "show-transform-peaks",
+   "source": "snd"
+  },
+  {
+   "name": "show-widget",
+   "source": "snd"
+  },
+  {
+   "name": "show-x-axis",
+   "source": "snd-constant"
+  },
+  {
+   "name": "show-x-axis-unlabelled",
+   "source": "snd-constant"
+  },
+  {
+   "name": "show-y-zero",
+   "source": "snd"
+  },
+  {
+   "name": "signature",
+   "source": "snd"
+  },
+  {
+   "name": "silence-all-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "silence-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "sin",
+   "source": "s7"
+  },
+  {
+   "name": "sinc-train",
+   "source": "snd"
+  },
+  {
+   "name": "sinc-train?",
+   "source": "snd"
+  },
+  {
+   "name": "sinc-width",
+   "source": "snd"
+  },
+  {
+   "name": "sinc-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "sine-env-channel",
+   "source": "snd"
+  },
+  {
+   "name": "sine-ramp",
+   "source": "snd"
+  },
+  {
+   "name": "singer",
+   "source": "snd"
+  },
+  {
+   "name": "sinh",
+   "source": "s7"
+  },
+  {
+   "name": "smooth-channel",
+   "source": "snd"
+  },
+  {
+   "name": "smooth-selection",
+   "source": "snd"
+  },
+  {
+   "name": "smooth-sound",
+   "source": "snd"
+  },
+  {
+   "name": "snap-mark-to-beat",
+   "source": "snd"
+  },
+  {
+   "name": "snap-marks",
+   "source": "snd"
+  },
+  {
+   "name": "snap-mix-to-beat",
+   "source": "snd"
+  },
+  {
+   "name": "snd->sample",
+   "source": "snd"
+  },
+  {
+   "name": "snd->sample?",
+   "source": "snd"
+  },
+  {
+   "name": "snd-color",
+   "source": "snd"
+  },
+  {
+   "name": "snd-error",
+   "source": "snd"
+  },
+  {
+   "name": "snd-error-hook",
+   "source": "snd"
+  },
+  {
+   "name": "snd-font",
+   "source": "snd"
+  },
+  {
+   "name": "snd-gcs",
+   "source": "snd"
+  },
+  {
+   "name": "snd-help",
+   "source": "snd"
+  },
+  {
+   "name": "snd-hooks",
+   "source": "snd"
+  },
+  {
+   "name": "snd-opened-sound",
+   "source": "snd-constant"
+  },
+  {
+   "name": "snd-print",
+   "source": "snd"
+  },
+  {
+   "name": "snd-spectrum",
+   "source": "snd"
+  },
+  {
+   "name": "snd-tempnam",
+   "source": "snd"
+  },
+  {
+   "name": "snd-url",
+   "source": "snd"
+  },
+  {
+   "name": "snd-urls",
+   "source": "snd"
+  },
+  {
+   "name": "snd-version",
+   "source": "snd"
+  },
+  {
+   "name": "snd-warning",
+   "source": "snd"
+  },
+  {
+   "name": "snd-warning-hook",
+   "source": "snd"
+  },
+  {
+   "name": "sndwarp",
+   "source": "snd"
+  },
+  {
+   "name": "sort!",
+   "source": "snd"
+  },
+  {
+   "name": "sound->amp-env",
+   "source": "snd"
+  },
+  {
+   "name": "sound->integer",
+   "source": "snd"
+  },
+  {
+   "name": "sound-file-extensions",
+   "source": "snd"
+  },
+  {
+   "name": "sound-file?",
+   "source": "snd"
+  },
+  {
+   "name": "sound-files-in-directory",
+   "source": "snd"
+  },
+  {
+   "name": "sound-interp",
+   "source": "snd"
+  },
+  {
+   "name": "sound-loop-info",
+   "source": "snd"
+  },
+  {
+   "name": "sound-properties",
+   "source": "snd"
+  },
+  {
+   "name": "sound-property",
+   "source": "snd"
+  },
+  {
+   "name": "sound-widgets",
+   "source": "snd"
+  },
+  {
+   "name": "sound?",
+   "source": "snd"
+  },
+  {
+   "name": "soundfont-info",
+   "source": "snd"
+  },
+  {
+   "name": "sounds",
+   "source": "snd"
+  },
+  {
+   "name": "sounds->segment-data",
+   "source": "snd"
+  },
+  {
+   "name": "spectra",
+   "source": "snd"
+  },
+  {
+   "name": "spectral-polynomial",
+   "source": "snd"
+  },
+  {
+   "name": "spectro-hop",
+   "source": "snd"
+  },
+  {
+   "name": "spectro-x-angle",
+   "source": "snd"
+  },
+  {
+   "name": "spectro-x-scale",
+   "source": "snd"
+  },
+  {
+   "name": "spectro-y-angle",
+   "source": "snd"
+  },
+  {
+   "name": "spectro-y-scale",
+   "source": "snd"
+  },
+  {
+   "name": "spectro-z-angle",
+   "source": "snd"
+  },
+  {
+   "name": "spectro-z-scale",
+   "source": "snd"
+  },
+  {
+   "name": "spectrum",
+   "source": "snd"
+  },
+  {
+   "name": "spectrum->coeffs",
+   "source": "snd"
+  },
+  {
+   "name": "spectrum-end",
+   "source": "snd"
+  },
+  {
+   "name": "spectrum-start",
+   "source": "snd"
+  },
+  {
+   "name": "speed-control",
+   "source": "snd"
+  },
+  {
+   "name": "speed-control-as-float",
+   "source": "snd-constant"
+  },
+  {
+   "name": "speed-control-as-ratio",
+   "source": "snd-constant"
+  },
+  {
+   "name": "speed-control-as-semitone",
+   "source": "snd-constant"
+  },
+  {
+   "name": "speed-control-bounds",
+   "source": "snd"
+  },
+  {
+   "name": "speed-control-style",
+   "source": "snd"
+  },
+  {
+   "name": "speed-control-tones",
+   "source": "snd"
+  },
+  {
+   "name": "spot-freq",
+   "source": "snd"
+  },
+  {
+   "name": "sqrt",
+   "source": "s7"
+  },
+  {
+   "name": "square-wave",
+   "source": "snd"
+  },
+  {
+   "name": "square-wave?",
+   "source": "snd"
+  },
+  {
+   "name": "squelch-update",
+   "source": "snd"
+  },
+  {
+   "name": "squelch-vowels",
+   "source": "snd"
+  },
+  {
+   "name": "srate",
+   "source": "snd"
+  },
+  {
+   "name": "src",
+   "source": "snd"
+  },
+  {
+   "name": "src-channel",
+   "source": "snd"
+  },
+  {
+   "name": "src-duration",
+   "source": "snd"
+  },
+  {
+   "name": "src-fit-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "src-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "src-selection",
+   "source": "snd"
+  },
+  {
+   "name": "src-sound",
+   "source": "snd"
+  },
+  {
+   "name": "src?",
+   "source": "snd"
+  },
+  {
+   "name": "ssb-am",
+   "source": "snd"
+  },
+  {
+   "name": "ssb-am?",
+   "source": "snd"
+  },
+  {
+   "name": "ssb-bank",
+   "source": "snd"
+  },
+  {
+   "name": "ssb-bank-env",
+   "source": "snd"
+  },
+  {
+   "name": "ssb-fm",
+   "source": "snd"
+  },
+  {
+   "name": "stacktrace",
+   "source": "s7"
+  },
+  {
+   "name": "start-dac",
+   "source": "snd"
+  },
+  {
+   "name": "start-playing",
+   "source": "snd"
+  },
+  {
+   "name": "start-playing-hook",
+   "source": "snd"
+  },
+  {
+   "name": "start-playing-selection-hook",
+   "source": "snd"
+  },
+  {
+   "name": "start-progress-report",
+   "source": "snd"
+  },
+  {
+   "name": "status-report",
+   "source": "snd"
+  },
+  {
+   "name": "stdin-prompt",
+   "source": "snd"
+  },
+  {
+   "name": "stereo->mono",
+   "source": "snd"
+  },
+  {
+   "name": "stereo-flute",
+   "source": "snd"
+  },
+  {
+   "name": "stop-player",
+   "source": "snd"
+  },
+  {
+   "name": "stop-playing",
+   "source": "snd"
+  },
+  {
+   "name": "stop-playing-hook",
+   "source": "snd"
+  },
+  {
+   "name": "stop-playing-selection-hook",
+   "source": "snd"
+  },
+  {
+   "name": "stretch-envelope",
+   "source": "snd"
+  },
+  {
+   "name": "stretch-sound-via-dft",
+   "source": "snd"
+  },
+  {
+   "name": "string",
+   "source": "s7"
+  },
+  {
+   "name": "string->byte-vector",
+   "source": "snd"
+  },
+  {
+   "name": "string->keyword",
+   "source": "s7"
+  },
+  {
+   "name": "string->list",
+   "source": "s7"
+  },
+  {
+   "name": "string->number",
+   "source": "s7"
+  },
+  {
+   "name": "string->symbol",
+   "source": "s7"
+  },
+  {
+   "name": "string-append",
+   "source": "s7"
+  },
+  {
+   "name": "string-ci<=?",
+   "source": "s7"
+  },
+  {
+   "name": "string-ci<?",
+   "source": "s7"
+  },
+  {
+   "name": "string-ci=?",
+   "source": "s7"
+  },
+  {
+   "name": "string-ci>=?",
+   "source": "s7"
+  },
+  {
+   "name": "string-ci>?",
+   "source": "s7"
+  },
+  {
+   "name": "string-copy",
+   "source": "s7"
+  },
+  {
+   "name": "string-downcase",
+   "source": "s7"
+  },
+  {
+   "name": "string-fill!",
+   "source": "s7"
+  },
+  {
+   "name": "string-length",
+   "source": "s7"
+  },
+  {
+   "name": "string-position",
+   "source": "snd"
+  },
+  {
+   "name": "string-ref",
+   "source": "s7"
+  },
+  {
+   "name": "string-set!",
+   "source": "s7"
+  },
+  {
+   "name": "string-upcase",
+   "source": "s7"
+  },
+  {
+   "name": "string<=?",
+   "source": "s7"
+  },
+  {
+   "name": "string<?",
+   "source": "s7"
+  },
+  {
+   "name": "string=?",
+   "source": "s7"
+  },
+  {
+   "name": "string>=?",
+   "source": "s7"
+  },
+  {
+   "name": "string>?",
+   "source": "s7"
+  },
+  {
+   "name": "string?",
+   "source": "s7"
+  },
+  {
+   "name": "sublet",
+   "source": "snd"
+  },
+  {
+   "name": "substring",
+   "source": "s7"
+  },
+  {
+   "name": "substring-uncopied",
+   "source": "snd"
+  },
+  {
+   "name": "subvector",
+   "source": "snd"
+  },
+  {
+   "name": "subvector-position",
+   "source": "snd"
+  },
+  {
+   "name": "subvector-vector",
+   "source": "snd"
+  },
+  {
+   "name": "subvector?",
+   "source": "snd"
+  },
+  {
+   "name": "superimpose-ffts",
+   "source": "snd"
+  },
+  {
+   "name": "swap-channels",
+   "source": "snd"
+  },
+  {
+   "name": "swap-selection-channels",
+   "source": "snd"
+  },
+  {
+   "name": "symbol",
+   "source": "s7"
+  },
+  {
+   "name": "symbol->dynamic-value",
+   "source": "snd"
+  },
+  {
+   "name": "symbol->keyword",
+   "source": "s7"
+  },
+  {
+   "name": "symbol->string",
+   "source": "s7"
+  },
+  {
+   "name": "symbol->value",
+   "source": "snd"
+  },
+  {
+   "name": "symbol-initial-value",
+   "source": "snd"
+  },
+  {
+   "name": "symbol-table",
+   "source": "snd"
+  },
+  {
+   "name": "symbol?",
+   "source": "s7"
+  },
+  {
+   "name": "sync",
+   "source": "snd"
+  },
+  {
+   "name": "sync-all",
+   "source": "snd-constant"
+  },
+  {
+   "name": "sync-by-sound",
+   "source": "snd-constant"
+  },
+  {
+   "name": "sync-everything",
+   "source": "snd"
+  },
+  {
+   "name": "sync-max",
+   "source": "snd"
+  },
+  {
+   "name": "sync-none",
+   "source": "snd-constant"
+  },
+  {
+   "name": "sync-style",
+   "source": "snd"
+  },
+  {
+   "name": "syncd-marks",
+   "source": "snd"
+  },
+  {
+   "name": "syncd-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "syncup",
+   "source": "snd"
+  },
+  {
+   "name": "syntax?",
+   "source": "s7"
+  },
+  {
+   "name": "system",
+   "source": "s7"
+  },
+  {
+   "name": "table-lookup",
+   "source": "snd"
+  },
+  {
+   "name": "table-lookup?",
+   "source": "snd"
+  },
+  {
+   "name": "tan",
+   "source": "s7"
+  },
+  {
+   "name": "tanh",
+   "source": "s7"
+  },
+  {
+   "name": "tanhsin",
+   "source": "snd"
+  },
+  {
+   "name": "tanhsin?",
+   "source": "snd"
+  },
+  {
+   "name": "tap",
+   "source": "snd"
+  },
+  {
+   "name": "tap?",
+   "source": "snd"
+  },
+  {
+   "name": "telephone",
+   "source": "snd"
+  },
+  {
+   "name": "temp-dir",
+   "source": "snd"
+  },
+  {
+   "name": "text-focus-color",
+   "source": "snd"
+  },
+  {
+   "name": "throw",
+   "source": "s7"
+  },
+  {
+   "name": "time-graph",
+   "source": "snd-constant"
+  },
+  {
+   "name": "time-graph-style",
+   "source": "snd"
+  },
+  {
+   "name": "time-graph-type",
+   "source": "snd"
+  },
+  {
+   "name": "time-graph?",
+   "source": "snd"
+  },
+  {
+   "name": "times->samples",
+   "source": "snd"
+  },
+  {
+   "name": "tiny-font",
+   "source": "snd"
+  },
+  {
+   "name": "touch-tone",
+   "source": "snd"
+  },
+  {
+   "name": "tracking-cursor-style",
+   "source": "snd"
+  },
+  {
+   "name": "transform->float-vector",
+   "source": "snd"
+  },
+  {
+   "name": "transform->integer",
+   "source": "snd"
+  },
+  {
+   "name": "transform->vct",
+   "source": "snd-constant"
+  },
+  {
+   "name": "transform-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "transform-framples",
+   "source": "snd"
+  },
+  {
+   "name": "transform-graph",
+   "source": "snd-constant"
+  },
+  {
+   "name": "transform-graph-style",
+   "source": "snd"
+  },
+  {
+   "name": "transform-graph-type",
+   "source": "snd"
+  },
+  {
+   "name": "transform-graph?",
+   "source": "snd"
+  },
+  {
+   "name": "transform-normalization",
+   "source": "snd"
+  },
+  {
+   "name": "transform-sample",
+   "source": "snd"
+  },
+  {
+   "name": "transform-size",
+   "source": "snd"
+  },
+  {
+   "name": "transform-type",
+   "source": "snd"
+  },
+  {
+   "name": "transform?",
+   "source": "snd"
+  },
+  {
+   "name": "transpose-mixes",
+   "source": "snd"
+  },
+  {
+   "name": "tree-count",
+   "source": "snd"
+  },
+  {
+   "name": "tree-cyclic?",
+   "source": "snd"
+  },
+  {
+   "name": "tree-leaves",
+   "source": "snd"
+  },
+  {
+   "name": "tree-memq",
+   "source": "snd"
+  },
+  {
+   "name": "tree-set-memq",
+   "source": "snd"
+  },
+  {
+   "name": "triangle-wave",
+   "source": "snd"
+  },
+  {
+   "name": "triangle-wave?",
+   "source": "snd"
+  },
+  {
+   "name": "truncate",
+   "source": "s7"
+  },
+  {
+   "name": "tubebell",
+   "source": "snd"
+  },
+  {
+   "name": "tukey-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "two-pole",
+   "source": "snd"
+  },
+  {
+   "name": "two-pole?",
+   "source": "snd"
+  },
+  {
+   "name": "two-tab",
+   "source": "snd"
+  },
+  {
+   "name": "two-zero",
+   "source": "snd"
+  },
+  {
+   "name": "two-zero?",
+   "source": "snd"
+  },
+  {
+   "name": "type-name",
+   "source": "s7"
+  },
+  {
+   "name": "type-of",
+   "source": "snd"
+  },
+  {
+   "name": "ultraspherical-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "unbind-key",
+   "source": "snd"
+  },
+  {
+   "name": "unclip-channel",
+   "source": "snd"
+  },
+  {
+   "name": "undefined?",
+   "source": "s7"
+  },
+  {
+   "name": "undo",
+   "source": "snd"
+  },
+  {
+   "name": "undo-hook",
+   "source": "snd"
+  },
+  {
+   "name": "unlet",
+   "source": "snd"
+  },
+  {
+   "name": "unselect-all",
+   "source": "snd"
+  },
+  {
+   "name": "unspecified?",
+   "source": "s7"
+  },
+  {
+   "name": "update-graphs",
+   "source": "snd"
+  },
+  {
+   "name": "update-hook",
+   "source": "snd"
+  },
+  {
+   "name": "update-lisp-graph",
+   "source": "snd"
+  },
+  {
+   "name": "update-sound",
+   "source": "snd"
+  },
+  {
+   "name": "update-time-graph",
+   "source": "snd"
+  },
+  {
+   "name": "update-transform-graph",
+   "source": "snd"
+  },
+  {
+   "name": "upon-save-yourself",
+   "source": "snd"
+  },
+  {
+   "name": "values",
+   "source": "s7"
+  },
+  {
+   "name": "variable-display",
+   "source": "snd"
+  },
+  {
+   "name": "variable-graph?",
+   "source": "snd"
+  },
+  {
+   "name": "varlet",
+   "source": "snd"
+  },
+  {
+   "name": "vct->channel",
+   "source": "snd-constant"
+  },
+  {
+   "name": "vector",
+   "source": "s7"
+  },
+  {
+   "name": "vector->list",
+   "source": "s7"
+  },
+  {
+   "name": "vector-append",
+   "source": "s7"
+  },
+  {
+   "name": "vector-dimension",
+   "source": "snd"
+  },
+  {
+   "name": "vector-dimensions",
+   "source": "snd"
+  },
+  {
+   "name": "vector-fill!",
+   "source": "s7"
+  },
+  {
+   "name": "vector-length",
+   "source": "s7"
+  },
+  {
+   "name": "vector-rank",
+   "source": "snd"
+  },
+  {
+   "name": "vector-ref",
+   "source": "s7"
+  },
+  {
+   "name": "vector-set!",
+   "source": "s7"
+  },
+  {
+   "name": "vector-typer",
+   "source": "snd"
+  },
+  {
+   "name": "vector?",
+   "source": "s7"
+  },
+  {
+   "name": "vibrating-uniform-circular-string",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-amp",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-amp-env",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-files",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-select-hook",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-selected-files",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-sort",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-speed",
+   "source": "snd"
+  },
+  {
+   "name": "view-files-speed-style",
+   "source": "snd"
+  },
+  {
+   "name": "view-mixes-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "view-regions-dialog",
+   "source": "snd"
+  },
+  {
+   "name": "view-sound",
+   "source": "snd"
+  },
+  {
+   "name": "voiced->unvoiced",
+   "source": "snd"
+  },
+  {
+   "name": "volterra-filter",
+   "source": "snd"
+  },
+  {
+   "name": "vox",
+   "source": "snd"
+  },
+  {
+   "name": "walsh-transform",
+   "source": "snd-constant"
+  },
+  {
+   "name": "wave-train",
+   "source": "snd"
+  },
+  {
+   "name": "wave-train?",
+   "source": "snd"
+  },
+  {
+   "name": "wavelet-transform",
+   "source": "snd-constant"
+  },
+  {
+   "name": "wavelet-type",
+   "source": "snd"
+  },
+  {
+   "name": "wavo-hop",
+   "source": "snd"
+  },
+  {
+   "name": "wavo-trace",
+   "source": "snd"
+  },
+  {
+   "name": "weak-hash-table",
+   "source": "snd"
+  },
+  {
+   "name": "weak-hash-table?",
+   "source": "snd"
+  },
+  {
+   "name": "weighted-moving-average",
+   "source": "snd"
+  },
+  {
+   "name": "welch-window",
+   "source": "snd-constant"
+  },
+  {
+   "name": "widget-position",
+   "source": "snd"
+  },
+  {
+   "name": "widget-size",
+   "source": "snd"
+  },
+  {
+   "name": "widget-text",
+   "source": "snd"
+  },
+  {
+   "name": "window-height",
+   "source": "snd"
+  },
+  {
+   "name": "window-samples",
+   "source": "snd"
+  },
+  {
+   "name": "window-width",
+   "source": "snd"
+  },
+  {
+   "name": "window-x",
+   "source": "snd"
+  },
+  {
+   "name": "window-y",
+   "source": "snd"
+  },
+  {
+   "name": "with-background-processes",
+   "source": "snd"
+  },
+  {
+   "name": "with-baffle",
+   "source": "snd"
+  },
+  {
+   "name": "with-file-monitor",
+   "source": "snd"
+  },
+  {
+   "name": "with-gl",
+   "source": "snd"
+  },
+  {
+   "name": "with-input-from-file",
+   "source": "s7"
+  },
+  {
+   "name": "with-input-from-string",
+   "source": "s7"
+  },
+  {
+   "name": "with-inset-graph",
+   "source": "snd"
+  },
+  {
+   "name": "with-interrupts",
+   "source": "snd"
+  },
+  {
+   "name": "with-let",
+   "source": "snd"
+  },
+  {
+   "name": "with-local-hook",
+   "source": "snd"
+  },
+  {
+   "name": "with-menu-icons",
+   "source": "snd"
+  },
+  {
+   "name": "with-mix-tags",
+   "source": "snd"
+  },
+  {
+   "name": "with-output-to-file",
+   "source": "s7"
+  },
+  {
+   "name": "with-output-to-string",
+   "source": "s7"
+  },
+  {
+   "name": "with-pointer-focus",
+   "source": "snd"
+  },
+  {
+   "name": "with-relative-panes",
+   "source": "snd"
+  },
+  {
+   "name": "with-smpte-label",
+   "source": "snd"
+  },
+  {
+   "name": "with-sound",
+   "source": "snd"
+  },
+  {
+   "name": "with-temporary-selection",
+   "source": "snd"
+  },
+  {
+   "name": "with-toolbar",
+   "source": "snd"
+  },
+  {
+   "name": "with-tooltips",
+   "source": "snd"
+  },
+  {
+   "name": "with-tracking-cursor",
+   "source": "snd"
+  },
+  {
+   "name": "with-verbose-cursor",
+   "source": "snd"
+  },
+  {
+   "name": "write",
+   "source": "s7"
+  },
+  {
+   "name": "write-byte",
+   "source": "s7"
+  },
+  {
+   "name": "write-bytes",
+   "source": "s7"
+  },
+  {
+   "name": "write-char",
+   "source": "s7"
+  },
+  {
+   "name": "write-string",
+   "source": "s7"
+  },
+  {
+   "name": "x->position",
+   "source": "snd"
+  },
+  {
+   "name": "x-axis-as-clock",
+   "source": "snd-constant"
+  },
+  {
+   "name": "x-axis-as-percentage",
+   "source": "snd-constant"
+  },
+  {
+   "name": "x-axis-in-beats",
+   "source": "snd-constant"
+  },
+  {
+   "name": "x-axis-in-measures",
+   "source": "snd-constant"
+  },
+  {
+   "name": "x-axis-in-samples",
+   "source": "snd-constant"
+  },
+  {
+   "name": "x-axis-in-seconds",
+   "source": "snd-constant"
+  },
+  {
+   "name": "x-axis-label",
+   "source": "snd"
+  },
+  {
+   "name": "x-axis-style",
+   "source": "snd"
+  },
+  {
+   "name": "x-bounds",
+   "source": "snd"
+  },
+  {
+   "name": "x-position-slider",
+   "source": "snd"
+  },
+  {
+   "name": "x-zoom-slider",
+   "source": "snd"
+  },
+  {
+   "name": "xb-open",
+   "source": "snd"
+  },
+  {
+   "name": "xramp-channel",
+   "source": "snd"
+  },
+  {
+   "name": "y->position",
+   "source": "snd"
+  },
+  {
+   "name": "y-axis-label",
+   "source": "snd"
+  },
+  {
+   "name": "y-bounds",
+   "source": "snd"
+  },
+  {
+   "name": "y-position-slider",
+   "source": "snd"
+  },
+  {
+   "name": "y-zoom-slider",
+   "source": "snd"
+  },
+  {
+   "name": "z-transform",
+   "source": "snd"
+  },
+  {
+   "name": "zecho",
+   "source": "snd"
+  },
+  {
+   "name": "zero+",
+   "source": "snd"
+  },
+  {
+   "name": "zero-pad",
+   "source": "snd"
+  },
+  {
+   "name": "zero-phase",
+   "source": "snd"
+  },
+  {
+   "name": "zero?",
+   "source": "s7"
+  },
+  {
+   "name": "zip-sound",
+   "source": "snd"
+  },
+  {
+   "name": "zipper",
+   "source": "snd"
+  },
+  {
+   "name": "zoom-color",
+   "source": "snd"
+  },
+  {
+   "name": "zoom-focus-active",
+   "source": "snd-constant"
+  },
+  {
+   "name": "zoom-focus-left",
+   "source": "snd-constant"
+  },
+  {
+   "name": "zoom-focus-middle",
+   "source": "snd-constant"
+  },
+  {
+   "name": "zoom-focus-right",
+   "source": "snd-constant"
+  },
+  {
+   "name": "zoom-focus-style",
+   "source": "snd"
+  }
+ ]
+}

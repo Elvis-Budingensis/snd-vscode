@@ -1,0 +1,258 @@
+// sndProcess.ts
+//
+// Life cycle of the Snd child process.
+//
+// ONE DEPARTURE FROM clamps-vscode WORTH STATING.  There, SBCL is started
+// DETACHED and survives a restart of the extension host, because the
+// channel is a socket: a fresh extension can simply reconnect to the port
+// noted in session.json.  Here the channel IS the pipe.  A detached Snd
+// would keep running with its stdin bound to a dead parent, and nothing
+// could ever speak to it again -- an orphan holding the audio device.  So
+// this process is a child, and it dies with the window.
+//
+// The consequence is honest rather than pleasant: reloading the window
+// loses the session.  What survives instead is the FILE, because Snd's
+// edit history can be written out (save-state), and that is offered as a
+// command rather than pretended to be automatic.
+
+import * as cp from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+
+export type SndMode = 'auto' | 'nogui' | 'gui';
+export type SndStatus = 'stopped' | 'starting' | 'ready' | 'error';
+
+export interface SndOptions {
+  /** Executable: snd, snd-nogui, snd-motif, an absolute path. */
+  command: string;
+  /** Extra arguments, from the user's settings. */
+  args: string[];
+  /** Directory Snd starts in -- its notion of "current file". */
+  cwd: string;
+  /** Absolute path of scheme/snd-vscode.scm. */
+  bridgePath: string;
+  mode: SndMode;
+  /** Sound files to open at startup. */
+  files?: string[];
+}
+
+/**
+ * The command line for Snd.
+ *
+ * A pure function, and deliberately so: the argument order is the one
+ * thing here that cannot be checked by looking at a running process.
+ * -l loads the bridge, and it comes LAST, after the user's own arguments
+ * and after any file to open -- Snd processes startup arguments in order,
+ * so a bridge loaded first would announce itself ready before the files
+ * it is supposed to report even exist.
+ *
+ * -noinit is NOT passed.  It would suppress ~/.snd, and ~/.snd is where a
+ * Snd user keeps the things that make Snd theirs.  An editor that
+ * silently discards it is not offering the same Snd.
+ */
+export function commandLine(options: SndOptions): { command: string; args: string[] } {
+  const args: string[] = [...options.args];
+  for (const file of options.files ?? []) args.push(file);
+  args.push('-l', options.bridgePath);
+  return { command: options.command, args };
+}
+
+/**
+ * Where the Snd binary is.
+ *
+ * THE INSTALL PROBLEM, AND WHICH HALF OF IT THIS SOLVES.
+ *
+ * What makes Snd painful to install on macOS and Windows is not Snd. It is
+ * Motif: XQuartz, libXm, libXt, libXpm, headers in places Homebrew moved
+ * last year. Snd's own configure defaults to NO GUI -- Motif is only used
+ * with --with-motif -- and a headless build has no X dependency at all.
+ * sndlib and s7 are in the tarball; the audio backend on macOS is
+ * CoreAudio, which is part of the system.
+ *
+ * So: `./configure && make`. That is the whole build, and it is a build we
+ * WANT rather than tolerate, because the GUI is exactly the part this
+ * extension replaces.
+ *
+ * The second half -- not having to run even that -- is solved by shipping
+ * the binary. Snd's licence permits it in as many words: permission to use,
+ * copy, modify, distribute and license, no agreement or fee required. So
+ * a bundled binary under bin/<platform>-<arch>/ is preferred over PATH, and
+ * a user who has their own Snd keeps it by setting snd.path.
+ *
+ * The order is deliberate: an explicitly configured path wins over
+ * everything, because someone who set it means it. The bundle comes next,
+ * so that the common case needs no decision. PATH comes last -- a Snd on
+ * PATH may well be the Motif one, and if it is, it works too.
+ */
+export function resolveExecutable(args: {
+  configured: string;
+  mode: SndMode;
+  /** bin/ inside the extension. */
+  bundleRoot: string;
+  platform: string;
+  arch: string;
+  exists: (path: string) => boolean;
+}): { command: string; source: 'configured' | 'bundled' | 'path' } {
+  const { configured, mode, bundleRoot, platform, arch, exists } = args;
+
+  // Anything but the default means the user chose. Absolute or not.
+  if (configured && configured !== 'snd') {
+    return { command: configured, source: 'configured' };
+  }
+
+  const suffix = platform === 'win32' ? '.exe' : '';
+  const candidates = [
+    path.join(bundleRoot, `${platform}-${arch}`, `snd${suffix}`),
+    path.join(bundleRoot, platform, `snd${suffix}`),
+  ];
+  for (const candidate of candidates) {
+    if (exists(candidate)) return { command: candidate, source: 'bundled' };
+  }
+
+  return { command: executableFor(mode, configured), source: 'path' };
+}
+
+/**
+ * Guess a Snd executable from what the mode asks for.
+ *
+ * The Snd build decides whether there is a GUI: a Motif build always has
+ * one, a build without --with-motif never has one, and there is no flag
+ * that turns one into the other.  So "mode" cannot switch anything at
+ * run time; it can only pick a different binary, and only if the user
+ * built both.  Which is why the setting is a command name and this is a
+ * guess with a fallback, not a promise.
+ */
+export function executableFor(mode: SndMode, configured: string): string {
+  if (configured && configured !== 'snd') return configured;
+  if (mode === 'nogui') return 'snd-nogui';
+  if (mode === 'gui') return 'snd-motif';
+  return 'snd';
+}
+
+export interface SndEvents {
+  onStdout(text: string): void;
+  onStderr(text: string): void;
+  onExit(code: number | null, signal: string | null): void;
+  onStatus(status: SndStatus, detail: string): void;
+}
+
+export class SndProcess {
+  private child: cp.ChildProcessWithoutNullStreams | undefined;
+  private currentStatus: SndStatus = 'stopped';
+
+  /** Mode Snd reported about itself, not the one that was asked for. */
+  reportedMode: 'gui' | 'nogui' | undefined;
+
+  constructor(private readonly events: SndEvents) {}
+
+  get status(): SndStatus {
+    return this.currentStatus;
+  }
+
+  get running(): boolean {
+    return !!this.child && this.child.exitCode === null && !this.child.killed;
+  }
+
+  get pid(): number | undefined {
+    return this.child?.pid;
+  }
+
+  private setStatus(status: SndStatus, detail = ''): void {
+    this.currentStatus = status;
+    this.events.onStatus(status, detail);
+  }
+
+  start(options: SndOptions): void {
+    if (this.running) return;
+
+    if (!fs.existsSync(options.bridgePath)) {
+      this.setStatus('error', `bridge not found: ${options.bridgePath}`);
+      return;
+    }
+
+    const { command, args } = commandLine(options);
+    this.setStatus('starting', `${command} ${args.join(' ')}`);
+
+    let child: cp.ChildProcessWithoutNullStreams;
+    try {
+      child = cp.spawn(command, args, {
+        cwd: options.cwd,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          // Snd looks for its .scm files here. Without it, a bridge that
+          // wants (require ...) finds nothing -- and the error says only
+          // "can't load", not where it looked.
+          SND_PATH: path.dirname(options.bridgePath) + path.delimiter + (process.env.SND_PATH ?? ''),
+        },
+      }) as cp.ChildProcessWithoutNullStreams;
+    } catch (error) {
+      this.setStatus('error', String(error));
+      return;
+    }
+
+    this.child = child;
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (text: string) => this.events.onStdout(text));
+    child.stderr.on('data', (text: string) => this.events.onStderr(text));
+
+    child.on('error', error => {
+      // The usual case: the binary is not on PATH. Saying so is more use
+      // than the ENOENT, because the fix is a setting.
+      this.setStatus(
+        'error',
+        `${command} could not be started (${String(error)}). ` +
+          'Check "snd.path" in the settings.'
+      );
+    });
+
+    child.on('exit', (code, signal) => {
+      this.child = undefined;
+      this.reportedMode = undefined;
+      this.setStatus('stopped', signal ? `signal ${signal}` : `exit code ${code}`);
+      this.events.onExit(code, signal);
+    });
+  }
+
+  /** One line down Snd's stdin. Returns false if nothing is listening. */
+  send(line: string): boolean {
+    if (!this.child || !this.running) return false;
+    return this.child.stdin.write(line);
+  }
+
+  markReady(mode: 'gui' | 'nogui'): void {
+    this.reportedMode = mode;
+    this.setStatus('ready', `Snd is listening (${mode})`);
+  }
+
+  /**
+   * Ends the session.
+   *
+   * Closing stdin first, and only then a signal: the headless bridge
+   * reads until EOF and shuts Snd down itself, which gives Snd the chance
+   * to release the audio device and to ask about unsaved edits in the GUI
+   * case.  SIGKILL leaves a locked sound card behind often enough to be
+   * worth the two hundred milliseconds.
+   */
+  stop(): void {
+    const child = this.child;
+    if (!child) return;
+    try {
+      child.stdin.end();
+    } catch {
+      // already gone
+    }
+    setTimeout(() => {
+      if (child.exitCode === null) {
+        try { child.kill('SIGTERM'); } catch { /* gone */ }
+      }
+      setTimeout(() => {
+        if (child.exitCode === null) {
+          try { child.kill('SIGKILL'); } catch { /* gone */ }
+        }
+      }, 2000);
+    }, 200);
+  }
+}

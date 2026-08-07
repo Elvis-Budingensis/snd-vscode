@@ -1,0 +1,9 @@
+node_modules/
+out/
+*.vsix
+*.zip
+s7
+.build/
+bin/
+.vscode-test/
+.DS_Store

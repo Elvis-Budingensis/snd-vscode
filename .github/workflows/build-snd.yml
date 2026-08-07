@@ -1,0 +1,80 @@
+# Prebuilt headless Snd binaries, so that nobody has to build anything.
+#
+# Snd's licence permits this in as many words: "permission to use, copy,
+# modify, distribute, and license this software and its documentation for any
+# purpose. No written agreement, license, or royalty fee is required."
+# COPYING from the Snd tarball travels with the binary in the artifact.
+#
+# Nothing here installs Motif. That is the point: the headless build needs a
+# C compiler and nothing else, and the GUI is the part the extension
+# replaces.
+
+name: build snd
+
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14      # Apple silicon
+            platform: darwin
+            arch: arm64
+          - os: macos-13      # Intel
+            platform: darwin
+            arch: x64
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ALSA headers on Linux only. macOS uses CoreAudio, which is part of
+      # the system, so there is nothing to install there at all.
+      - name: audio headers (Linux)
+        if: matrix.platform == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+
+      - name: build
+        run: tools/build-snd.sh
+
+      - name: the binary must not have picked up X
+        if: matrix.platform == 'linux'
+        run: |
+          # On the runner Motif is absent, so a linked libXm would mean
+          # configure found something unexpected. Worth checking rather than
+          # assuming: an X-linked binary works on the runner and fails on a
+          # user's machine, which is the worst place to find out.
+          if ldd bin/${{ matrix.platform }}-${{ matrix.arch }}/snd | grep -Ei 'libX|libXm|libXt'; then
+            echo "the binary links against X"
+            exit 1
+          fi
+
+      - name: the binary must not need a display
+        run: |
+          # No DISPLAY, and it still has to report itself ready. This is the
+          # actual promise being made to the user.
+          env -u DISPLAY printf '' | \
+            bin/${{ matrix.platform }}-${{ matrix.arch }}/snd -l scheme/snd-vscode.scm 2>&1 | \
+            grep -q '"event":"ready"'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snd-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            bin/${{ matrix.platform }}-${{ matrix.arch }}/snd
+            .build/snd-26.5/COPYING
+
+  # Windows is deliberately not in the matrix above. See WINDOWS.md: the
+  # source has MSVC and MinGW paths and they are old, and audio goes through
+  # waveOut. Claiming a build here that has not been stood up would be worse
+  # than the honest gap.
