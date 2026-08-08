@@ -54,7 +54,12 @@ if (!s7) {
 // permanently skipped -- and a skipped gate is the one that was going to
 // catch the next mistake in the bridge.
 if (!s7) {
+  // third-party/s7 first: it is in the repository, so a fresh clone can run
+  // the s7 gate without downloading fourteen megabytes from ccrma. .build is
+  // the fuller tree that tools/build-snd.sh leaves behind, and SND_SOURCE is
+  // for a tree kept somewhere else.
   const sources = [
+    path.join(root, 'third-party', 's7'),
     path.join(root, '.build', 'snd-26.5'),
     process.env.SND_SOURCE ?? '',
   ].filter(Boolean);

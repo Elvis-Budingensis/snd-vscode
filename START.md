@@ -80,7 +80,9 @@ In the development host window:
   extension activates on Scheme files and on any workspace containing
   `*.scm`. Check the bottom-right of the status bar says **Scheme**; a file
   VS Code has typed as something else gets no commands.
-- `C-c C-z` — the REPL, which starts a session if none is running
+- `C-c C-z` — the REPL. It also opens by itself whenever a session starts,
+  without taking the focus, so a session begun by evaluating a form leaves the
+  cursor in the file
 - `C-c C-f` — open a sound file; the waveform panel opens with it
 - `C-c C-c` — the control panel
 - **Snd: Transform Options** from the palette
@@ -90,6 +92,32 @@ enum numbers out of the running Snd, and everything downstream of that works.
 
 `Snd: Open Log` says which binary was taken — configured, bundled, or PATH —
 and everything Snd printed.
+
+## Snd opens its own window
+
+Then the session is running a **Motif** Snd, almost certainly one found on
+`PATH` — `/usr/local/bin/snd` on macOS. The panels work with it (both editors
+share the same state, which is the point), but if you wanted the headless one:
+
+```sh
+ls bin/darwin-arm64/snd
+```
+
+Missing? It is not in the archive and not in git — it is a build artefact, and
+`.gitignore` keeps it out on purpose. Either rebuild it:
+
+```sh
+tools/build-snd.sh ~/.build/snd-26.5      # the source tree you already have
+```
+
+or copy it over from a previous checkout:
+
+```sh
+cp -R ../snd-vscode-0.1.0.old/bin .
+```
+
+The extension prefers `bin/<platform>-<arch>/snd` over `PATH`; `Snd: Open Log`
+says which of the three it took — configured, bundled, or path.
 
 ## When it does not start
 

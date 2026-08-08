@@ -16,6 +16,7 @@ export interface Sound {
   index: number;
   selected?: boolean;
   empty?: boolean;
+  sync?: number;
   fileName: string;
   shortName: string;
   channels: number;
@@ -32,10 +33,30 @@ export interface EditHistory {
   list: Array<{ position: number; origin: string; type: string; start: number; frames: number }>;
 }
 
+export interface Region {
+  index: number;
+  frames: number;
+  channels: number;
+  srate: number;
+  position: number;
+  home: string;
+}
+
+export interface Mix {
+  index: number;
+  position: number;
+  frames: number;
+  amp: number;
+  name: string;
+  home: string;
+}
+
 export interface ExplorerHost {
   sounds(): Promise<Sound[]>;
   marks(snd: number, chn: number): Promise<Array<{ id: number; sample: number; name: string }>>;
   edits(snd: number, chn: number): Promise<EditHistory>;
+  regions(): Promise<Region[]>;
+  mixes(snd: number, chn: number): Promise<Mix[]>;
   ready(): boolean;
 }
 
@@ -46,7 +67,11 @@ type Node =
   | { kind: 'marks'; sound: Sound; chn: number }
   | { kind: 'mark'; sound: Sound; chn: number; id: number; sample: number; name: string }
   | { kind: 'history'; sound: Sound; chn: number }
-  | { kind: 'edit'; sound: Sound; chn: number; position: number; label: string; current: boolean };
+  | { kind: 'edit'; sound: Sound; chn: number; position: number; label: string; current: boolean }
+  | { kind: 'mixes'; sound: Sound; chn: number }
+  | { kind: 'mix'; sound: Sound; chn: number; mix: Mix }
+  | { kind: 'regions' }
+  | { kind: 'region'; region: Region };
 
 export class SoundExplorer implements vscode.TreeDataProvider<Node> {
   private readonly changeEmitter = new vscode.EventEmitter<Node | undefined>();
@@ -70,7 +95,10 @@ export class SoundExplorer implements vscode.TreeDataProvider<Node> {
         const item = new vscode.TreeItem(node.sound.shortName, collapsed);
         item.description =
           `${node.sound.channels} ch · ${(node.sound.frames / Math.max(1, node.sound.srate)).toFixed(2)} s` +
-          (node.sound.edited ? ` · edited (${node.sound.editPosition})` : '');
+          (node.sound.edited ? ` · edited (${node.sound.editPosition})` : '') +
+          // Shown because a sound edited together with another one otherwise
+          // looks possessed: an edit here changes something over there.
+          (node.sound.sync ? ` · sync ${node.sound.sync}` : '');
         item.tooltip = node.sound.fileName;
         item.iconPath = new vscode.ThemeIcon(node.sound.edited ? 'circle-filled' : 'file-media');
         item.contextValue = 'sndSound';
@@ -102,6 +130,7 @@ export class SoundExplorer implements vscode.TreeDataProvider<Node> {
         const item = new vscode.TreeItem(node.name || `mark ${node.id}`);
         item.description = String(node.sample);
         item.iconPath = new vscode.ThemeIcon('bookmark');
+        item.contextValue = 'sndMark';
         item.command = {
           command: 'snd.goToSample',
           title: 'Go to mark',
@@ -113,6 +142,45 @@ export class SoundExplorer implements vscode.TreeDataProvider<Node> {
         const item = new vscode.TreeItem('edit history', collapsed);
         item.iconPath = new vscode.ThemeIcon('history');
         item.id = `history:${node.sound.index}:${node.chn}`;
+        return item;
+      }
+      case 'mixes': {
+        const item = new vscode.TreeItem('mixes', collapsed);
+        item.iconPath = new vscode.ThemeIcon('layers');
+        item.id = `mixes:${node.sound.index}:${node.chn}`;
+        return item;
+      }
+      case 'mix': {
+        const item = new vscode.TreeItem(node.mix.name || `mix ${node.mix.index}`);
+        item.description = `at ${node.mix.position} · ${node.mix.frames} · amp ${node.mix.amp.toFixed(2)}`;
+        item.tooltip =
+          `${node.mix.home}\n\nA mix is still movable: position and amplitude are ` +
+          'settable and each change is an edit.';
+        item.iconPath = new vscode.ThemeIcon('layers');
+        item.contextValue = 'sndMix';
+        item.command = {
+          command: 'snd.goToSample',
+          title: 'Go to the mix',
+          arguments: [node.sound.index, node.chn, node.mix.position],
+        };
+        return item;
+      }
+      case 'regions': {
+        const item = new vscode.TreeItem('regions', collapsed);
+        item.iconPath = new vscode.ThemeIcon('clippy');
+        item.tooltip =
+          'Regions are copies of samples, made by a selection or by make-region. ' +
+          'Only max-regions of them exist; the oldest is dropped when a new one arrives.';
+        item.id = 'regions';
+        return item;
+      }
+      case 'region': {
+        const item = new vscode.TreeItem(`region ${node.region.index}`);
+        const seconds = node.region.frames / Math.max(1, node.region.srate);
+        item.description = `${seconds.toFixed(2)} s · ${node.region.channels} ch`;
+        item.tooltip = node.region.home;
+        item.iconPath = new vscode.ThemeIcon('clippy');
+        item.contextValue = 'sndRegion';
         return item;
       }
       case 'edit': {
@@ -139,7 +207,13 @@ export class SoundExplorer implements vscode.TreeDataProvider<Node> {
         if (sounds.length === 0) {
           return [{ kind: 'hint', text: 'No sound open — run "Snd: Open Sound File".' }];
         }
-        return sounds.map(sound => ({ kind: 'sound' as const, sound }));
+        // Regions belong to the session, not to a sound: they outlive the
+        // selection and the sound they came from, so they sit beside the
+        // sounds rather than under one.
+        return [
+          ...sounds.map(sound => ({ kind: 'sound' as const, sound })),
+          { kind: 'regions' as const },
+        ];
       }
       if (node.kind === 'sound') {
         // A one-channel sound has no channel level worth clicking through:
@@ -148,6 +222,7 @@ export class SoundExplorer implements vscode.TreeDataProvider<Node> {
           return [
             { kind: 'channel', sound: node.sound, chn: 0 },
             { kind: 'marks', sound: node.sound, chn: 0 },
+            { kind: 'mixes', sound: node.sound, chn: 0 },
             { kind: 'history', sound: node.sound, chn: 0 },
           ];
         }
@@ -160,6 +235,7 @@ export class SoundExplorer implements vscode.TreeDataProvider<Node> {
       if (node.kind === 'channel' && node.sound.channels > 1) {
         return [
           { kind: 'marks', sound: node.sound, chn: node.chn },
+          { kind: 'mixes', sound: node.sound, chn: node.chn },
           { kind: 'history', sound: node.sound, chn: node.chn },
         ];
       }
@@ -175,6 +251,23 @@ export class SoundExplorer implements vscode.TreeDataProvider<Node> {
           sample: mark.sample,
           name: mark.name,
         }));
+      }
+      if (node.kind === 'mixes') {
+        const mixes = await this.host.mixes(node.sound.index, node.chn);
+        if (mixes.length === 0) return [{ kind: 'hint', text: 'no mixes' }];
+        return mixes.map(mix => ({ kind: 'mix' as const, sound: node.sound, chn: node.chn, mix }));
+      }
+      if (node.kind === 'regions') {
+        const regions = await this.host.regions();
+        if (regions.length === 0) {
+          return [
+            {
+              kind: 'hint',
+              text: 'no regions — a selection makes one when selection-creates-region is on',
+            },
+          ];
+        }
+        return regions.map(region => ({ kind: 'region' as const, region }));
       }
       if (node.kind === 'history') {
         const history = await this.host.edits(node.sound.index, node.chn);

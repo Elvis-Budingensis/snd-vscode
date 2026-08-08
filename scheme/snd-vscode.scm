@@ -162,8 +162,27 @@
 ;; Guards and argument access
 ;; ------------------------------------------------------------------
 
+;; CALLABLE, not procedure?.
+;;
+;; s7's procedure? is #f for a MACRO, and Snd defines at least one name the
+;; bridge needs as one:
+;;
+;;   Xen_define_typed_procedure(S_define_envelope "-1", ...);
+;;   Xen_eval_C_string("(define-macro (define-envelope a . b)
+;;                        `(define-envelope-1 ',a ,@b))");
+;;
+;; -- snd-env.c, in the HAVE_SCHEME branch. So `define-envelope` is a macro
+;; wrapping the real procedure, and asking procedure? about it answers "not
+;; available in this Snd build" for something that works perfectly in the
+;; REPL two lines away. A wrong answer that blames the build is worse than no
+;; answer.
+;;
+;; The macro exists because its documented syntax takes the name UNQUOTED --
+;; (define-envelope ramp '(0 0 1 1)) -- and the C function needs a symbol.
 (define (sv-have? name)
-  (and (defined? name) (procedure? (symbol->value name))))
+  (and (defined? name)
+       (let ((value (symbol->value name)))
+         (or (procedure? value) (macro? value)))))
 
 (define (sv-in-snd?)
   (sv-have? 'open-sound))
@@ -282,6 +301,33 @@
 ;; the mistake survives so long inside Snd and only breaks at the boundary.
 ;; ------------------------------------------------------------------
 
+;; Regions and mixes are objects too, and print as "#<region 0>" and
+;; "#<mix 3>" -- the same trap the sounds op fell into, so the same rule:
+;; integers on the wire, converted at the boundary, and INTEGER? asked first
+;; because region? and mix? answer "is this a valid region" and say #t for a
+;; valid index as readily as for the object.
+(define (sv-object-index value predicate converter)
+  (cond ((integer? value) value)
+        ((not (sv-in-snd?)) value)
+        ((and (sv-have? predicate) ((symbol->value predicate) value))
+         ((symbol->value converter) value))
+        (else value)))
+
+(define (sv-region-index r) (sv-object-index r 'region? 'region->integer))
+(define (sv-mix-index m) (sv-object-index m 'mix? 'mix->integer))
+
+(define (sv-region value)
+  ;; On the way in: an integer from the panel becomes the object Snd's
+  ;; region functions want.
+  (if (and (integer? value) (sv-have? 'integer->region))
+      ((symbol->value 'integer->region) value)
+      value))
+
+(define (sv-mix value)
+  (if (and (integer? value) (sv-have? 'integer->mix))
+      ((symbol->value 'integer->mix) value)
+      value))
+
 (define (sv-snd-index s)
   ;; INTEGER FIRST, and this is not tidiness.
   ;;
@@ -382,6 +428,14 @@
                           'editPosition ((symbol->value 'edit-position) s 0)
                           'edited (> ((symbol->value 'edit-position) s 0) 0)
                           'selected (eqv? (sv-snd-index s) (sv-snd-index selected))
+                          ;; "Operations can be applied simultaneously to any
+                          ;; other channels or sounds by using the 'sync'
+                          ;; button." Sounds sharing a non-zero sync move and
+                          ;; edit together, so the tree has to show it or a
+                          ;; sound edited from elsewhere looks possessed.
+                          'sync (catch #t
+                                  (lambda () ((symbol->value 'sync) s))
+                                  (lambda args 0))
                           ;; Reported rather than filtered out: an empty
                           ;; sound is a real thing to have -- (new-sound)
                           ;; makes one, and one fills it afterwards -- and
@@ -815,65 +869,6 @@
   (inlet 'editPosition ((symbol->value 'edit-position)
                         (sv-arg params 'snd 0) 0)))
 
-(sv-define-op envelope (params)
-  ;; The envelope editor's state. enved-envelope is a list of x y pairs
-  ;; flattened -- the same shape env-channel wants, so the panel can hand
-  ;; it straight back.
-  (let ((target (sv-arg params 'target "")))
-    (inlet 'envelope (if (sv-have? 'enved-envelope)
-                         ((symbol->value 'enved-envelope))
-                         ())
-           'target (if (sv-have? 'enved-target)
-                       (object->string ((symbol->value 'enved-target)))
-                       "")
-           'base (if (sv-have? 'enved-base) ((symbol->value 'enved-base)) 1.0)
-           'clip (if (sv-have? 'enved-clip?) ((symbol->value 'enved-clip?)) #f))))
-
-(sv-define-op setenvelope (params)
-  ;; Written through env-channel, which puts ONE entry in the edit
-  ;; history -- the same entry Snd's own envelope editor produces. A
-  ;; sample-by-sample scale from the panel would produce thousands, and
-  ;; undo would stop being usable.
-  (sv-require 'env-channel)
-  (let* ((points (sv-arg params 'points ""))
-         (snd (sv-arg params 'snd 0))
-         (chn (sv-arg params 'chn 0)))
-    ((symbol->value 'env-channel) (eval-string (string-append "(list " points ")") (rootlet))
-     0 #f snd chn)
-    (inlet 'editPosition ((symbol->value 'edit-position) snd chn))))
-
-(sv-define-op constants (params)
-  ;; What fourier-transform, blackman2-window and graph-as-sonogram are
-  ;; NUMERICALLY, in this build.
-  ;;
-  ;; The panels need the numbers to know which radio button is on, and
-  ;; the honest way to get them is to ask. Baking the integers into the
-  ;; extension would work until Snd inserts a transform in the middle of
-  ;; its list -- after which every panel would be one entry off, would
-  ;; still look correct, and would set the wrong window on a spectrum
-  ;; whose picture nobody can check by eye.
-  ;;
-  ;; So the panels declare SYMBOLS, resolve them once per session, and
-  ;; write symbols back.
-  (let ((out ()))
-    (for-each
-     (lambda (name)
-       (when (> (length name) 0)
-         (let ((symbol (string->symbol name)))
-           (set! out (cons (inlet 'name name
-                                  'available (and (defined? symbol) #t)
-                                  'value (if (defined? symbol)
-                                             (sv-var-encode
-                                              (catch #t
-                                                (lambda ()
-                                                  (let ((v (symbol->value symbol)))
-                                                    (if (procedure? v) (v) v)))
-                                                (lambda (type info) -1)))
-                                             -1))
-                           out)))))
-     (sv-split-words (sv-arg params 'names "")))
-    (reverse out)))
-
 (sv-define-op waveforms (params)
   ;; SEVERAL CHANNELS, ONE REQUEST, ONE TIME RANGE.
   ;;
@@ -948,6 +943,260 @@
                             'marks (sv-marks-of snd chn)
                             'selection (sv-selection-of snd chn))))
                 chns))))
+
+(define (sv-enved-target-name)
+  ;; enved-target is one of three constants. The panel speaks Bill's own
+  ;; button labels -- amp, flt, src -- because those are what the dialog says
+  ;; and what his documentation calls them.
+  (catch #t
+    (lambda ()
+      (let ((v ((symbol->value 'enved-target))))
+        (cond ((and (defined? 'enved-spectrum) (eqv? v (symbol->value 'enved-spectrum))) "flt")
+              ((and (defined? 'enved-srate) (eqv? v (symbol->value 'enved-srate))) "src")
+              (else "amp"))))
+    (lambda args "amp")))
+
+(define (sv-envelope? value)
+  ;; What counts as an envelope: a list of an even number of reals, at least
+  ;; two breakpoints. That is exactly what define-envelope stores -- it
+  ;; defines an ordinary variable, as Snd's own funcs.scm shows on every
+  ;; line -- and there is no Scheme-visible registry to ask instead: the
+  ;; editor's list lives in all_envs/all_names in snd-env.c, C-side only.
+  (and (pair? value)
+       (even? (length value))
+       (>= (length value) 4)
+       (let loop ((rest value))
+         (or (null? rest)
+             (and (real? (car rest)) (loop (cdr rest)))))))
+
+(define (sv-named-envelopes limit)
+  (let ((out ()))
+    (for-each
+     (lambda (sym)
+       (when (< (length out) limit)
+         (catch #t
+           (lambda ()
+             (when (defined? sym)
+               (let ((value (symbol->value sym)))
+                 (when (sv-envelope? value)
+                   (set! out (cons (inlet 'name (symbol->string sym) 'points value) out))))))
+           (lambda args #f))))
+     (symbol-table))
+    (reverse out)))
+
+(sv-define-op envelope (params)
+  ;; Everything Bill's Edit Envelope dialog shows, in one request.
+  ;;
+  ;; His dialog is a window over enved-* variables, like the rest of Snd, so
+  ;; the panel reads and writes those: with a Motif build both editors show
+  ;; the same envelope, the same base, the same target.
+  (let* ((snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0))
+         (var (lambda (name fallback)
+                (if (sv-have? name)
+                    (catch #t (lambda () ((symbol->value name))) (lambda args fallback))
+                    fallback))))
+    (inlet 'envelope (var 'enved-envelope ())
+           'base (var 'enved-base 1.0)
+           'clip (var 'enved-clip? #f)
+           'wave (var 'enved-wave? #f)
+           'inDB (var 'enved-in-dB #f)
+           'power (var 'enved-power 3.0)
+           'filterOrder (var 'enved-filter-order 40)
+           'target (if (sv-have? 'enved-target) (sv-enved-target-name) "amp")
+           'style (catch #t
+                    (lambda ()
+                      (if (and (defined? 'envelope-exponential)
+                               (eqv? ((symbol->value 'enved-style))
+                                     (symbol->value 'envelope-exponential)))
+                          "exponential"
+                          "linear"))
+                    (lambda args "linear"))
+           ;; The named envelopes, for the list on the left of Bill's dialog.
+           ;; 500, not 200. The scan stops after that many MATCHES, and a
+           ;; session that has loaded one of Snd's own envelope files --
+           ;; funcs.scm alone is about a hundred -- plus a few of its own can
+           ;; pass 200. Being cut off shows as "my envelope is not in the
+           ;; list", with nothing to suggest a limit was involved.
+           'named (sv-named-envelopes (sv-arg params 'limit 500))
+           'filter (if (sv-have? 'filter-control-envelope)
+                       (catch #t (lambda () ((symbol->value 'filter-control-envelope) snd))
+                              (lambda args ()))
+                       ())
+           'srate (if (sv-in-snd?) ((symbol->value 'srate) snd) 44100)
+           'frames (if (sv-in-snd?) ((symbol->value 'framples) snd chn) 0)
+           'selection (sv-selection-of snd chn)
+           'editPosition (if (sv-in-snd?) ((symbol->value 'edit-position) snd chn) 0))))
+
+(define (sv-breakpoints text)
+  ;; "0 0 1 1" -> (0 0 1 1). Read as a LIST OF NUMBERS, not evaluated as
+  ;; code: the panel produces numbers and nothing else, and a breakpoint list
+  ;; that goes through eval is an eval op with a friendlier name.
+  (let ((out ()))
+    (for-each (lambda (word)
+                (let ((n (string->number word)))
+                  (if n
+                      (set! out (cons (* 1.0 n) out))
+                      (error 'sv-bad-envelope
+                             (string-append "not a number in the envelope: " word)))))
+              (sv-split-words text))
+    (let ((points (reverse out)))
+      (when (odd? (length points))
+        (error 'sv-bad-envelope "an envelope needs an even number of values (x y x y ...)"))
+      (when (< (length points) 4)
+        (error 'sv-bad-envelope "an envelope needs at least two breakpoints"))
+      points)))
+
+(sv-define-op applyenvelope (params)
+  ;; BILL'S MATRIX: three targets times three scopes.
+  ;;
+  ;;            sound                  selection            mix
+  ;;   amp      env-sound              env-selection        mix-amp-env
+  ;;   flt      filter-sound           filter-selection     --
+  ;;   src      src-sound              src-selection        --
+  ;;
+  ;; Nine cells, seven of them real functions, and the two empty ones are
+  ;; empty in Snd too -- a mix has an amplitude envelope and no filter or
+  ;; sampling-rate envelope. They are refused by name rather than silently
+  ;; falling back to the sound, which would apply an envelope to the whole
+  ;; file when the user asked for one mix.
+  ;;
+  ;; Every one of these puts ONE entry in the edit history, which is why they
+  ;; are used instead of walking the samples.
+  (let* ((snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0))
+         (target (sv-arg params 'target "amp"))
+         (scope (sv-arg params 'scope "sound"))
+         (base (sv-arg params 'base 1.0))
+         (order (sv-arg params 'order 40))
+         (mix (sv-mix (sv-arg params 'mix 0)))
+         (points (sv-breakpoints (sv-arg params 'points ""))))
+    (when (and (string=? scope "selection")
+               (not (and (sv-have? 'selection?) ((symbol->value 'selection?)))))
+      (error 'sv-no-selection "there is no selection to apply an envelope to"))
+    (cond
+     ;; --- amplitude
+     ((and (string=? target "amp") (string=? scope "sound"))
+      (sv-require 'env-sound)
+      ;; env-sound env beg dur base s c e -- the base is positional here, and
+      ;; it is the fourth argument, not the second.
+      ((symbol->value 'env-sound) points 0 ((symbol->value 'framples) snd chn) base snd chn))
+     ((and (string=? target "amp") (string=? scope "selection"))
+      (sv-require 'env-selection)
+      ((symbol->value 'env-selection) points base))
+     ((and (string=? target "amp") (string=? scope "mix"))
+      (sv-require 'mix-amp-env)
+      (set! ((symbol->value 'mix-amp-env) mix) points))
+     ;; --- spectrum, through an FIR filter of enved-filter-order taps
+     ((and (string=? target "flt") (string=? scope "sound"))
+      (sv-require 'filter-sound)
+      ((symbol->value 'filter-sound) points order snd chn))
+     ((and (string=? target "flt") (string=? scope "selection"))
+      (sv-require 'filter-selection)
+      ((symbol->value 'filter-selection) points order))
+     ;; --- sampling rate: changes length and pitch together
+     ((and (string=? target "src") (string=? scope "sound"))
+      (sv-require 'src-sound)
+      ((symbol->value 'src-sound) points snd chn))
+     ((and (string=? target "src") (string=? scope "selection"))
+      (sv-require 'src-selection)
+      ((symbol->value 'src-selection) points))
+     (else
+      (error 'sv-no-such-target
+             (string-append "Snd has no " target " envelope for a " scope
+                            " -- a mix has an amplitude envelope only"))))
+    (inlet 'target target 'scope scope 'applied #t
+           'editPosition ((symbol->value 'edit-position) snd chn))))
+
+(sv-define-op storeenvelope (params)
+  ;; Into Snd's OWN editor state, without applying it. So a curve drawn here
+  ;; is the curve Snd's envelope editor opens with, and the two are one
+  ;; editor rather than two.
+  (let ((points (sv-breakpoints (sv-arg params 'points "")))
+        (base (sv-arg params 'base 1.0)))
+    (when (sv-have? 'enved-envelope)
+      (set! ((symbol->value 'enved-envelope)) points))
+    (when (sv-have? 'enved-base)
+      (set! ((symbol->value 'enved-base)) base))
+    (inlet 'envelope points 'base base)))
+
+(sv-define-op defineenvelope (params)
+  ;; Bill's "define it" button: the curve gets a name and joins the list.
+  ;;
+  ;; define-envelope defines an ordinary variable -- his own funcs.scm is a
+  ;; hundred lines of exactly this -- so a named envelope is usable anywhere
+  ;; an envelope is, not only in the editor.
+  (sv-require 'define-envelope)
+  (let* ((name (sv-arg params 'name ""))
+         (points (sv-breakpoints (sv-arg params 'points "")))
+         (base (sv-arg params 'base 1.0)))
+    (when (= (length name) 0) (error 'sv-bad-name "an envelope needs a name"))
+    ;; The name is checked rather than interpolated blindly: it becomes a
+    ;; variable, and this is the one place where panel text turns into a
+    ;; symbol.
+    (for-each (lambda (c)
+                (when (or (char=? c #\() (char=? c #\)) (char=? c #\space)
+                          (char=? c #\") (char=? c #\'))
+                  (error 'sv-bad-name
+                         (string-append "not a usable envelope name: " name))))
+              (string->list name))
+    ;; define-envelope-1 IS the procedure; `define-envelope` is a macro over
+    ;; it that exists only to quote the name for you (snd-env.c). Calling the
+    ;; procedure directly needs no eval and no form-building: the name arrives
+    ;; as a symbol, which is what its type check accepts ("a string or
+    ;; symbol"). The macro is the fallback, for a build without the -1 name.
+    (cond ((sv-have? 'define-envelope-1)
+           ((symbol->value 'define-envelope-1) (string->symbol name) points base))
+          ((macro? (symbol->value 'define-envelope))
+           (eval (list 'define-envelope (string->symbol name) (list 'quote points) base)
+                 (rootlet)))
+          (else
+           ((symbol->value 'define-envelope) (string->symbol name) points base)))
+    (inlet 'name name 'points points 'base base)))
+
+(sv-define-op constants (params)
+  ;; What fourier-transform, blackman2-window and graph-as-sonogram are
+  ;; NUMERICALLY, in this build.
+  ;;
+  ;; The panels need the numbers to know which radio button is on, and the
+  ;; honest way to get them is to ask. Baking the integers into the extension
+  ;; would work until Snd inserts a transform in the middle of its list --
+  ;; after which every panel would be one entry off, would still look
+  ;; correct, and would set the wrong window on a spectrum whose picture
+  ;; nobody can check by eye.
+  ;;
+  ;; So the panels declare SYMBOLS, resolve them once per session, and write
+  ;; symbols back.
+  (let ((out ()))
+    (for-each
+     (lambda (name)
+       (when (> (length name) 0)
+         (let ((symbol (string->symbol name)))
+           (set! out (cons (inlet 'name name
+                                  'available (and (defined? symbol) #t)
+                                  'value (if (defined? symbol)
+                                             (sv-var-encode
+                                              (catch #t
+                                                (lambda ()
+                                                  (let ((v (symbol->value symbol)))
+                                                    (if (procedure? v) (v) v)))
+                                                (lambda (type info) -1)))
+                                             -1))
+                           out)))))
+     (sv-split-words (sv-arg params 'names "")))
+    (reverse out)))
+
+(sv-define-op storeenvelope (params)
+  ;; Into Snd's OWN editor state, without applying it. So a curve drawn here
+  ;; is the curve Snd's envelope editor opens with, and the two are one
+  ;; editor rather than two.
+  (let ((points (sv-breakpoints (sv-arg params 'points "")))
+        (base (sv-arg params 'base 1.0)))
+    (when (sv-have? 'enved-envelope)
+      (set! ((symbol->value 'enved-envelope)) points))
+    (when (sv-have? 'enved-base)
+      (set! ((symbol->value 'enved-base)) base))
+    (inlet 'envelope points 'base base)))
 
 ;; ------------------------------------------------------------------
 ;; Base64
@@ -1028,11 +1277,23 @@
          (window-value (if (and (symbol? window) (defined? window))
                            (symbol->value window)
                            2))
-         (floor-dB (let ((v (if (and (defined? 'min-dB) (sv-have? 'min-dB))
-                                (catch #t (lambda () ((symbol->value 'min-dB)))
-                                       (lambda args -60.0))
-                                -60.0)))
-                     (if (>= v 0) -60.0 v)))
+         ;; -90, NOT min-dB.
+         ;;
+         ;; snd-spectrum's own floor is a literal in snd-sig.c:
+         ;;
+         ;;   lowest = 0.000001;  ... if (val < lowest) rdat[i] = 0.0;
+         ;;   ... else rdat[i] = -90.0;  /* min_dB(ss)? or could channel
+         ;;                                  case be less? */
+         ;;
+         ;; -- Bill Schottstaedt's own comment, wondering the same thing.
+         ;; Bins whose raw magnitude falls under `lowest` are set to zero and
+         ;; then to a flat -90; bins just above it are computed and can be
+         ;; LOWER than -90 (measured here: -105.14). So -90 is not a floor in
+         ;; the sense of a minimum, it is the value used for "did not reach
+         ;; the threshold", and scaling against min-dB (-60) puts every real
+         ;; measurement below -60 into the same black as the ones that were
+         ;; never measured.
+         (floor-dB -90.0)
          (usable (quotient size 2))
          (cells (make-int-vector (* columns bins) 0))
          (hop (/ dur columns)))
@@ -1075,6 +1336,345 @@
            ;; Column-major: one column is one transform, and the webview
            ;; walks columns to build the image.
            'cells (sv-base64 cells))))
+
+;; ------------------------------------------------------------------
+;; Regions and mixes
+;;
+;; Snd's last two dialogs without a counterpart here. Both are lists of
+;; objects with a handful of accessors, so both are trees rather than
+;; windows -- which is the one thing this side can do better: Snd's region
+;; browser and mix dialog are two more windows to arrange, and a tree is
+;; simply there.
+;;
+;; A REGION is a copy of some samples, made by a selection (when
+;; selection-creates-region is on) or by make-region. It outlives the
+;; selection it came from, and there are only max-regions of them -- the
+;; oldest is dropped when a new one arrives, which is worth knowing before
+;; wondering where one went.
+;;
+;; A MIX is a piece of sound laid over a channel, still movable: position and
+;; amplitude are settable and each change is an edit. That is the difference
+;; from having mixed something in destructively, and it is why the tree shows
+;; them at all.
+;; ------------------------------------------------------------------
+
+(sv-define-op regions (params)
+  (if (not (and (sv-in-snd?) (sv-have? 'regions)))
+      #()
+      (let ((all ((symbol->value 'regions))))
+        (map (lambda (r)
+               (inlet 'index (sv-region-index r)
+                      'frames (catch #t (lambda () ((symbol->value 'region-framples) r))
+                                     (lambda args 0))
+                      'channels (catch #t (lambda () ((symbol->value 'region-chans) r))
+                                       (lambda args 1))
+                      'srate (catch #t (lambda () ((symbol->value 'region-srate) r))
+                                    (lambda args 0))
+                      'position (catch #t (lambda () ((symbol->value 'region-position) r 0))
+                                       (lambda args 0))
+                      ;; region-home is where it came from: sound, channel,
+                      ;; begin and end. Without it a region list is a row of
+                      ;; numbers with no way back to the sound.
+                      'home (catch #t
+                              (lambda ()
+                                (let ((h ((symbol->value 'region-home) r)))
+                                  (if (pair? h)
+                                      (object->string h)
+                                      "")))
+                              (lambda args ""))))
+             (if (list? all) all (list all))))))
+
+(sv-define-op regionaction (params)
+  (let* ((action (sv-arg params 'action ""))
+         (region (sv-region (sv-arg params 'region 0)))
+         (snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0))
+         (at (sv-arg params 'at 0)))
+    (cond
+     ((string=? action "play")
+      (sv-require 'play)
+      ;; A region is played by handing it to play as the object, exactly
+      ;; like a sound: "The object can be a string, a sound object or index,
+      ;; a region, a mix ...".
+      ((symbol->value 'play) region)
+      (inlet 'playing #t))
+     ((string=? action "insert")
+      (sv-require 'insert-region)
+      ((symbol->value 'insert-region) region at snd chn)
+      (inlet 'editPosition ((symbol->value 'edit-position) snd chn)))
+     ((string=? action "mix")
+      (sv-require 'mix-region)
+      ((symbol->value 'mix-region) region at snd chn)
+      (inlet 'editPosition ((symbol->value 'edit-position) snd chn)))
+     ((string=? action "save")
+      ;; KEYWORDS: save-region reg :file :sample-type :header-type :comment
+      (sv-require 'save-region)
+      (let ((file (sv-arg params 'file "")))
+        ((symbol->value 'save-region) region :file file)
+        (inlet 'file file)))
+     ((string=? action "forget")
+      (sv-require 'forget-region)
+      ((symbol->value 'forget-region) region)
+      (inlet 'forgotten #t))
+     (else (error 'sv-unknown-action (string-append "not a region action: " action))))))
+
+(sv-define-op mixes (params)
+  (if (not (and (sv-in-snd?) (sv-have? 'mixes)))
+      #()
+      (let* ((snd (sv-arg params 'snd 0))
+             (chn (sv-arg params 'chn 0))
+             (all (catch #t
+                    (lambda () ((symbol->value 'mixes) snd chn))
+                    (lambda args ()))))
+        (map (lambda (m)
+               (inlet 'index (sv-mix-index m)
+                      'position (catch #t (lambda () ((symbol->value 'mix-position) m))
+                                       (lambda args 0))
+                      'frames (catch #t (lambda () ((symbol->value 'mix-length) m))
+                                     (lambda args 0))
+                      'amp (catch #t (lambda () ((symbol->value 'mix-amp) m))
+                                  (lambda args 1.0))
+                      'name (catch #t (lambda () (or ((symbol->value 'mix-name) m) ""))
+                                   (lambda args ""))
+                      'home (catch #t
+                              (lambda ()
+                                (let ((h ((symbol->value 'mix-home) m)))
+                                  (if (pair? h) (object->string h) "")))
+                              (lambda args ""))))
+             (if (list? all) all (list all))))))
+
+(sv-define-op mixaction (params)
+  (let* ((action (sv-arg params 'action ""))
+         (mix (sv-mix (sv-arg params 'mix 0)))
+         (snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0)))
+    (cond
+     ((string=? action "position")
+      ;; Moving a mix is an EDIT, which is the whole point of a mix still
+      ;; being a mix: it can be moved and the move can be undone.
+      (set! ((symbol->value 'mix-position) mix) (sv-arg params 'value 0))
+      (inlet 'position ((symbol->value 'mix-position) mix)
+             'editPosition ((symbol->value 'edit-position) snd chn)))
+     ((string=? action "amp")
+      (set! ((symbol->value 'mix-amp) mix) (* 1.0 (sv-arg params 'value 1.0)))
+      (inlet 'amp ((symbol->value 'mix-amp) mix)))
+     ((string=? action "name")
+      (set! ((symbol->value 'mix-name) mix) (sv-arg params 'text ""))
+      (inlet 'name ((symbol->value 'mix-name) mix)))
+     ((string=? action "play")
+      (sv-require 'play)
+      ((symbol->value 'play) mix)
+      (inlet 'playing #t))
+     (else (error 'sv-unknown-action (string-append "not a mix action: " action))))))
+
+(sv-define-op markaction (params)
+  ;; Marks follow the edit list -- "if the deleted mark was present in an
+  ;; earlier edit, and you undo to that point, the mark comes back to life".
+  ;; So adding and deleting marks is undoable like everything else, and the
+  ;; tree does not need its own bookkeeping.
+  (let* ((action (sv-arg params 'action ""))
+         (snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0)))
+    (cond
+     ((string=? action "add")
+      (sv-require 'add-mark)
+      ;; add-mark sample snd chn name sync
+      (let* ((name (sv-arg params 'text ""))
+             (mark (if (> (length name) 0)
+                       ((symbol->value 'add-mark) (sv-arg params 'sample 0) snd chn name)
+                       ((symbol->value 'add-mark) (sv-arg params 'sample 0) snd chn))))
+        (inlet 'sample ((symbol->value 'mark-sample) mark))))
+     ((string=? action "delete")
+      (sv-require 'delete-mark)
+      ((symbol->value 'delete-mark) (sv-arg params 'mark 0))
+      (inlet 'deleted #t))
+     ((string=? action "name")
+      (set! ((symbol->value 'mark-name) (sv-arg params 'mark 0)) (sv-arg params 'text ""))
+      (inlet 'name (sv-arg params 'text "")))
+     ((string=? action "move")
+      (set! ((symbol->value 'mark-sample) (sv-arg params 'mark 0)) (sv-arg params 'sample 0))
+      (inlet 'sample (sv-arg params 'sample 0)))
+     (else (error 'sv-unknown-action (string-append "not a mark action: " action))))))
+
+(sv-define-op sync (params)
+  ;; Grouping sounds for simultaneous editing. From snd.html: sounds that
+  ;; share a sync value other than 0 are edited together, and 0 means "on its
+  ;; own". sync-max gives a value known to be unused, which is how one makes a
+  ;; new group without collecting the existing ones by accident.
+  (let ((snd (sv-arg params 'snd 0))
+        (value (sv-arg params 'value 0)))
+    ;; "new" arrives as a STRING, not a symbol: the wire format carries
+    ;; numbers, booleans and strings, and inletLiteral quotes anything
+    ;; textual. Comparing it with eq? against a symbol is always false, so
+    ;; asking for a new group silently set the sync field to the string --
+    ;; which Snd would then reject somewhere else entirely.
+    (set! ((symbol->value 'sync) snd)
+          (if (and (string? value) (string=? value "new"))
+              (+ 1 ((symbol->value 'sync-max)))
+              value))
+    (inlet 'sync ((symbol->value 'sync) snd))))
+
+;; ------------------------------------------------------------------
+;; Find
+;;
+;; "Searches in Snd refer to the sound data ... The expression it asks for is
+;; a function that takes one argument, the current sample value, and returns
+;; #t when it finds a match. To look for the next sample that is greater than
+;; .1, (lambda (y) (> y .1))."
+;;
+;; So Find is not a text search: it is a predicate applied to samples, and
+;; the predicate can be a closure -- his own zero+ example keeps the previous
+;; sample in a let and finds zero crossings. That is the whole point of it,
+;; and it is why the expression has to be EVALUATED rather than parsed into
+;; some little query language of mine: any restriction I invented would rule
+;; out exactly the searches that make the feature worth having.
+;;
+;; The expression comes from a prompt the user typed into, like the REPL, so
+;; evaluating it grants no access the REPL does not already have. What it must
+;; not do is arrive from a panel button -- and it does not; the only caller is
+;; the Find command.
+;;
+;; The scan is a do loop over a sampler, which is what the reference
+;; recommends now that scan-channel is obsolete: "scan-channel is obsolete;
+;; use a do loop with a sampler".
+
+(sv-define-op find (params)
+  (sv-require 'make-sampler)
+  (let* ((snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0))
+         (expr (sv-arg params 'expr ""))
+         (backwards (sv-arg params 'backwards #f))
+         (from (sv-arg params 'from (if (sv-in-snd?)
+                                        ((symbol->value 'cursor) snd chn)
+                                        0)))
+         (frames ((symbol->value 'framples) snd chn))
+         (predicate (eval-string expr (rootlet))))
+    (unless (procedure? predicate)
+      (error 'sv-bad-search
+             "a search expression must evaluate to a procedure of one argument, like (lambda (y) (> y .1))"))
+    ;; Snd's own search-procedure is set too, so C-s in a Motif window and
+    ;; Find here look for the same thing -- one search, two front ends.
+    (when (sv-have? 'search-procedure)
+      (catch #t
+        (lambda () (set! ((symbol->value 'search-procedure)) predicate))
+        (lambda args #f)))
+    (let* ((direction (if backwards -1 1))
+           (start (max 0 (min (- frames 1) (+ from direction))))
+           (reader ((symbol->value 'make-sampler) start snd chn direction))
+           (limit (if backwards start (- frames start))))
+      (let loop ((i 0))
+        (if (>= i limit)
+            (inlet 'found #f 'from from 'backwards backwards)
+            (let* ((position (+ start (* direction i)))
+                   (value ((symbol->value 'read-sample) reader)))
+              (if (catch #t
+                    (lambda () (and (predicate value) #t))
+                    (lambda (type info)
+                      (error 'sv-search-error
+                             (string-append "the search expression failed on a sample: "
+                                            (object->string info)))))
+                  (begin
+                    (set! ((symbol->value 'cursor) snd chn) position)
+                    (inlet 'found #t 'sample position 'value value))
+                  (loop (+ i 1)))))))))
+
+;; ------------------------------------------------------------------
+;; The keyboard, as Snd has it
+;;
+;; "Editing in Snd is modelled after Emacs in many regards. Each channel has a
+;; cursor (a big "+"), a set of marks, and a list of edits ... Where an
+;; operation has an obvious analog in text editing, I've tried to use the
+;; associated Emacs command. To delete the sample at the cursor, for example,
+;; use C-d."
+;;
+;; The panel had a mouse and buttons; this is the other half. Every entry
+;; below is the function Snd's own key binding calls, and the chord is in the
+;; comment so the table can be read against snd.html.
+;;
+;; A WHITELIST, again, and for the same reason as the edit buttons: a
+;; keystroke that carries a function name to be evaluated is eval with a
+;; keyboard in front of it.
+;;
+;; NUMERIC ARGUMENTS are Snd's too -- "All keyboard commands accept numerical
+;; arguments, as in Emacs" -- and a float is multiplied by the sampling rate
+;; before use, so C-u 2.1 C-f moves 2.1 seconds. That conversion happens here
+;; rather than in the panel, because the sampling rate is Snd's to know.
+;; ------------------------------------------------------------------
+
+(define (sv-count params snd chn)
+  ;; An integer is samples; a float is seconds, as in Snd.
+  (let ((n (sv-arg params 'count 1)))
+    (if (integer? n)
+        n
+        (round (* n ((symbol->value 'srate) snd))))))
+
+(sv-define-op key (params)
+  (let* ((action (sv-arg params 'action ""))
+         (snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0))
+         (count (sv-count params snd chn))
+         (at (lambda () ((symbol->value 'cursor) snd chn)))
+         (frames (lambda () ((symbol->value 'framples) snd chn)))
+         (put (lambda (sample)
+                (set! ((symbol->value 'cursor) snd chn)
+                      (max 0 (min (- (frames) 1) sample))))))
+    (cond
+     ;; --- moving, which changes no samples
+     ((string=? action "start") (put 0))                       ; C-a / <
+     ((string=? action "end") (put (- (frames) 1)))             ; C-e / >
+     ((string=? action "forward") (put (+ (at) count)))         ; C-f
+     ((string=? action "backward") (put (- (at) count)))        ; C-b
+     ;; "C-n move cursor ahead one 'line'" -- and a line in Snd is 128
+     ;; samples, which is what C-k deletes. Not a guess: the same number
+     ;; appears in both bindings in snd.html.
+     ((string=? action "down") (put (+ (at) (* 128 count))))    ; C-n
+     ((string=? action "up") (put (- (at) (* 128 count))))      ; C-p
+     ((string=? action "next-mark")                             ; C-j
+      (let ((ms (catch #t (lambda () ((symbol->value 'marks) snd chn)) (lambda args ()))))
+        (let loop ((rest (if (list? ms) ms (list ms))))
+          (cond ((null? rest) #f)
+                ((> ((symbol->value 'mark-sample) (car rest)) (at))
+                 (put ((symbol->value 'mark-sample) (car rest))))
+                (else (loop (cdr rest)))))))
+     ;; --- editing
+     ((string=? action "delete-sample")                         ; C-d
+      (sv-require 'delete-samples)
+      ((symbol->value 'delete-samples) (at) count snd chn))
+     ((string=? action "delete-previous")                       ; C-h
+      (sv-require 'delete-samples)
+      (let ((from (max 0 (- (at) count))))
+        ((symbol->value 'delete-samples) from (- (at) from) snd chn)
+        (put from)))
+     ((string=? action "delete-line")                           ; C-k
+      (sv-require 'delete-samples)
+      ((symbol->value 'delete-samples) (at) (* 128 count) snd chn))
+     ((string=? action "insert-zero")                           ; C-o
+      (sv-require 'insert-silence)
+      ((symbol->value 'insert-silence) (at) count snd chn))
+     ((string=? action "zero-sample")                           ; C-z
+      (let loop ((i 0))
+        (when (< i count)
+          (set! ((symbol->value 'sample) (+ (at) i) snd chn) 0.0)
+          (loop (+ i 1)))))
+     ((string=? action "mark")                                  ; C-m
+      (sv-require 'add-mark)
+      ((symbol->value 'add-mark) (at) snd chn))
+     ((string=? action "paste")                                 ; C-y
+      (sv-require 'insert-selection)
+      ((symbol->value 'insert-selection) (at) snd chn))
+     ((string=? action "delete-selection")                      ; C-w
+      (sv-require 'delete-selection)
+      ((symbol->value 'delete-selection)))
+     ((string=? action "mix-selection")                         ; C-x q
+      (sv-require 'mix-selection)
+      ((symbol->value 'mix-selection) (at) snd chn))
+     ((string=? action "smooth")                                ; C-x C-z
+      (sv-require 'smooth-sound)
+      ((symbol->value 'smooth-sound) (at) count snd chn))
+     (else (error 'sv-unknown-key (string-append "not a key action: " action))))
+    (inlet 'action action
+           'cursor (at)
+           'editPosition ((symbol->value 'edit-position) snd chn))))
 
 ;; ------------------------------------------------------------------
 ;; The Edit menu

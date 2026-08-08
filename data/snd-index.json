@@ -192,6 +192,10 @@
    "source": "snd"
   },
   {
+   "name": "add-mark!",
+   "source": "snd-suffix"
+  },
+  {
    "name": "add-mark-pane",
    "source": "snd"
   },
@@ -388,8 +392,16 @@
    "source": "snd"
   },
   {
+   "name": "ask-about-unsaved-edits*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "ask-before-overwrite",
    "source": "snd"
+  },
+  {
+   "name": "ask-before-overwrite*",
+   "source": "snd-suffix"
   },
   {
    "name": "assoc",
@@ -436,6 +448,10 @@
    "source": "snd"
   },
   {
+   "name": "auto-resize*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "auto-save",
    "source": "snd"
   },
@@ -444,8 +460,16 @@
    "source": "snd"
   },
   {
+   "name": "auto-update*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "auto-update-interval",
    "source": "snd"
+  },
+  {
+   "name": "auto-update-interval*",
+   "source": "snd-suffix"
   },
   {
    "name": "autocorrelate",
@@ -464,6 +488,10 @@
    "source": "snd"
   },
   {
+   "name": "axis-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "axis-info",
    "source": "snd"
   },
@@ -472,8 +500,16 @@
    "source": "snd"
   },
   {
+   "name": "axis-label-font*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "axis-numbers-font",
    "source": "snd"
+  },
+  {
+   "name": "axis-numbers-font*",
+   "source": "snd-suffix"
   },
   {
    "name": "background-gradient",
@@ -500,12 +536,24 @@
    "source": "snd"
   },
   {
+   "name": "basic-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "beats-per-measure",
    "source": "snd"
   },
   {
+   "name": "beats-per-measure*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "beats-per-minute",
    "source": "snd"
+  },
+  {
+   "name": "beats-per-minute*",
+   "source": "snd-suffix"
   },
   {
    "name": "before-close-hook",
@@ -614,6 +662,10 @@
   {
    "name": "bold-peaks-font",
    "source": "snd"
+  },
+  {
+   "name": "bold-peaks-font*",
+   "source": "snd-suffix"
   },
   {
    "name": "boolean?",
@@ -928,6 +980,10 @@
    "source": "snd"
   },
   {
+   "name": "channel-style*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "channel-sync",
    "source": "snd"
   },
@@ -1088,6 +1144,10 @@
    "source": "snd"
   },
   {
+   "name": "clipping*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "clm-channel",
    "source": "snd"
   },
@@ -1098,6 +1158,10 @@
   {
    "name": "clm-table-size",
    "source": "snd-constant"
+  },
+  {
+   "name": "clm-table-size*",
+   "source": "snd-suffix"
   },
   {
    "name": "close-hook",
@@ -1124,12 +1188,20 @@
    "source": "snd"
   },
   {
+   "name": "color-cutoff*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "color-hook",
    "source": "snd"
   },
   {
    "name": "color-inverted",
    "source": "snd"
+  },
+  {
+   "name": "color-inverted*",
+   "source": "snd-suffix"
   },
   {
    "name": "color-mixes",
@@ -1144,12 +1216,20 @@
    "source": "snd"
   },
   {
+   "name": "color-scale*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "color?",
    "source": "snd"
   },
   {
    "name": "colormap",
    "source": "snd"
+  },
+  {
+   "name": "colormap*",
+   "source": "snd-suffix"
   },
   {
    "name": "colormap->integer",
@@ -1166,6 +1246,10 @@
   {
    "name": "colormap-size",
    "source": "snd"
+  },
+  {
+   "name": "colormap-size*",
+   "source": "snd-suffix"
   },
   {
    "name": "colormap?",
@@ -1262,6 +1346,10 @@
   {
    "name": "contrast-control-amp",
    "source": "snd"
+  },
+  {
+   "name": "contrast-control-amp*",
+   "source": "snd-suffix"
   },
   {
    "name": "contrast-control-bounds",
@@ -1376,6 +1464,10 @@
    "source": "snd"
   },
   {
+   "name": "cursor-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "cursor-context",
    "source": "snd"
   },
@@ -1400,6 +1492,10 @@
    "source": "snd"
   },
   {
+   "name": "cursor-location-offset*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "cursor-on-left",
    "source": "snd-constant"
   },
@@ -1416,12 +1512,24 @@
    "source": "snd"
   },
   {
+   "name": "cursor-size*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "cursor-style",
    "source": "snd"
   },
   {
+   "name": "cursor-style*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "cursor-update-interval",
    "source": "snd"
+  },
+  {
+   "name": "cursor-update-interval*",
+   "source": "snd-suffix"
   },
   {
    "name": "cutlet",
@@ -1436,12 +1544,24 @@
    "source": "snd"
   },
   {
+   "name": "dac-combines-channels*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "dac-size",
    "source": "snd"
   },
   {
+   "name": "dac-size*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "data-color",
    "source": "snd"
+  },
+  {
+   "name": "data-color*",
+   "source": "snd-suffix"
   },
   {
    "name": "data-location",
@@ -1460,16 +1580,32 @@
    "source": "snd"
   },
   {
+   "name": "default-output-chans*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "default-output-header-type",
    "source": "snd"
+  },
+  {
+   "name": "default-output-header-type*",
+   "source": "snd-suffix"
   },
   {
    "name": "default-output-sample-type",
    "source": "snd"
   },
   {
+   "name": "default-output-sample-type*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "default-output-srate",
    "source": "snd"
+  },
+  {
+   "name": "default-output-srate*",
+   "source": "snd-suffix"
   },
   {
    "name": "defgenerator",
@@ -1494,6 +1630,10 @@
   {
    "name": "define-envelope",
    "source": "snd"
+  },
+  {
+   "name": "define-envelope-1",
+   "source": "snd-suffix"
   },
   {
    "name": "define-expansion",
@@ -1684,6 +1824,10 @@
    "source": "snd"
   },
   {
+   "name": "dot-size*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "down-oct",
    "source": "snd"
   },
@@ -1852,6 +1996,10 @@
    "source": "snd"
   },
   {
+   "name": "enved-base*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "enved-clip?",
    "source": "snd"
   },
@@ -1876,6 +2024,10 @@
    "source": "snd"
   },
   {
+   "name": "enved-filter-order*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "enved-hook",
    "source": "snd"
   },
@@ -1892,6 +2044,10 @@
    "source": "snd"
   },
   {
+   "name": "enved-power*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "enved-spectrum",
    "source": "snd-constant"
   },
@@ -1904,16 +2060,32 @@
    "source": "snd"
   },
   {
+   "name": "enved-style*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "enved-target",
    "source": "snd"
+  },
+  {
+   "name": "enved-target*",
+   "source": "snd-suffix"
   },
   {
    "name": "enved-wave?",
    "source": "snd"
   },
   {
+   "name": "enved-wave?*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "enved-waveform-color",
    "source": "snd"
+  },
+  {
+   "name": "enved-waveform-color*",
+   "source": "snd-suffix"
   },
   {
    "name": "envelope-exponential",
@@ -1948,16 +2120,32 @@
    "source": "snd"
   },
   {
+   "name": "eps-bottom-margin*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "eps-file",
    "source": "snd"
+  },
+  {
+   "name": "eps-file*",
+   "source": "snd-suffix"
   },
   {
    "name": "eps-left-margin",
    "source": "snd"
   },
   {
+   "name": "eps-left-margin*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "eps-size",
    "source": "snd"
+  },
+  {
+   "name": "eps-size*",
+   "source": "snd-suffix"
   },
   {
    "name": "eq?",
@@ -2052,16 +2240,32 @@
    "source": "snd"
   },
   {
+   "name": "expand-control-hop*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "expand-control-jitter",
    "source": "snd"
+  },
+  {
+   "name": "expand-control-jitter*",
+   "source": "snd-suffix"
   },
   {
    "name": "expand-control-length",
    "source": "snd"
   },
   {
+   "name": "expand-control-length*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "expand-control-ramp",
    "source": "snd"
+  },
+  {
+   "name": "expand-control-ramp*",
+   "source": "snd-suffix"
   },
   {
    "name": "expand-control?",
@@ -2116,8 +2320,16 @@
    "source": "snd"
   },
   {
+   "name": "fft-log-frequency*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "fft-log-magnitude",
    "source": "snd"
+  },
+  {
+   "name": "fft-log-magnitude*",
+   "source": "snd-suffix"
   },
   {
    "name": "fft-smoother",
@@ -2132,16 +2344,32 @@
    "source": "snd"
   },
   {
+   "name": "fft-window*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "fft-window-alpha",
    "source": "snd"
+  },
+  {
+   "name": "fft-window-alpha*",
+   "source": "snd-suffix"
   },
   {
    "name": "fft-window-beta",
    "source": "snd"
   },
   {
+   "name": "fft-window-beta*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "fft-with-phases",
    "source": "snd"
+  },
+  {
+   "name": "fft-with-phases*",
+   "source": "snd-suffix"
   },
   {
    "name": "file->array",
@@ -2208,16 +2436,32 @@
    "source": "snd"
   },
   {
+   "name": "filter-control-in-dB*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "filter-control-in-hz",
    "source": "snd"
+  },
+  {
+   "name": "filter-control-in-hz*",
+   "source": "snd-suffix"
   },
   {
    "name": "filter-control-order",
    "source": "snd"
   },
   {
+   "name": "filter-control-order*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "filter-control-waveform-color",
    "source": "snd"
+  },
+  {
+   "name": "filter-control-waveform-color*",
+   "source": "snd-suffix"
   },
   {
    "name": "filter-control?",
@@ -2680,8 +2924,16 @@
    "source": "snd"
   },
   {
+   "name": "graph-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "graph-cursor",
    "source": "snd"
+  },
+  {
+   "name": "graph-cursor*",
+   "source": "snd-suffix"
   },
   {
    "name": "graph-data",
@@ -2720,8 +2972,16 @@
    "source": "snd"
   },
   {
+   "name": "graph-style*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "graphs-horizontal",
    "source": "snd"
+  },
+  {
+   "name": "graphs-horizontal*",
+   "source": "snd-suffix"
   },
   {
    "name": "green-noise",
@@ -2742,6 +3002,10 @@
   {
    "name": "grid-density",
    "source": "snd"
+  },
+  {
+   "name": "grid-density*",
+   "source": "snd-suffix"
   },
   {
    "name": "haar-transform",
@@ -2840,6 +3104,10 @@
    "source": "snd"
   },
   {
+   "name": "highlight-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "hilbert-transform",
    "source": "snd"
   },
@@ -2860,8 +3128,16 @@
    "source": "snd"
   },
   {
+   "name": "html-dir*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "html-program",
    "source": "snd"
+  },
+  {
+   "name": "html-program*",
+   "source": "snd-suffix"
   },
   {
    "name": "hz->radians",
@@ -2928,8 +3204,16 @@
    "source": "snd"
   },
   {
+   "name": "initial-beg*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "initial-dur",
    "source": "snd"
+  },
+  {
+   "name": "initial-dur*",
+   "source": "snd-suffix"
   },
   {
    "name": "initial-graph-hook",
@@ -3120,6 +3404,10 @@
    "source": "snd"
   },
   {
+   "name": "just-sounds*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "jycos",
    "source": "snd"
   },
@@ -3206,6 +3494,10 @@
   {
    "name": "ladspa-dir",
    "source": "snd"
+  },
+  {
+   "name": "ladspa-dir*",
+   "source": "snd-suffix"
   },
   {
    "name": "lambda*",
@@ -3320,6 +3612,10 @@
    "source": "snd"
   },
   {
+   "name": "listener-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "listener-colorized",
    "source": "snd"
   },
@@ -3328,8 +3624,16 @@
    "source": "snd"
   },
   {
+   "name": "listener-font*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "listener-prompt",
    "source": "snd"
+  },
+  {
+   "name": "listener-prompt*",
+   "source": "snd-suffix"
   },
   {
    "name": "listener-selection",
@@ -3338,6 +3642,10 @@
   {
    "name": "listener-text-color",
    "source": "snd"
+  },
+  {
+   "name": "listener-text-color*",
+   "source": "snd-suffix"
   },
   {
    "name": "little-endian?",
@@ -3386,6 +3694,10 @@
   {
    "name": "log-freq-start",
    "source": "snd"
+  },
+  {
+   "name": "log-freq-start*",
+   "source": "snd-suffix"
   },
   {
    "name": "logand",
@@ -3584,6 +3896,10 @@
    "source": "snd"
   },
   {
+   "name": "make-fir-filter?",
+   "source": "snd-suffix"
+  },
+  {
    "name": "make-firmant",
    "source": "snd"
   },
@@ -3646,6 +3962,10 @@
   {
    "name": "make-iir-filter",
    "source": "snd"
+  },
+  {
+   "name": "make-iir-filter?",
+   "source": "snd-suffix"
   },
   {
    "name": "make-int-vector",
@@ -4124,6 +4444,10 @@
    "source": "snd"
   },
   {
+   "name": "mark-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "mark-context",
    "source": "snd"
   },
@@ -4184,8 +4508,16 @@
    "source": "snd"
   },
   {
+   "name": "mark-tag-height*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "mark-tag-width",
    "source": "snd"
+  },
+  {
+   "name": "mark-tag-width*",
+   "source": "snd-suffix"
   },
   {
    "name": "mark?",
@@ -4212,8 +4544,20 @@
    "source": "snd"
   },
   {
+   "name": "max-regions*",
+   "source": "snd-suffix"
+  },
+  {
+   "name": "max-regionsnegative?",
+   "source": "snd-suffix"
+  },
+  {
    "name": "max-transform-peaks",
    "source": "snd"
+  },
+  {
+   "name": "max-transform-peaks*",
+   "source": "snd-suffix"
   },
   {
    "name": "maxamp",
@@ -4246,6 +4590,10 @@
   {
    "name": "min-dB",
    "source": "snd"
+  },
+  {
+   "name": "min-dB*",
+   "source": "snd-suffix"
   },
   {
    "name": "mix",
@@ -4286,6 +4634,10 @@
   {
    "name": "mix-color",
    "source": "snd"
+  },
+  {
+   "name": "mix-color*",
+   "source": "snd-suffix"
   },
   {
    "name": "mix-dialog-mix",
@@ -4372,8 +4724,16 @@
    "source": "snd"
   },
   {
+   "name": "mix-tag-height*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "mix-tag-width",
    "source": "snd"
+  },
+  {
+   "name": "mix-tag-width*",
+   "source": "snd-suffix"
   },
   {
    "name": "mix-tag-y",
@@ -4386,6 +4746,10 @@
   {
    "name": "mix-waveform-height",
    "source": "snd"
+  },
+  {
+   "name": "mix-waveform-height*",
+   "source": "snd-suffix"
   },
   {
    "name": "mix?",
@@ -4600,6 +4964,10 @@
    "source": "snd"
   },
   {
+   "name": "mus-array-print-length*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "mus-b24int",
    "source": "snd-constant"
   },
@@ -4748,6 +5116,10 @@
    "source": "snd"
   },
   {
+   "name": "mus-float-equal-fudge-factor*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "mus-frequency",
    "source": "snd"
   },
@@ -4868,8 +5240,16 @@
    "source": "snd"
   },
   {
+   "name": "mus-max-malloc*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "mus-max-table-size",
    "source": "snd"
+  },
+  {
+   "name": "mus-max-table-size*",
+   "source": "snd-suffix"
   },
   {
    "name": "mus-mulaw",
@@ -5018,6 +5398,10 @@
   {
    "name": "mus-sound-path",
    "source": "snd"
+  },
+  {
+   "name": "mus-sound-path*",
+   "source": "snd-suffix"
   },
   {
    "name": "mus-sound-preload",
@@ -5472,6 +5856,10 @@
    "source": "snd"
   },
   {
+   "name": "open-file-dialog-directory*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "open-hook",
    "source": "snd"
   },
@@ -5644,12 +6032,20 @@
    "source": "snd"
   },
   {
+   "name": "peak-env-dir*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "peaks",
    "source": "snd"
   },
   {
    "name": "peaks-font",
    "source": "snd"
+  },
+  {
+   "name": "peaks-font*",
+   "source": "snd-suffix"
   },
   {
    "name": "peek-char",
@@ -5714,6 +6110,10 @@
   {
    "name": "play-arrow-size",
    "source": "snd"
+  },
+  {
+   "name": "play-arrow-size*",
+   "source": "snd-suffix"
   },
   {
    "name": "play-between-marks",
@@ -5852,6 +6252,10 @@
    "source": "snd"
   },
   {
+   "name": "position-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "positive?",
    "source": "s7"
   },
@@ -5882,6 +6286,10 @@
   {
    "name": "print-length",
    "source": "snd"
+  },
+  {
+   "name": "print-length*",
+   "source": "snd-suffix"
   },
   {
    "name": "procedure-arglist",
@@ -6124,6 +6532,10 @@
    "source": "snd"
   },
   {
+   "name": "region-graph-style*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "region-home",
    "source": "snd"
   },
@@ -6176,6 +6588,10 @@
    "source": "snd"
   },
   {
+   "name": "remember-sound-state*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "remove-clicks",
    "source": "snd"
   },
@@ -6224,8 +6640,16 @@
    "source": "snd"
   },
   {
+   "name": "reverb-control-decay*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "reverb-control-feedback",
    "source": "snd"
+  },
+  {
+   "name": "reverb-control-feedback*",
+   "source": "snd-suffix"
   },
   {
    "name": "reverb-control-length",
@@ -6238,6 +6662,10 @@
   {
    "name": "reverb-control-lowpass",
    "source": "snd"
+  },
+  {
+   "name": "reverb-control-lowpass*",
+   "source": "snd-suffix"
   },
   {
    "name": "reverb-control-scale",
@@ -6480,12 +6908,24 @@
    "source": "snd"
   },
   {
+   "name": "sash-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "save-as-dialog-auto-comment",
    "source": "snd"
   },
   {
+   "name": "save-as-dialog-auto-comment*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "save-as-dialog-src",
    "source": "snd"
+  },
+  {
+   "name": "save-as-dialog-src*",
+   "source": "snd-suffix"
   },
   {
    "name": "save-controls",
@@ -6494,6 +6934,10 @@
   {
    "name": "save-dir",
    "source": "snd"
+  },
+  {
+   "name": "save-dir*",
+   "source": "snd-suffix"
   },
   {
    "name": "save-edit-history",
@@ -6558,6 +7002,10 @@
   {
    "name": "save-state-file",
    "source": "snd"
+  },
+  {
+   "name": "save-state-file*",
+   "source": "snd-suffix"
   },
   {
    "name": "save-state-hook",
@@ -6676,8 +7124,16 @@
    "source": "snd"
   },
   {
+   "name": "selected-data-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "selected-graph-color",
    "source": "snd"
+  },
+  {
+   "name": "selected-graph-color*",
+   "source": "snd-suffix"
   },
   {
    "name": "selected-sound",
@@ -6700,12 +7156,20 @@
    "source": "snd"
   },
   {
+   "name": "selection-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "selection-context",
    "source": "snd"
   },
   {
    "name": "selection-creates-region",
    "source": "snd"
+  },
+  {
+   "name": "selection-creates-region*",
+   "source": "snd-suffix"
   },
   {
    "name": "selection-framples",
@@ -6792,12 +7256,20 @@
    "source": "snd"
   },
   {
+   "name": "show-axes*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "show-bare-x-axis",
    "source": "snd-constant"
   },
   {
    "name": "show-controls",
    "source": "snd"
+  },
+  {
+   "name": "show-controls*",
+   "source": "snd-suffix"
   },
   {
    "name": "show-disk-space",
@@ -6808,16 +7280,32 @@
    "source": "snd"
   },
   {
+   "name": "show-full-duration*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "show-full-range",
    "source": "snd"
+  },
+  {
+   "name": "show-full-range*",
+   "source": "snd-suffix"
   },
   {
    "name": "show-grid",
    "source": "snd"
   },
   {
+   "name": "show-grid*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "show-indices",
    "source": "snd"
+  },
+  {
+   "name": "show-indices*",
+   "source": "snd-suffix"
   },
   {
    "name": "show-listener",
@@ -6828,8 +7316,16 @@
    "source": "snd"
   },
   {
+   "name": "show-marks*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "show-mix-waveforms",
    "source": "snd"
+  },
+  {
+   "name": "show-mix-waveforms*",
+   "source": "snd-suffix"
   },
   {
    "name": "show-no-axes",
@@ -6848,8 +7344,16 @@
    "source": "snd"
   },
   {
+   "name": "show-selection-transform*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "show-sonogram-cursor",
    "source": "snd"
+  },
+  {
+   "name": "show-sonogram-cursor*",
+   "source": "snd-suffix"
   },
   {
    "name": "show-stack",
@@ -6858,6 +7362,10 @@
   {
    "name": "show-transform-peaks",
    "source": "snd"
+  },
+  {
+   "name": "show-transform-peaks*",
+   "source": "snd-suffix"
   },
   {
    "name": "show-widget",
@@ -6874,6 +7382,10 @@
   {
    "name": "show-y-zero",
    "source": "snd"
+  },
+  {
+   "name": "show-y-zero*",
+   "source": "snd-suffix"
   },
   {
    "name": "signature",
@@ -6902,6 +7414,10 @@
   {
    "name": "sinc-width",
    "source": "snd"
+  },
+  {
+   "name": "sinc-width*",
+   "source": "snd-suffix"
   },
   {
    "name": "sinc-window",
@@ -7096,28 +7612,56 @@
    "source": "snd"
   },
   {
+   "name": "spectro-hop*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "spectro-x-angle",
    "source": "snd"
+  },
+  {
+   "name": "spectro-x-angle*",
+   "source": "snd-suffix"
   },
   {
    "name": "spectro-x-scale",
    "source": "snd"
   },
   {
+   "name": "spectro-x-scale*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "spectro-y-angle",
    "source": "snd"
+  },
+  {
+   "name": "spectro-y-angle*",
+   "source": "snd-suffix"
   },
   {
    "name": "spectro-y-scale",
    "source": "snd"
   },
   {
+   "name": "spectro-y-scale*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "spectro-z-angle",
    "source": "snd"
   },
   {
+   "name": "spectro-z-angle*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "spectro-z-scale",
    "source": "snd"
+  },
+  {
+   "name": "spectro-z-scale*",
+   "source": "snd-suffix"
   },
   {
    "name": "spectrum",
@@ -7132,8 +7676,16 @@
    "source": "snd"
   },
   {
+   "name": "spectrum-end*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "spectrum-start",
    "source": "snd"
+  },
+  {
+   "name": "spectrum-start*",
+   "source": "snd-suffix"
   },
   {
    "name": "speed-control",
@@ -7160,8 +7712,16 @@
    "source": "snd"
   },
   {
+   "name": "speed-control-style*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "speed-control-tones",
    "source": "snd"
+  },
+  {
+   "name": "speed-control-tones*",
+   "source": "snd-suffix"
   },
   {
    "name": "spot-freq",
@@ -7274,6 +7834,10 @@
   {
    "name": "stdin-prompt",
    "source": "snd"
+  },
+  {
+   "name": "stdin-prompt*",
+   "source": "snd-suffix"
   },
   {
    "name": "stereo->mono",
@@ -7512,6 +8076,10 @@
    "source": "snd"
   },
   {
+   "name": "sync-style*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "syncd-marks",
    "source": "snd"
   },
@@ -7572,8 +8140,16 @@
    "source": "snd"
   },
   {
+   "name": "temp-dir*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "text-focus-color",
    "source": "snd"
+  },
+  {
+   "name": "text-focus-color*",
+   "source": "snd-suffix"
   },
   {
    "name": "throw",
@@ -7592,6 +8168,10 @@
    "source": "snd"
   },
   {
+   "name": "time-graph-type*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "time-graph?",
    "source": "snd"
   },
@@ -7604,12 +8184,20 @@
    "source": "snd"
   },
   {
+   "name": "tiny-font*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "touch-tone",
    "source": "snd"
   },
   {
    "name": "tracking-cursor-style",
    "source": "snd"
+  },
+  {
+   "name": "tracking-cursor-style*",
+   "source": "snd-suffix"
   },
   {
    "name": "transform->float-vector",
@@ -7644,12 +8232,20 @@
    "source": "snd"
   },
   {
+   "name": "transform-graph-type*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "transform-graph?",
    "source": "snd"
   },
   {
    "name": "transform-normalization",
    "source": "snd"
+  },
+  {
+   "name": "transform-normalization*",
+   "source": "snd-suffix"
   },
   {
    "name": "transform-sample",
@@ -7660,8 +8256,16 @@
    "source": "snd"
   },
   {
+   "name": "transform-size*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "transform-type",
    "source": "snd"
+  },
+  {
+   "name": "transform-type*",
+   "source": "snd-suffix"
   },
   {
    "name": "transform?",
@@ -7904,6 +8508,10 @@
    "source": "snd"
   },
   {
+   "name": "view-files-sort*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "view-files-speed",
    "source": "snd"
   },
@@ -7956,12 +8564,24 @@
    "source": "snd"
   },
   {
+   "name": "wavelet-type*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "wavo-hop",
    "source": "snd"
   },
   {
+   "name": "wavo-hop*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "wavo-trace",
    "source": "snd"
+  },
+  {
+   "name": "wavo-trace*",
+   "source": "snd-suffix"
   },
   {
    "name": "weak-hash-table",
@@ -8016,6 +8636,10 @@
    "source": "snd"
   },
   {
+   "name": "with-background-processes*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "with-baffle",
    "source": "snd"
   },
@@ -8024,8 +8648,16 @@
    "source": "snd"
   },
   {
+   "name": "with-file-monitor*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "with-gl",
    "source": "snd"
+  },
+  {
+   "name": "with-gl*",
+   "source": "snd-suffix"
   },
   {
    "name": "with-input-from-file",
@@ -8040,8 +8672,16 @@
    "source": "snd"
   },
   {
+   "name": "with-inset-graph*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "with-interrupts",
    "source": "snd"
+  },
+  {
+   "name": "with-interrupts*",
+   "source": "snd-suffix"
   },
   {
    "name": "with-let",
@@ -8056,8 +8696,16 @@
    "source": "snd"
   },
   {
+   "name": "with-menu-icons*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "with-mix-tags",
    "source": "snd"
+  },
+  {
+   "name": "with-mix-tags*",
+   "source": "snd-suffix"
   },
   {
    "name": "with-output-to-file",
@@ -8072,12 +8720,24 @@
    "source": "snd"
   },
   {
+   "name": "with-pointer-focus*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "with-relative-panes",
    "source": "snd"
   },
   {
+   "name": "with-relative-panes*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "with-smpte-label",
    "source": "snd"
+  },
+  {
+   "name": "with-smpte-label*",
+   "source": "snd-suffix"
   },
   {
    "name": "with-sound",
@@ -8092,16 +8752,32 @@
    "source": "snd"
   },
   {
+   "name": "with-toolbar*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "with-tooltips",
    "source": "snd"
+  },
+  {
+   "name": "with-tooltips*",
+   "source": "snd-suffix"
   },
   {
    "name": "with-tracking-cursor",
    "source": "snd"
   },
   {
+   "name": "with-tracking-cursor*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "with-verbose-cursor",
    "source": "snd"
+  },
+  {
+   "name": "with-verbose-cursor*",
+   "source": "snd-suffix"
   },
   {
    "name": "write",
@@ -8160,6 +8836,10 @@
    "source": "snd"
   },
   {
+   "name": "x-axis-style*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "x-bounds",
    "source": "snd"
   },
@@ -8216,6 +8896,10 @@
    "source": "snd"
   },
   {
+   "name": "zero-pad*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "zero-phase",
    "source": "snd"
   },
@@ -8236,6 +8920,10 @@
    "source": "snd"
   },
   {
+   "name": "zoom-color*",
+   "source": "snd-suffix"
+  },
+  {
    "name": "zoom-focus-active",
    "source": "snd-constant"
   },
@@ -8254,6 +8942,10 @@
   {
    "name": "zoom-focus-style",
    "source": "snd"
+  },
+  {
+   "name": "zoom-focus-style*",
+   "source": "snd-suffix"
   }
  ]
 }

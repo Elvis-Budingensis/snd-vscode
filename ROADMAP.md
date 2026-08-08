@@ -24,18 +24,29 @@ had nowhere to draw it.
 - [x] sounds, channels, marks and **edit history** as a tree, clickable
 - [x] **sonogram** over a range, not one frame — transforms in Snd through
       `snd-spectrum`, one byte per cell over the wire, drawn as `ImageData`
-- [ ] **regions and mixes** in the tree, with a waveform per region
+- [x] **regions and mixes** in the tree, with play, insert, mix, save, forget,
+      and mix position/amplitude
+- [ ] a waveform per region in the tree
 - [ ] `ats` files: Snd reads them, and the analysis is already in the
       workflow of the Dorota / REASPCollider side of the desk
+- [x] **marks** added, renamed and deleted from the tree
 - [ ] **live level metering** while `play` runs (`dac-hook`)
 - [x] **Transform Options, control panel, View options, Preferences** as
       panels, rendered from one declarative registry over Snd's variables
-- [ ] **envelope editor** drawing surface (the bridge ops exist)
+- [x] **envelope editor** — channel, selection and filter response, with
+      Snd's exponential base drawn rather than only stored
 - [ ] **diff of two edit positions** — the thing Snd's edit history implies
       and does not offer
 - [ ] `variable-display` / `make-variable-display` in a panel: Snd's own way
       of showing an instrument's internals, which currently needs Motif
 - [ ] a graph of the current `dsp` chain, once there is one to graph
+
+- [x] **Find** — a sample predicate, closures included, sharing Snd's own
+      `search-procedure`
+- [x] **sync** — grouping sounds for simultaneous editing, shown in the tree
+- [ ] the **wavogram** (`time-graph-type` as `graph-as-wavogram`)
+- [ ] `enved-wave?` in `flt` mode: the filter's actual frequency response
+      drawn over the envelope
 
 ## Infrastructure
 

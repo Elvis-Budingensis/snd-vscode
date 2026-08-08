@@ -311,7 +311,12 @@ export const CONTROLS_DIALOG: DialogSpec = {
           name: 'filter-control-envelope',
           label: 'envelope',
           kind: 'readonly',
-          hint: 'edit it in the envelope panel',
+          // Read-only HERE on purpose, not for want of a way to write it.
+          // A list of breakpoints is not a control: typing one into a text
+          // field is how a curve gets a vertical segment and Snd's env
+          // generator divides by zero. "Snd: Envelope Editor" draws it, with
+          // the neighbours constrained so that cannot happen.
+          hint: 'draw it in "Snd: Envelope Editor" — target: the filter response',
           perSound: true,
         },
       ],

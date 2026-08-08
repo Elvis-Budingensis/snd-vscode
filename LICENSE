@@ -14,9 +14,19 @@ more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <https://www.gnu.org/licenses/>.
 
-NOTE: the full text of the GPL-3.0 must accompany this file before the
-extension is distributed; add COPYING from https://www.gnu.org/licenses/gpl-3.0.txt.
+The full text of the GPL-3.0 belongs alongside this file as COPYING before
+the extension is distributed:
+
+    curl -o COPYING https://www.gnu.org/licenses/gpl-3.0.txt
+
+A release gate checks for it (see tools/gates.mjs); it is deliberately not
+committed by a script, because fetching a licence on someone's behalf and
+committing it unread is not how one takes on a licence.
 
 scheme/snd-vscode.scm is loaded into Snd and forms part of the same program
 when running.  Snd and s7 are by Bill Schottstaedt.  The command set and key
-chords follow inf-snd.el by Michael Scholz.  Neither is included here.
+chords follow inf-snd.el by Michael Scholz.
+
+third-party/s7 contains s7.c and s7.h, taken unmodified from snd-26.5 and
+covered by their own licence, 0BSD -- see third-party/s7/README.md.  Snd
+itself is not included; tools/build-snd.sh fetches it.

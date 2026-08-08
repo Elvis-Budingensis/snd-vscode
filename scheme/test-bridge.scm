@@ -73,7 +73,9 @@
 (define (selected-sound) (make-sound-object 0))
 (define (edit-position . args) 3)
 (define cursor-value 42)
-(define (cursor . args) cursor-value)
+(define cursor
+  (dilambda (lambda* ((snd 0) (chn 0)) cursor-value)
+            (lambda* ((snd 0) (chn 0) v) (set! cursor-value v))))
 (define (marks . args) (list 7))
 (define (mark-sample m) 100)
 (define (mark-name m) "start")
@@ -106,6 +108,45 @@
               (set! *sel-frames* v))))
 (define (selection?) (or *has-selection* *sel-member*))
 
+;; Regions and mixes are OBJECTS, like sounds -- and region? and mix? say #t
+;; for a valid index too, which is the trap sounds fell into twice.
+(define (make-region-object i) (list '*region* i))
+(define (region? x) (or (and (pair? x) (eq? (car x) '*region*)) (and (integer? x) (>= x 0))))
+(define (region->integer r) (cadr r))
+(define (integer->region i) (make-region-object i))
+(define (regions) (list (make-region-object 0) (make-region-object 1)))
+(define (region-framples r) 1000)
+(define (region-chans r) 1)
+(define (region-srate r) 44100)
+(define (region-position r chan) 500)
+(define (region-home r) (list 'sound 0 0 500 1500))
+(define *region-log* ())
+(define (insert-region r beg snd chn) (set! *region-log* (cons (list 'insert (region->integer r) beg) *region-log*)) 1)
+(define (mix-region r samp snd chn) (set! *region-log* (cons (list 'mix (region->integer r) samp) *region-log*)) 1)
+(define (save-region r . args) (set! *region-log* (cons (cons 'save args) *region-log*)) "f.wav")
+(define (forget-region r) (set! *region-log* (cons 'forget *region-log*)) #t)
+
+(define (make-mix-object i) (list '*mix* i))
+(define (mix? x) (or (and (pair? x) (eq? (car x) '*mix*)) (and (integer? x) (>= x 0))))
+(define (mix->integer m) (cadr m))
+(define (integer->mix i) (make-mix-object i))
+(define (mixes . args) (list (make-mix-object 0)))
+(define *mix-position-value* 2000)
+(define mix-position
+  (dilambda (lambda (m) *mix-position-value*) (lambda (m v) (set! *mix-position-value* v))))
+(define *mix-amp-value* 1.0)
+(define mix-amp (dilambda (lambda (m) *mix-amp-value*) (lambda (m v) (set! *mix-amp-value* v))))
+(define *mix-name-value* "")
+(define mix-name (dilambda (lambda (m) *mix-name-value*) (lambda (m v) (set! *mix-name-value* v))))
+(define (mix-length m) 300)
+(define (mix-home m) (list 'sound 0 0))
+
+(define *mark-log* ())
+(define (add-mark sample . rest)
+  (set! *mark-log* (cons (cons 'add (cons sample rest)) *mark-log*))
+  7)
+(define (delete-mark m) (set! *mark-log* (cons (list 'delete m) *mark-log*)) #t)
+
 (define (snd-spectrum data window len . rest)
   ;; The real signature: data window length (linear #t) (beta 0.0) in-place
   ;; (normalized #t). In dB the values are <= 0 with min-dB as the floor.
@@ -114,6 +155,27 @@
     (do ((i 0 (+ i 1))) ((= i len) out)
       (set! (out i) (if linear (if (< i 4) 1.0 0.0) (if (< i 4) 0.0 -90.0))))))
 (define (min-dB) -60.0)
+;; A sampler, as the reference describes it: make-sampler start snd chn dir,
+;; then read-sample walks in that direction.
+(define (make-sampler start . rest)
+  (let ((pos start)
+        (dir (if (and (pair? rest) (pair? (cdr rest)) (pair? (cddr rest)))
+                 (caddr rest)
+                 1)))
+    (list 'sampler (lambda () (let ((v (*test-data* (max 0 (min (- *test-frames* 1) pos)))))
+                                (set! pos (+ pos dir))
+                                v)))))
+(define (read-sample r) ((cadr r)))
+(define *search-procedure-value* #f)
+(define search-procedure
+  (dilambda (lambda () *search-procedure-value*)
+            (lambda (v) (set! *search-procedure-value* v))))
+(define *sync-value* 0)
+(define sync
+  (dilambda (lambda* ((snd 0)) *sync-value*)
+            (lambda* ((snd 0) v) (set! *sync-value* v))))
+(define (sync-max) 3)
+
 (define (snd-help sym) (string-append "help for " (symbol->string sym)))
 (define (snd-version) "Snd 26.5 (test stub)")
 (define (default-output-srate) 44100)
@@ -159,6 +221,19 @@
 (define *edits* ())
 (define *has-selection* #f)
 (define (delete-selection) (set! *edits* (cons 'delete *edits*)) 1)
+(define *key-log* ())
+(define (delete-samples beg dur snd chn)
+  (set! *key-log* (cons (list 'delete-samples beg dur) *key-log*)) 1)
+(define (insert-silence beg dur snd chn)
+  (set! *key-log* (cons (list 'insert-silence beg dur) *key-log*)) 1)
+(define (smooth-sound beg dur snd chn)
+  (set! *key-log* (cons (list 'smooth beg dur) *key-log*)) 1)
+(define *sample-value* 0.5)
+(define sample
+  (dilambda (lambda* (samp (snd 0) (chn 0)) *sample-value*)
+            (lambda* (samp (snd 0) (chn 0) v)
+              (set! *key-log* (cons (list 'sample samp v) *key-log*))
+              (set! *sample-value* v))))
 ;; The signatures the reference gives: insert-selection beg snd chn, and
 ;; mix-selection beg snd chn selection-chan. Stubbing them as no-argument
 ;; functions is what let "insert at cursor" paste at 0 unnoticed.
@@ -175,12 +250,86 @@
 (define (unselect-all) (set! *has-selection* #f) 1)
 (define (scale-selection-by f) (set! *edits* (cons (list 'scale f) *edits*)) 1)
 (define (scale-channel f beg dur snd chn) (set! *edits* (cons (list 'scale-chan f) *edits*)) 1)
-(define (src-selection r) (set! *edits* (cons (list 'src r) *edits*)) 1)
+; src-selection is defined once, further down, where the envelope stubs are:
+; two definitions and the second silently wins, which is how the resample test
+; started passing an empty list.
 (define fourier-transform 0)
 (define blackman2-window 2)
+;; The envelope side, with the signatures the reference gives:
+;;   env-channel            env beg dur snd chn edpos
+;;   env-channel-with-base  env base beg dur snd chn edpos
+;;   env-selection          envelope env-base
+;; Each stub records HOW it was called, so a positional slip shows up here
+;; rather than as an edit in the wrong place.
 (define *env* (list 0.0 1.0 1.0 0.0))
+(define *env-calls* ())
 (define enved-envelope (dilambda (lambda () *env*) (lambda (v) (set! *env* v))))
-(define (env-channel e beg dur snd chn) (set! *env* e) 1)
+(define *enved-base-value* 1.0)
+(define enved-base
+  (dilambda (lambda () *enved-base-value*) (lambda (v) (set! *enved-base-value* v))))
+(define (enved-clip?) #f)
+(define (env-channel e beg dur snd chn)
+  (set! *env-calls* (cons (list 'env-channel e beg dur snd chn) *env-calls*)) 1)
+;; Bill's matrix: three targets times three scopes. The signatures are the
+;; documented ones, so a positional slip shows up here.
+;;   env-sound env beg dur base s c e     (the base is the FOURTH argument)
+;;   filter-sound env order s c e
+;;   src-sound num-or-env s c e
+(define (env-sound e beg dur base snd chn)
+  (set! *env-calls* (cons (list 'env-sound e beg dur base snd chn) *env-calls*)) 1)
+(define (filter-sound e order snd chn)
+  (set! *env-calls* (cons (list 'filter-sound e order snd chn) *env-calls*)) 1)
+(define (filter-selection e order)
+  (set! *env-calls* (cons (list 'filter-selection e order) *env-calls*)) 1)
+(define (src-sound e snd chn)
+  (set! *env-calls* (cons (list 'src-sound e snd chn) *env-calls*)) 1)
+(define (src-selection e)
+  ;; Recorded in BOTH logs: the resample op and the envelope op both call it,
+  ;; and a stub that serves one of them leaves the other testing nothing.
+  (set! *env-calls* (cons (list 'src-selection e) *env-calls*))
+  (set! *edits* (cons (list 'src e) *edits*))
+  1)
+(define *mix-amp-env-value* ())
+(define mix-amp-env
+  (dilambda (lambda (m) *mix-amp-env-value*)
+            (lambda (m v)
+              (set! *env-calls* (cons (list 'mix-amp-env v) *env-calls*))
+              (set! *mix-amp-env-value* v))))
+;; Snd's REAL arrangement, from snd-env.c: a procedure named
+;; define-envelope-1, plus a macro named define-envelope that quotes the name
+;; for you. Stubbing it as a plain procedure hid the fact that sv-have?
+;; answered "not available in this Snd build" for a working macro.
+(define *defined-envelopes* ())
+(define (define-envelope-1 name points base)
+  (set! *defined-envelopes* (cons (list name points base) *defined-envelopes*))
+  name)
+(define-macro (define-envelope a . b) `(define-envelope-1 ',a ,@b))
+(define enved-amplitude 0)
+(define enved-spectrum 1)
+(define enved-srate 2)
+(define envelope-linear 0)
+(define envelope-exponential 1)
+(define *enved-target-value* 0)
+(define enved-target
+  (dilambda (lambda () *enved-target-value*) (lambda (v) (set! *enved-target-value* v))))
+(define (enved-style) envelope-linear)
+(define (enved-wave?) #f)
+(define (enved-in-dB) #f)
+(define (enved-power) 3.0)
+(define (enved-filter-order) 40)
+;; A named envelope is an ordinary variable holding an even-length list of
+;; reals -- exactly what Snd's own funcs.scm defines on every line.
+(define sv-test-ramp '(0 0 1 1))
+(define (env-channel-with-base e base beg dur snd chn)
+  (set! *env-calls* (cons (list 'with-base e base beg dur snd chn) *env-calls*)) 1)
+(define (env-selection e base)
+  (set! *env-calls* (cons (list 'env-selection e base) *env-calls*)) 1)
+(define *filter-env* (list 0.0 1.0 1.0 1.0))
+(define filter-control-envelope
+  (dilambda (lambda* ((snd 0)) *filter-env*)
+            (lambda* ((snd 0) v) (set! *filter-env* v))))
+(define (filter-control-order . args) 20)
+(define (filter-control-in-hz . args) #f)
 
 
 ;; --- hooks, in Snd's own two shapes ---------------------------------
@@ -435,11 +584,6 @@
 (sv-request "36" 'applycontrols (inlet 'snd 0))
 (check "applycontrols: ok" #t ((last-frame) 'ok))
 
-(sv-request "37" 'setenvelope (inlet 'points "0.0 0.0 1.0 1.0" 'snd 0 'chn 0))
-(check "setenvelope: written through env-channel" (list 0.0 0.0 1.0 1.0) *env*)
-
-(sv-request "38" 'envelope (inlet))
-(check "envelope: read back" (list 0.0 0.0 1.0 1.0) (((last-frame) 'value) 'envelope))
 
 
 ;; --- the Edit menu -------------------------------------------------
@@ -769,7 +913,12 @@
          (* 4 (ceiling (/ 32 3))) (length (v 'cells)))
   ;; The floor is Snd's min-dB, not the loudest cell in view. Scaling to the
   ;; view would make the same passage look different at every zoom level.
-  (check "sonogram: the floor comes from min-dB" -60.0 (v 'floorDB)))
+    ;; -90, and it is a literal in snd-sig.c rather than min-dB. Bins below
+  ;; snd-spectrum's `lowest` threshold get a flat -90; bins just above it are
+  ;; computed and can be lower (measured against a real Snd: -105.14). Pinned
+  ;; here so that a change in Snd shows up as a failing test rather than as a
+  ;; sonogram that is subtly too dark.
+  (check "sonogram: the floor is snd-spectrum's own -90" -90.0 (v 'floorDB)))
 
 ;; A power of two, whatever was asked for -- snd-spectrum requires it.
 (sv-request "91" 'sonogram (inlet 'snd 0 'chn 0 'columns 2 'bins 8 'size 1000))
@@ -780,6 +929,312 @@
 (sv-request "92" 'sonogram (inlet 'snd 0 'chn 0 'start 900 'dur 100
                                   'columns 4 'bins 8 'size 256))
 (check "sonogram: a range at the end does not raise" #t ((last-frame) 'ok))
+
+
+
+;; --- the envelope editor, Bill's dialog -----------------------------
+
+(sv-request "100" 'envelope (inlet 'snd 0 'chn 0))
+(let ((v ((last-frame) 'value)))
+  (check "envelope: reads Snd's own editor state" (list 0.0 1.0 1.0 0.0) (v 'envelope))
+  (check "envelope: base" 1.0 (v 'base))
+  ;; The three buttons of the dialog, by Bill's own labels.
+  (check "envelope: target" "amp" (v 'target))
+  (check "envelope: style" "linear" (v 'style))
+  (check "envelope: the FIR order the flt button uses" 40 (v 'filterOrder))
+  ;; The list on the left of his dialog. There is no Scheme-visible registry
+  ;; -- all_envs lives in snd-env.c -- so it is the symbol table, filtered to
+  ;; what an envelope actually is.
+  (check-true "envelope: named envelopes are found"
+              (let loop ((rest (v 'named)))
+                (and (pair? rest)
+                     (or (string=? ((car rest) 'name) "sv-test-ramp")
+                         (loop (cdr rest)))))))
+
+;; Breakpoints are READ as numbers, not evaluated.
+(sv-request "101" 'applyenvelope (inlet 'points "(exit)" 'snd 0 'chn 0))
+(check "applyenvelope: refuses anything that is not a number" #f ((last-frame) 'ok))
+(sv-request "102" 'applyenvelope (inlet 'points "0 0 1" 'snd 0 'chn 0))
+(check "applyenvelope: refuses an odd number of values" #f ((last-frame) 'ok))
+(sv-request "103" 'applyenvelope (inlet 'points "0 1" 'snd 0 'chn 0))
+(check "applyenvelope: refuses a single breakpoint" #f ((last-frame) 'ok))
+
+;; amp x sound: env-sound env beg dur BASE s c e -- the base is the fourth
+;; argument, not the second, and getting that wrong would silently apply a
+;; linear envelope where an exponential one was asked for.
+(set! *env-calls* ())
+(sv-request "104" 'applyenvelope (inlet 'points "0 0 1 1" 'target "amp" 'scope "sound"
+                                        'base 32.0 'snd 0 'chn 0))
+(check "envelope: amp x sound is env-sound with the base fourth"
+       (list 'env-sound (list 0.0 0.0 1.0 1.0) 0 *test-frames* 32.0 0 0)
+       (car *env-calls*))
+
+;; flt x sound: filter-sound env ORDER s c e
+(set! *env-calls* ())
+(sv-request "105" 'applyenvelope (inlet 'points "0 1 1 0" 'target "flt" 'scope "sound"
+                                        'order 64 'snd 0 'chn 0))
+(check "envelope: flt x sound is filter-sound with the order"
+       (list 'filter-sound (list 0.0 1.0 1.0 0.0) 64 0 0)
+       (car *env-calls*))
+
+;; src x sound: src-sound num-or-env s c e -- no base, no order.
+(set! *env-calls* ())
+(sv-request "106" 'applyenvelope (inlet 'points "0 1 1 2" 'target "src" 'scope "sound"
+                                        'snd 0 'chn 0))
+(check "envelope: src x sound is src-sound"
+       (list 'src-sound (list 0.0 1.0 1.0 2.0) 0 0)
+       (car *env-calls*))
+
+;; The selection scope, and its refusal.
+(set! *has-selection* #f)
+(set! *sel-member* #f)
+(sv-request "107" 'applyenvelope (inlet 'points "0 0 1 1" 'scope "selection"))
+(check "envelope: no selection is an error, not the whole sound" #f ((last-frame) 'ok))
+(set! *has-selection* #t)
+(set! *env-calls* ())
+(sv-request "108" 'applyenvelope (inlet 'points "0 0 1 1" 'target "flt" 'scope "selection"
+                                        'order 20))
+(check "envelope: flt x selection" (list 'filter-selection (list 0.0 0.0 1.0 1.0) 20)
+       (car *env-calls*))
+(set! *has-selection* #f)
+
+;; amp x mix is a mix's amplitude envelope.
+(set! *env-calls* ())
+(sv-request "109" 'applyenvelope (inlet 'points "0 1 1 0" 'target "amp" 'scope "mix" 'mix 0))
+(check "envelope: amp x mix sets mix-amp-env"
+       (list 'mix-amp-env (list 0.0 1.0 1.0 0.0)) (car *env-calls*))
+
+;; The two empty cells of the matrix are empty in Snd too, and are refused by
+;; name rather than falling back to the sound -- which would envelope the
+;; whole file when one mix was asked for.
+(set! *env-calls* ())
+(sv-request "110" 'applyenvelope (inlet 'points "0 1 1 0" 'target "flt" 'scope "mix" 'mix 0))
+(check "envelope: flt x mix is refused" #f ((last-frame) 'ok))
+(check "envelope: and nothing happened instead" () *env-calls*)
+(check-true "envelope: the refusal says why"
+            (string-position "amplitude envelope only" ((last-frame) 'error)))
+
+;; "define it": the curve gets a name and becomes usable anywhere.
+(sv-request "111" 'defineenvelope (inlet 'name "sv-test-fade" 'points "0 1 1 0" 'base 2.0))
+(check "defineenvelope: defined" (list 'sv-test-fade (list 0.0 1.0 1.0 0.0) 2.0)
+       (car *defined-envelopes*))
+(sv-request "112" 'defineenvelope (inlet 'name "(exit)" 'points "0 1 1 0"))
+(check "defineenvelope: a name that is not a name is refused" #f ((last-frame) 'ok))
+(sv-request "113" 'defineenvelope (inlet 'name "" 'points "0 1 1 0"))
+(check "defineenvelope: an empty name is refused" #f ((last-frame) 'ok))
+
+;; Storing without applying, so Snd's own editor opens on the same curve.
+(sv-request "114" 'storeenvelope (inlet 'points "0 0 0.5 1 1 0" 'base 4.0))
+(check "storeenvelope: into Snd's editor state" (list 0.0 0.0 0.5 1.0 1.0 0.0) *env*)
+(check "storeenvelope: including the base" 4.0 *enved-base-value*)
+
+
+;; --- regions, mixes, marks ------------------------------------------
+
+(sv-request "120" 'regions (inlet))
+(let ((v ((last-frame) 'value)))
+  (check "regions: two" 2 (length v))
+  ;; Integers on the wire. As objects they would come back as the string
+  ;; "#<region 0>" and be rejected -- the sounds mistake, twice over.
+  (check "regions: index is an integer" 0 ((car v) 'index))
+  (check-true "regions: really an integer" (integer? ((car v) 'index)))
+  (check "regions: length" 1000 ((car v) 'frames))
+  ;; Without region-home a region list is numbers with no way back to the
+  ;; sound it came from.
+  (check-true "regions: home is reported" (> (length ((car v) 'home)) 0)))
+
+(set! *region-log* ())
+(sv-request "121" 'regionaction (inlet 'action "insert" 'region 1 'at 4000 'snd 0 'chn 0))
+(check "regions: insert-region reg beg snd chn" (list 'insert 1 4000) (car *region-log*))
+
+(set! *region-log* ())
+(sv-request "122" 'regionaction (inlet 'action "save" 'region 0 'file "/tmp/r.wav"))
+;; save-region reg :file ... -- keywords, like save-selection and play.
+(check "regions: save-region passes :file as a keyword"
+       (list 'save :file "/tmp/r.wav") (car *region-log*))
+
+(sv-request "123" 'regionaction (inlet 'action "explode" 'region 0))
+(check "regions: an unknown action is refused" #f ((last-frame) 'ok))
+
+(sv-request "124" 'mixes (inlet 'snd 0 'chn 0))
+(let ((v ((last-frame) 'value)))
+  (check "mixes: one" 1 (length v))
+  (check "mixes: index is an integer" 0 ((car v) 'index))
+  (check "mixes: position" 2000 ((car v) 'position))
+  (check "mixes: amp" 1.0 ((car v) 'amp)))
+
+;; Moving a mix is an edit -- that is the difference between a mix and having
+;; mixed something in destructively.
+(sv-request "125" 'mixaction (inlet 'action "position" 'mix 0 'value 3500 'snd 0 'chn 0))
+(check "mixes: moved" 3500 (mix-position (integer->mix 0)))
+(sv-request "126" 'mixaction (inlet 'action "amp" 'mix 0 'value 0.25))
+(check "mixes: amp set as a float" 0.25 (mix-amp (integer->mix 0)))
+
+(set! *mark-log* ())
+(sv-request "127" 'markaction (inlet 'action "add" 'sample 1234 'snd 0 'chn 0))
+;; add-mark sample snd chn name sync -- no name means no name argument, not
+;; an empty one, because an empty name is a name.
+(check "marks: added without a name" (list 'add 1234 0 0) (car *mark-log*))
+(set! *mark-log* ())
+(sv-request "128" 'markaction (inlet 'action "add" 'sample 10 'text "start" 'snd 0 'chn 0))
+(check "marks: added with a name" (list 'add 10 0 0 "start") (car *mark-log*))
+
+;; --- the object/index rule, now for three kinds ----------------------
+
+(check "objects: a region object becomes its index" 1
+       (sv-region-index (make-region-object 1)))
+(check "objects: a region index stays an integer" 3 (sv-region-index 3))
+(check "objects: a mix object becomes its index" 2 (sv-mix-index (make-mix-object 2)))
+(check "objects: a mix index stays an integer" 0 (sv-mix-index 0))
+;; And on the way in, an integer becomes the object Snd wants.
+(check-true "objects: an index becomes a region object"
+            (pair? (sv-region 1)))
+(check-true "objects: an index becomes a mix object" (pair? (sv-mix 1)))
+
+
+;; --- the keyboard, as Snd has it ------------------------------------
+;;
+;; "Where an operation has an obvious analog in text editing, I've tried to
+;; use the associated Emacs command." The chords are Bill's; the functions
+;; they call are checked here so a rebinding cannot quietly point C-d at
+;; something else.
+
+(set! cursor-value 1000)
+(sv-request "130" 'key (inlet 'action "start" 'snd 0 'chn 0))
+(check "keys: C-a goes to sample 0" 0 (cursor))
+(sv-request "131" 'key (inlet 'action "end" 'snd 0 'chn 0))
+(check "keys: C-e goes to the last sample" (- *test-frames* 1) (cursor))
+
+(set! cursor-value 500)
+(sv-request "132" 'key (inlet 'action "forward" 'count 10 'snd 0 'chn 0))
+(check "keys: C-f moves forward by samples" 510 (cursor))
+;; "If the argument is a float, it is multiplied by the sampling rate before
+;; being applied to the command, so C-u 2.1 C-f moves the cursor forward 2.1
+;; seconds in the data."
+(set! cursor-value 0)
+(sv-request "133" 'key (inlet 'action "forward" 'count 0.01 'snd 0 'chn 0))
+(check "keys: a float count is seconds" 441 (cursor))
+
+;; "C-n move cursor ahead one 'line'" and "C-k delete a 'line' -- 128
+;; samples": the same number in both bindings, so a line is 128 samples.
+(set! cursor-value 0)
+(sv-request "134" 'key (inlet 'action "down" 'snd 0 'chn 0))
+(check "keys: C-n moves one line of 128 samples" 128 (cursor))
+
+(set! cursor-value 200)
+(set! *key-log* ())
+(sv-request "135" 'key (inlet 'action "delete-sample" 'snd 0 'chn 0))
+(check "keys: C-d deletes at the cursor" (list 'delete-samples 200 1) (car *key-log*))
+
+(set! *key-log* ())
+(sv-request "136" 'key (inlet 'action "delete-previous" 'snd 0 'chn 0))
+;; C-h deletes BEFORE the cursor and then the cursor follows the data back.
+(check "keys: C-h deletes the previous sample" (list 'delete-samples 199 1)
+       (car *key-log*))
+(check "keys: and the cursor moves with it" 199 (cursor))
+
+(set! *key-log* ())
+(sv-request "137" 'key (inlet 'action "delete-line" 'snd 0 'chn 0))
+(check "keys: C-k deletes 128 samples" (list 'delete-samples 199 128) (car *key-log*))
+
+(set! *key-log* ())
+(sv-request "138" 'key (inlet 'action "insert-zero" 'count 3 'snd 0 'chn 0))
+(check "keys: C-o inserts silence" (list 'insert-silence 199 3) (car *key-log*))
+
+(set! *key-log* ())
+(sv-request "139" 'key (inlet 'action "zero-sample" 'snd 0 'chn 0))
+(check "keys: C-z zeroes the sample at the cursor" (list 'sample 199 0.0)
+       (car *key-log*))
+
+(sv-request "140" 'key (inlet 'action "rm -rf" 'snd 0 'chn 0))
+(check "keys: an unknown action is refused" #f ((last-frame) 'ok))
+
+;; C-j goes to the NEXT mark, not the first one.
+(set! cursor-value 0)
+(sv-request "141" 'key (inlet 'action "next-mark" 'snd 0 'chn 0))
+(check "keys: C-j jumps to the next mark" 100 (cursor))
+(set! cursor-value 500)
+(sv-request "142" 'key (inlet 'action "next-mark" 'snd 0 'chn 0))
+(check "keys: and stays put when there is none ahead" 500 (cursor))
+
+
+;; --- Find -----------------------------------------------------------
+;;
+;; "The expression it asks for is a function that takes one argument, the
+;; current sample value, and returns #t when it finds a match." A predicate,
+;; not a text pattern -- and it may be a closure, which is what his own zero+
+;; example is. That is why the expression is evaluated: any little query
+;; language of mine would rule out exactly the searches worth having.
+
+(set! cursor-value 0)
+(sv-request "150" 'find (inlet 'expr "(lambda (y) (> y 0.5))" 'snd 0 'chn 0))
+(let ((v ((last-frame) 'value)))
+  (check "find: found something" #t (v 'found))
+  (check-true "find: the value really matches" (> (v 'value) 0.5))
+  ;; The cursor moves to the hit, as C-s does in Snd.
+  (check "find: the cursor moved there" (v 'sample) (cursor)))
+
+;; Snd's own search-procedure is set too, so C-s in a Motif window and Find
+;; here look for the same thing.
+(check-true "find: search-procedure is set" (procedure? (search-procedure)))
+
+;; A search that matches nothing must say so rather than moving the cursor
+;; somewhere arbitrary.
+(set! cursor-value 0)
+(sv-request "151" 'find (inlet 'expr "(lambda (y) (> y 99.0))" 'snd 0 'chn 0))
+(check "find: nothing found is reported" #f (((last-frame) 'value) 'found))
+(check "find: and the cursor stayed put" 0 (cursor))
+
+;; An expression that is not a procedure is refused with the reason.
+(sv-request "152" 'find (inlet 'expr "42" 'snd 0 'chn 0))
+(check "find: a non-procedure is refused" #f ((last-frame) 'ok))
+(check-true "find: and says what was expected"
+            (string-position "procedure of one argument" ((last-frame) 'error)))
+
+;; A predicate that raises must not take the whole request down silently.
+(sv-request "153" 'find (inlet 'expr "(lambda (y) (vector-ref y 0))" 'snd 0 'chn 0))
+(check "find: a failing predicate is an error frame" #f ((last-frame) 'ok))
+
+;; A closure works -- his zero+ example is exactly this shape.
+(set! cursor-value 0)
+(sv-request "154" 'find
+             (inlet 'expr "(let ((last 0.0)) (lambda (y) (let ((r (and (< last 0.0) (>= y 0.0)))) (set! last y) r)))"
+                    'snd 0 'chn 0))
+(check "find: a closure keeps state across samples" #t
+       (((last-frame) 'value) 'found))
+
+;; --- sync -----------------------------------------------------------
+
+(sv-request "155" 'sync (inlet 'snd 0 'value 2))
+(check "sync: set" 2 (sync))
+;; sync-max gives a value known to be unused, so a new group does not collect
+;; the existing ones by accident.
+(sv-request "156" 'sync (inlet 'snd 0 'value "new"))
+(check "sync: a new group is above sync-max" 4 (sync))
+(sv-request "157" 'sync (inlet 'snd 0 'value 0))
+(check "sync: 0 means on its own" 0 (sync))
+
+
+;; --- macros count as available --------------------------------------
+;;
+;; procedure? is #f for a macro, and Snd defines define-envelope as one:
+;;   Xen_eval_C_string("(define-macro (define-envelope a . b)
+;;                        `(define-envelope-1 ',a ,@b))")
+;; Asking procedure? about it reports "not available in this Snd build" for
+;; something that works in the REPL two lines away.
+
+(check-true "available: a macro counts as available" (sv-have? 'define-envelope))
+(check-true "available: so does a procedure" (sv-have? 'define-envelope-1))
+(check "available: an undefined name does not" #f (sv-have? 'no-such-snd-name))
+
+;; And "define it" reaches the procedure, not the macro, so no form is built
+;; and nothing is evaluated.
+(set! *defined-envelopes* ())
+(sv-request "160" 'defineenvelope (inlet 'name "sv-macro-test" 'points "0 1 1 0" 'base 3.0))
+(check "defineenvelope: went through define-envelope-1"
+       (list 'sv-macro-test (list 0.0 1.0 1.0 0.0) 3.0)
+       (car *defined-envelopes*))
+(check "defineenvelope: reported ok" #t ((last-frame) 'ok))
 
 (set! sv-emit original-emit)
 

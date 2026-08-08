@@ -1,8 +1,14 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-08-07
 
 First cut. The session, the REPL, the panels, the tree, the gates.
+
+Everything below was written while it was being found, which is why the
+entries read like an account of mistakes rather than a feature list. Most of
+them are: five of the bugs came from guessing at Snd's API instead of reading
+it, and the two gates that now check every Snd name against Snd's own headers
+and force keyword calls exist because of them.
 
 - two-process design: TypeScript extension ↔ `scheme/snd-vscode.scm` in Snd's s7
 - frames on stderr, requests as one balanced line on stdin; works the same in
@@ -189,6 +195,166 @@ First cut. The session, the REPL, the panels, the tree, the gates.
   that sounds like a toolchain problem and is actually a stale header from an
   earlier, unrelated build step in the same directory. `-DUSE_SND=0` is now
   passed explicitly, which wins over the header's `#ifndef` guard
+- **s7 is vendored** in `third-party/s7` (two files, 4 MB, 0BSD), so a fresh
+  clone runs the 181 s7 checks without fetching 14 MB from ccrma — which took
+  nineteen minutes here, and meant `skip s7 tests` on every clone. A gate that
+  always skips is the one that was going to catch the next mistake in the
+  bridge. `.vscodeignore` keeps it out of the package, and a test keeps
+  `.vscodeignore` honest
+- **the envelope editor** — draggable breakpoints, applied through
+  `env-channel`, `env-channel-with-base` or `env-selection`, one edit-history
+  entry each; or written to `filter-control-envelope`, which is a control and
+  not an edit, and the panel says which happened. Snd's exponential base is
+  drawn, not merely stored: a base of 32 and a base of 1 are very different
+  envelopes and identical straight lines. `store in Snd's editor` writes
+  `enved-envelope` and `enved-base` without applying, so Snd's own dialog
+  opens on the same curve
+- breakpoints are read with `string->number` and refused otherwise: an
+  envelope that went through `eval` would be an eval op with a friendlier name.
+  Points are kept strictly between their neighbours, because two at the same x
+  make a vertical segment and Snd's env generator divides by zero on it
+- release metadata in `package.json` (repository, bugs, homepage, author) and
+  a `RELEASE=1` gate for the things that must be true before publishing —
+  off by default, because a gate that fails every day for a reason nobody is
+  acting on today is one people learn to read past
+- **the built Snd ships with the repository and the archive** —
+  `bin/darwin-arm64/snd`, with checksum and provenance in `bin/README.md`.
+  Keeping it out was the tidier choice and the wrong one: after a fresh clone
+  the extension fell back to `PATH`, found a Motif build, and opened Snd's own
+  X window beside the panels every time. A binary in git is a real cost; a
+  surprise GUI on every clone is a worse one
+- the session still says so, once, if it does end up on a GUI build from
+  `PATH` — correct behaviour, startling without a word of explanation
+- `vsce package --target darwin-arm64` as `npm run package:darwin-arm64`: an
+  untargeted `.vsix` carrying every platform's binary makes a Linux user
+  download a macOS one, and the release gate now insists on a target script
+  per committed binary
+- **space auditions in the envelope editor**: apply, play the affected range,
+  and remember — so the next press takes the previous audition back instead of
+  stacking. Twenty presses while dragging a point leave one entry in the edit
+  history. The replacing is conditional on the audition still being the top of
+  that history: if anything else happened since, the next audition stacks,
+  because undoing would remove somebody else's work. `apply` clears the
+  bookkeeping, or it would be the one action that space could silently reverse
+- **the REPL opens with the session** (`snd.openReplOnStart`, on by default).
+  A running Snd with no visible listener is a process nobody can type into,
+  and Snd's own stdout — its warnings, and anything it prints on its own
+  account — has nowhere to appear. Snd itself does the same thing: its
+  listener is part of the window. The focus is not taken
+- `Snd: Open REPL` starts the session instead of waiting for the first form.
+  A prompt in front of a process that does not exist yet looks like a REPL
+  that is not working
+- **regions and mixes in the tree**, Snd's last two dialogs without a
+  counterpart: regions beside the sounds (they outlive the selection and the
+  sound they came from), mixes under their channel, with play, insert and mix
+  at the cursor, save, forget, and settable mix position and amplitude. Marks
+  can now be added, renamed and deleted there too
+- both are **objects** in Snd, like sounds, and `region?`/`mix?` say `#t` for a
+  valid index as well — the same trap the sounds op fell into twice, so the
+  same rule: integers on the wire, `integer?` asked first, converted at the
+  boundary
+- **the −90 in every dB spectrum is not a measurement.** It is a literal in
+  `snd-sig.c` for "raw magnitude under 1e-6", carrying Bill Schottstaedt's own
+  comment wondering whether it should be `min-dB` — and bins just above that
+  threshold are computed and can be *lower* (−105.14, measured). The step in
+  the middle of the plot was those flat values drawn as a curve. They are now
+  left out of the line and the floor is marked; the sonogram scales against
+  −90 rather than `min-dB`, so real measurements below −60 dB keep their
+  shading
+- the keyword gate learned that `(play region)` is legitimate: the rule is that
+  anything *after* the object must be named, not that there must be something
+  after it. Verified by re-introducing the original positional `play` and
+  watching the gate catch it again
+- **Snd's keyboard in the waveform panel** — `C-a C-e C-f C-b C-n C-p C-j C-d
+  C-h C-k C-o C-z C-m C-y C-w`, the chords from snd.html, calling the functions
+  Snd's own bindings call. `C-u` then digits gives a count, with Snd's rule
+  that an integer is samples and a decimal is seconds; the conversion is in the
+  bridge, where the sampling rate is known
+- the key table was briefly written out twice — once as a TypeScript constant
+  and once inside the webview, injected by a build-time regex that silently
+  dropped the three entries whose description contains an apostrophe. Three
+  keys that would have done nothing, with nothing to notice. It is interpolated
+  from one list now, and a test says so
+- the panel-edit gate now flags a **call**, `(delete-selection`, not a mention.
+  It had fired twice on documentation — a tooltip naming the Snd function a
+  button stands for, and an action in the key table — and both are the good
+  case: the panel sends a name and the bridge decides what it means. A rule
+  that punishes what it is meant to encourage gets switched off. Verified by
+  planting a real `(delete-selection)` in the panel and watching it fail
+- the tour's `(apropos "spectr")` line was misleading: Snd's `apropos` prints
+  into its listener and returns `#f`, so headless it appears to do nothing.
+  Replaced with a snippet that returns a list, and a note pointing at
+  **Snd: Apropos**, which asks the bridge and walks the symbol table
+- **the envelope panel drew nothing at all**, and the cause was one dead line:
+  the target dropdown had been replaced by Bill's three latched buttons, and
+  the line that wired an `onchange` onto it stayed behind. It threw on the
+  first property set, the script stopped, no listener after it was attached,
+  and nothing was ever drawn. There is no message anywhere for this — the
+  console belongs to a webview nobody has open — so it reads as "the envelopes
+  are not shown", which sends the search to the envelope code
+- a new gate runs **every panel's script against a stand-in DOM** and reports
+  any element id the script asks for that the panel's own HTML does not
+  declare. Verified by planting the original line and watching it fail. Four
+  panels, and it is the cheapest check in the file after the name index
+- panels now report their own JavaScript errors in the error line, rather than
+  into a console nobody has open
+- **"type its name in the text field"** — Bill's other way to load an envelope,
+  which I had left out. Enter in the name field loads it, reading the list
+  fresh, because the point of typing a name is usually that it was just
+  defined. The panel also re-reads when it comes back into view, so a
+  `define-envelope` typed in the REPL shows up
+- an envelope defined in the REPL did not appear in the editor's list until
+  something else made the panel re-read. Snd has no hook for "a variable was
+  defined", so the REPL saying "something ran" is the only signal there is —
+  the panel now refreshes after an evaluation, coalesced, because evaluating a
+  file sends one of those per form
+- the named-envelope scan stops after a number of matches, and the number was
+  200. Snd's own `funcs.scm` defines about a hundred; being cut off shows as
+  "my envelope is not in the list" with nothing to suggest a limit. Raised to
+  500
+- **the REPL evaluates one top-level form at a time.** Snd evaluates one
+  expression per request, so pasting two definitions produced "eval-string
+  trailing junk" and defined only the first — which is how `ramp` worked and
+  `pyramid` pasted with it did not, with a message that named neither.
+  `Snd: Evaluate File` had always split forms; the REPL had not
+- **Find**, which is not a text search: a predicate of one sample, closures
+  included, as the reference describes. Evaluated from a prompt only — a test
+  checks that no panel can send one — and it sets Snd's own `search-procedure`
+  so `C-s` in a Motif window looks for the same thing. The scan is a do loop
+  over a sampler, `scan-channel` being obsolete
+- **sync**, Snd's grouping of sounds for simultaneous editing, settable and
+  shown in the tree: an edit that silently changes another sound looks like
+  possession otherwise
+- `"new"` arrives over the wire as a **string**, not a symbol — the wire
+  carries numbers, booleans and strings, so `(eq? value 'new)` was always
+  false and asking for a new sync group set the field to the string instead
+- the envelope list is re-read when the **dropdown is opened**, not only when
+  something else refreshed the panel. The list is a snapshot of the session's
+  variables and the session changes underneath it; taking the snapshot at the
+  moment of looking removes timing from the question
+- the count is in the status line as well as the dropdown. "(1 envelopes)" was
+  the only sign the scan had found fewer than expected, and it reads as a
+  label rather than as data
+- **Snd: List Named Envelopes** prints exactly what the scan found. When the
+  list is short, the question is whether the scan missed them or the panel
+  dropped them, and that is otherwise unanswerable from outside
+- **"define it" reported `define-envelope is not available in this Snd build`**
+  for a name that works in the REPL. In Scheme builds Snd defines it as a
+  MACRO over the real procedure — `Xen_eval_C_string("(define-macro
+  (define-envelope a . b) \`(define-envelope-1 ',a ,@b))")` in snd-env.c — and
+  the bridge's availability test asked `procedure?`, which is `#f` for a
+  macro. A wrong answer that blames the build is worse than no answer.
+  (Found by Daniel via ChatGPT; the fix here is at the root — `sv-have?` now
+  accepts macros, so no other Snd macro can produce the same false report —
+  and "define it" calls `define-envelope-1`, the actual procedure, so nothing
+  has to be built as a form and evaluated. A gate and a stub matching Snd's
+  real arrangement keep it that way; the stub had been a plain procedure,
+  which is exactly why the tests were happy.)
+- the name index missed **names built by concatenation in the C source** —
+  `Xen_define_typed_procedure(S_define_envelope "-1", ...)` gives a real,
+  callable `define-envelope-1` that appears in no string table, so the gate
+  rejected a name that is right there in the build. The generator now resolves
+  those: 173 of them, and the index is 2236 names
 - `npm run gates`: five structural gates, tsc, 56 node checks, 63 s7 checks
 
 Found by the gates while writing it, and worth recording because neither

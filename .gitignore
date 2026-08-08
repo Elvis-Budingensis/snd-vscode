@@ -2,8 +2,21 @@ node_modules/
 out/
 *.vsix
 *.zip
+
+# The s7 BINARY the test gate builds for itself (the two source files it is
+# built from live in third-party/s7 and are committed), and the full Snd
+# source tree tools/build-snd.sh unpacks — 77 MB of somebody else's code,
+# reproducible with one command.
 s7
 .build/
-bin/
+
+# bin/ is COMMITTED, deliberately: without it a fresh clone falls back to
+# whatever `snd` is on PATH, and on a machine with a Motif build installed
+# that means Snd's own X window opening next to the panels. A binary in git is
+# a real cost; a surprise GUI on every clone is a worse one.
+#
+# What is not committed is a build of a platform nobody has tested. Add a
+# directory here per platform as it is built, or leave it out.
+
 .vscode-test/
 .DS_Store

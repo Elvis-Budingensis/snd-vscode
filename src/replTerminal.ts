@@ -17,7 +17,7 @@
 // Snd's REPL is the bridge's eval op with output and value separated.
 
 import * as vscode from 'vscode';
-import { isComplete } from './bridge';
+import { isComplete, splitTopLevelForms } from './bridge';
 
 export interface ReplHost {
   /** Evaluate and return what Snd said. Rejects on a Snd error. */
@@ -339,6 +339,19 @@ export class SndReplTerminal implements vscode.Pseudoterminal {
     await this.runCode(code, true);
   }
 
+  /**
+   * One form at a time.
+   *
+   * Snd evaluates ONE expression per request, so a block containing two
+   * top-level forms produces "eval-string trailing junk" and only the first
+   * one is defined -- which is how (define-envelope ramp ...) worked and
+   * (define-envelope pyramid ...) pasted with it did not, with an error
+   * message that named neither.
+   *
+   * Pasting several forms is normal: a definition and its use, two envelopes,
+   * a snippet out of a file. `Snd: Evaluate File` has always split them; the
+   * REPL did not.
+   */
   private async runCode(code: string, fromEditor: boolean): Promise<void> {
     if (!this.host.ready()) {
       this.write('\x1b[33mNo Snd session — starting one.\x1b[0m\r\n');
@@ -352,12 +365,18 @@ export class SndReplTerminal implements vscode.Pseudoterminal {
     }
     this.busy = true;
     try {
-      const result = await this.host.evaluate(code);
-      if (result.output) {
-        this.write(result.output.replace(/\r?\n/g, '\r\n'));
-        if (!result.output.endsWith('\n')) this.write('\r\n');
+      const forms = splitTopLevelForms(code);
+      // A single form goes through as it was typed, so an expression the
+      // splitter would not recognise -- a bare atom, something odd -- still
+      // reaches Snd unchanged.
+      for (const form of forms.length > 1 ? forms : [code]) {
+        const result = await this.host.evaluate(form);
+        if (result.output) {
+          this.write(result.output.replace(/\r?\n/g, '\r\n'));
+          if (!result.output.endsWith('\n')) this.write('\r\n');
+        }
+        this.write(`\x1b[36m${result.value}\x1b[0m\r\n`);
       }
-      this.write(`\x1b[36m${result.value}\x1b[0m\r\n`);
     } catch (error) {
       this.write(`\x1b[31m${String((error as Error).message ?? error)}\x1b[0m\r\n`);
     } finally {

@@ -807,3 +807,461 @@ test('a change of axis does not refetch the data', () => {
   assert.ok(/redraw\(\)/.test(handler[0]), 'the axis change refetches');
   assert.ok(!/reload\(\)/.test(handler[0]), 'the axis change refetches');
 });
+
+// --- the vendored s7 ---------------------------------------------------
+
+test('s7 is in the repository, so the s7 gate runs from a fresh clone', () => {
+  // Without a copy, the only way to get an s7 is tools/build-snd.sh, which
+  // downloads 14 MB from ccrma — nineteen minutes, once, here. The result was
+  // "skip s7 tests" on every fresh clone, and a gate that always skips is the
+  // one that was going to catch the next mistake in the bridge.
+  const directory = path.join(__dirname, '..', 'third-party', 's7');
+  for (const name of ['s7.c', 's7.h', 'README.md']) {
+    assert.ok(fs.existsSync(path.join(directory, name)), `third-party/s7/${name} missing`);
+  }
+  // 0BSD, and the line is in the file itself — worth asserting, because a
+  // future update that pulled in a differently licensed s7 would otherwise be
+  // invisible.
+  const source = fs.readFileSync(path.join(directory, 's7.c'), 'utf8').slice(0, 2000);
+  assert.ok(/SPDX-License-Identifier:\s*0BSD/.test(source), 's7.c is not the 0BSD one');
+});
+
+test('the test runner looks in the repository before anywhere else', () => {
+  const runner = fs.readFileSync(
+    path.join(__dirname, '..', 'tools', 'run-scheme-tests.mjs'),
+    'utf8'
+  );
+  const list = /const sources = \[[\s\S]*?\]/.exec(runner);
+  assert.ok(list, 'no source list');
+  assert.ok(
+    list[0].indexOf("'third-party'") < list[0].indexOf("'.build'"),
+    'third-party/s7 is not searched first'
+  );
+});
+
+test('the vendored source does not ship inside the extension', () => {
+  // Four megabytes of C in a VSIX that cannot compile it. .vscodeignore is
+  // the only thing standing between the repository layout and the package.
+  const ignore = fs.readFileSync(path.join(__dirname, '..', '.vscodeignore'), 'utf8');
+  for (const pattern of ['third-party/**', '.build/**']) {
+    assert.ok(ignore.includes(pattern), `${pattern} would be packaged`);
+  }
+  // And the things that must still ship, which the same file could exclude by
+  // accident.
+  assert.ok(!/^scheme\/?\*?\*?$/m.test(ignore), 'scheme/ must ship');
+  assert.ok(!/^data\/?\*?\*?$/m.test(ignore), 'data/ must ship');
+});
+
+// --- the envelope editor -----------------------------------------------
+
+const { pointsToWire, wireToPoints, normaliseX, constrain } = require('../out/envelopeView.js');
+
+test('breakpoints go over the wire as plain numbers', () => {
+  // The bridge reads these with string->number and refuses anything else, so
+  // an envelope cannot become a way to send code.
+  assert.equal(pointsToWire([{ x: 0, y: 1 }, { x: 1, y: 0 }]), '0 1 1 0');
+  assert.ok(!/[()a-z]/.test(pointsToWire([{ x: 0.5, y: 0.25 }, { x: 1, y: 0 }])));
+});
+
+test('breakpoints are rounded, not sent at full float precision', () => {
+  // A canvas position has about three decimal places of meaning; the rest is
+  // noise that makes the envelope unreadable in Snd's own editor.
+  const wire = pointsToWire([{ x: 1 / 3, y: 2 / 3 }, { x: 1, y: 0 }]);
+  assert.equal(wire, '0.3333 0.6667 1 0');
+});
+
+test('an envelope round-trips through the wire format', () => {
+  const points = [{ x: 0, y: 1 }, { x: 0.5, y: 0.25 }, { x: 1, y: 0 }];
+  const wire = pointsToWire(points);
+  assert.deepEqual(wireToPoints(wire.split(' ').map(Number)), points);
+});
+
+test("x is normalised, keeping the spacing", () => {
+  // Snd's envelopes carry arbitrary x units: (0 0 1 1 2 0) and (0 0 0.5 1 1 0)
+  // are the same envelope, and both have to arrive as the same drawing.
+  // Clipping instead would turn a three-point envelope into a two-point one
+  // and lose the shape it was drawn for.
+  const wide = normaliseX([{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 0 }]);
+  assert.deepEqual(wide, [{ x: 0, y: 0 }, { x: 0.5, y: 1 }, { x: 1, y: 0 }]);
+  const already = normaliseX([{ x: 0, y: 0 }, { x: 0.5, y: 1 }, { x: 1, y: 0 }]);
+  assert.deepEqual(already, [{ x: 0, y: 0 }, { x: 0.5, y: 1 }, { x: 1, y: 0 }]);
+});
+
+test('normaliseX survives an envelope with no span', () => {
+  const flat = normaliseX([{ x: 3, y: 0.5 }, { x: 3, y: 0.9 }]);
+  assert.equal(flat[0].x, 0);
+  assert.equal(flat[1].x, 1);
+});
+
+test('the first and last x are pinned', () => {
+  // An envelope that does not start at 0 and end at 1 is applied over a
+  // shorter span than the one drawn, and the rest keeps the last value —
+  // which looks like the envelope being ignored at the edges.
+  const points = [{ x: 0, y: 1 }, { x: 0.5, y: 0.5 }, { x: 1, y: 0 }];
+  assert.equal(constrain(points, 0, 0.4, 0.8, { min: 0, max: 2 })[0].x, 0);
+  assert.equal(constrain(points, 2, 0.6, 0.2, { min: 0, max: 2 })[2].x, 1);
+});
+
+test('a dragged point stays strictly between its neighbours', () => {
+  // Two points at the same x make a vertical jump, which Snd's env generator
+  // reads as a division by zero in the segment slope.
+  const points = [{ x: 0, y: 1 }, { x: 0.5, y: 0.5 }, { x: 1, y: 0 }];
+  const far = constrain(points, 1, 5, 0.5, { min: 0, max: 2 });
+  assert.ok(far[1].x < points[2].x, 'moved past its right neighbour');
+  const near = constrain(points, 1, -5, 0.5, { min: 0, max: 2 });
+  assert.ok(near[1].x > points[0].x, 'moved past its left neighbour');
+});
+
+test('y is clamped to the range the target allows', () => {
+  // A filter response is a gain between 0 and 1; an amplitude envelope is a
+  // multiplier and may exceed 1. The same curve must not mean both.
+  const points = [{ x: 0, y: 1 }, { x: 1, y: 1 }];
+  assert.equal(constrain(points, 0, 0, 5, { min: 0, max: 1 })[0].y, 1);
+  assert.equal(constrain(points, 0, 0, 5, { min: 0, max: 2 })[0].y, 2);
+  assert.equal(constrain(points, 0, 0, -3, { min: 0, max: 2 })[0].y, 0);
+});
+
+// --- the shipped binary ------------------------------------------------
+
+test('the bundled Snd is not excluded from the package', () => {
+  // The whole point of committing it is that it is there after a clone and
+  // after an install. .vscodeignore is the one file that could quietly undo
+  // that.
+  const ignore = fs.readFileSync(path.join(__dirname, '..', '.vscodeignore'), 'utf8');
+  assert.ok(!/^bin\/?\*?\*?$/m.test(ignore), 'bin/ would not ship');
+});
+
+test('every committed binary is accounted for', () => {
+  // A binary in a repository needs a note saying what it is and where it came
+  // from. Without one it is just four megabytes nobody can check.
+  const directory = path.join(__dirname, '..', 'bin');
+  if (!fs.existsSync(directory)) return;
+  const platforms = fs
+    .readdirSync(directory)
+    .filter(name => fs.existsSync(path.join(directory, name, 'snd')));
+  if (platforms.length === 0) return;
+  const readme = path.join(directory, 'README.md');
+  assert.ok(fs.existsSync(readme), 'bin/README.md is missing');
+  const text = fs.readFileSync(readme, 'utf8');
+  for (const platform of platforms) {
+    assert.ok(text.includes(platform), `bin/README.md does not mention ${platform}`);
+  }
+  // And a checksum, so it can be verified rather than trusted.
+  assert.ok(/sha256|shasum/i.test(text), 'bin/README.md has no checksum');
+});
+
+// --- auditioning -------------------------------------------------------
+
+const { shouldUndoPrevious } = require('../out/envelopeView.js');
+
+test('an audition replaces the previous one', () => {
+  // Twenty presses of space while dragging a point must not leave twenty
+  // entries in the edit history.
+  assert.equal(shouldUndoPrevious({ editPosition: 4 }, 4), true);
+});
+
+test('an audition does not undo somebody else\u2019s work', () => {
+  // If anything happened since — an edit from the REPL, a delete in the
+  // waveform panel, an undo by hand — the previous audition is no longer the
+  // top of the history, and undoing would take that other work back instead.
+  // Stacking is the safe direction to be wrong in.
+  assert.equal(shouldUndoPrevious({ editPosition: 4 }, 7), false);
+  assert.equal(shouldUndoPrevious({ editPosition: 4 }, 3), false);
+});
+
+test('the first audition has nothing to replace', () => {
+  assert.equal(shouldUndoPrevious(undefined, 0), false);
+});
+
+test('apply clears the audition, so space cannot take it back', () => {
+  // Otherwise "apply" would be the one action reversible by pressing space
+  // afterwards.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'envelopeView.ts'), 'utf8');
+  const applyCase = /case 'apply': \{[\s\S]*?break;/.exec(panel);
+  assert.ok(applyCase, 'no apply handler');
+  assert.ok(/this\.audition = undefined/.test(applyCase[0]), 'apply leaves the audition set');
+  // And an edit from anywhere else must clear it too.
+  const refresh = /static refresh\(\)[\s\S]*?\n  \}/.exec(panel);
+  assert.ok(/audition = undefined/.test(refresh[0]), 'refresh leaves the audition set');
+});
+
+test('space is ignored while a field has focus', () => {
+  // Typing 1.5 into "base" would otherwise play the sound on the space
+  // between the digits.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'envelopeView.ts'), 'utf8');
+  assert.ok(/tag === 'INPUT'/.test(panel), 'space is not guarded against form fields');
+});
+
+test('the REPL comes up with the session', () => {
+  // A running Snd with no visible listener is a process nobody can type
+  // into, and Snd's own stdout has nowhere to appear. Snd itself does the
+  // same: its listener is part of the window.
+  assert.ok(/session\.onReady = \(\)/.test(extensionSource), 'nothing runs when a session is ready');
+  const handler = /session\.onReady = \(\) => \{[\s\S]*?\n  \};/.exec(extensionSource);
+  assert.ok(handler, 'no onReady handler');
+  assert.ok(/SndReplTerminal\.show/.test(handler[0]), 'the REPL is not opened');
+  assert.ok(/openReplOnStart/.test(handler[0]), 'it cannot be switched off');
+});
+
+test('opening the REPL does not steal the focus', () => {
+  // Starting a session by evaluating a form must leave the cursor in the
+  // file — otherwise C-c C-e moves you somewhere you did not ask to go.
+  const repl = fs.readFileSync(path.join(__dirname, '..', 'src', 'replTerminal.ts'), 'utf8');
+  assert.ok(/terminal\.show\(false\)/.test(repl), 'the terminal takes focus');
+});
+
+test('snd.openReplOnStart is declared and on by default', () => {
+  const setting = manifest.contributes.configuration.properties['snd.openReplOnStart'];
+  assert.ok(setting, 'the setting is missing');
+  assert.equal(setting.default, true);
+});
+
+test('opening the REPL starts a session', () => {
+  // A prompt in front of a process that does not exist yet looks like a REPL
+  // that is not working. Asking for a listener is asking for something to
+  // listen to.
+  const handler = /command\('snd\.openRepl'[\s\S]*?\n  \);/.exec(extensionSource);
+  assert.ok(handler, 'no openRepl command');
+  assert.ok(/SndReplTerminal\.show/.test(handler[0]), 'the terminal is not shown');
+  assert.ok(/session\.start\(\)/.test(handler[0]), 'the session is not started');
+});
+
+// --- regions, mixes and marks in the tree ------------------------------
+
+test('the region and mix commands are wired to the right context', () => {
+  // A context menu entry on the wrong viewContext is invisible; on the right
+  // one but unregistered it fails when clicked. Both are silent.
+  const contexts = new Map();
+  for (const entry of manifest.contributes.menus['view/item/context']) {
+    const match = /viewItem == (\w+)/.exec(entry.when);
+    if (match) contexts.set(entry.command, match[1]);
+  }
+  for (const command of ['snd.region.play', 'snd.region.insert', 'snd.region.save']) {
+    assert.equal(contexts.get(command), 'sndRegion', `${command} is on the wrong item`);
+  }
+  for (const command of ['snd.mix.play', 'snd.mix.amp', 'snd.mix.position']) {
+    assert.equal(contexts.get(command), 'sndMix', `${command} is on the wrong item`);
+  }
+  for (const command of ['snd.mark.delete', 'snd.mark.rename']) {
+    assert.equal(contexts.get(command), 'sndMark', `${command} is on the wrong item`);
+  }
+  // And the tree must actually set those contextValues.
+  const explorer = fs.readFileSync(path.join(__dirname, '..', 'src', 'soundExplorer.ts'), 'utf8');
+  for (const value of ['sndRegion', 'sndMix', 'sndMark']) {
+    assert.ok(explorer.includes(`'${value}'`), `${value} is never set on a tree item`);
+  }
+});
+
+test('a region is inserted at the cursor, not at zero', () => {
+  // The same mistake insert-selection made: beg defaults to 0, so the paste
+  // lands at the start of the file wherever the cursor was.
+  const insert = /command\('snd\.region\.insert'[\s\S]*?\n  \);/.exec(extensionSource);
+  assert.ok(insert, 'no region insert command');
+  assert.ok(/cursorOf/.test(insert[0]), 'the cursor is not asked for');
+  assert.ok(/at,/.test(insert[0]), 'the position is not passed');
+});
+
+test('forgetting a region says what it does not do', () => {
+  // "Forget" reads like "delete". forget-region drops Snd's copy and does not
+  // touch any sound.
+  const forget = /command\('snd\.region\.forget'[\s\S]*?\n  \);/.exec(extensionSource);
+  assert.ok(/not affected/.test(forget[0]), 'the confirmation does not say what survives');
+});
+
+test("the sonogram floor is snd-spectrum's own -90, not min-dB", () => {
+  // From snd-sig.c: bins under `lowest` (1e-6) are set to a flat -90, while
+  // bins just above it are computed and can be LOWER (-105.14, measured).
+  // Scaling against min-dB (-60) puts every real measurement below -60 into
+  // the same black as the ones that were never measured.
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const op = /sv-define-op sonogram[\s\S]*?(?=\(sv-define-op)/.exec(bridge);
+  assert.ok(op, 'no sonogram op');
+  assert.ok(/floor-dB -90\.0/.test(op[0]), 'the floor is not -90');
+  assert.ok(/snd-sig\.c/.test(op[0]), 'the source of the number is not recorded');
+});
+
+test('the single spectrum does not draw the -90 values as a curve', () => {
+  // They are not measurements: snd-spectrum uses -90 for "raw magnitude under
+  // 1e-6", while bins just above that are computed and can be lower. Drawing
+  // them produced the step in the middle of every dB spectrum.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'spectrumView.ts'), 'utf8');
+  assert.ok(/NOT_MEASURED = -90/.test(panel), 'the threshold value is not named');
+  assert.ok(/drawing = false/.test(panel), 'unmeasured bins are not skipped');
+  // The range must be computed over measured bins only, or the whole curve is
+  // squashed against a floor that is not part of it.
+  assert.ok(/filter\(value => value !== NOT_MEASURED\)/.test(panel), 'the range includes -90');
+  // Linear mode has no such threshold — the exclusion must not apply there.
+  assert.ok(/current\.linear\s*\?/.test(panel), 'linear mode is treated the same');
+});
+
+// --- Bill's envelope dialog --------------------------------------------
+
+const { isSupported } = require('../out/envelopeView.js');
+
+test("the three targets are Bill's own labels", () => {
+  // "The choice is made via the three buttons marked 'amp', 'flt', and 'src'."
+  // Renaming them to something more descriptive would break the connection to
+  // his documentation, which is the thing a Snd user already knows.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'envelopeView.ts'), 'utf8');
+  assert.ok(/'amp' \| 'flt' \| 'src'/.test(panel), 'the targets are not amp/flt/src');
+  assert.ok(/'sound' \| 'selection' \| 'mix'/.test(panel), 'the scopes are not his either');
+});
+
+test('the target/scope matrix matches what Snd has', () => {
+  //            sound             selection          mix
+  //   amp      env-sound         env-selection      mix-amp-env
+  //   flt      filter-sound      filter-selection   —
+  //   src      src-sound         src-selection      —
+  for (const scope of ['sound', 'selection']) {
+    for (const target of ['amp', 'flt', 'src']) {
+      assert.ok(isSupported(target, scope), `${target} × ${scope} should exist`);
+    }
+  }
+  assert.ok(isSupported('amp', 'mix'), 'a mix has an amplitude envelope');
+  // And the two cells Snd does not have. Falling back to the sound would
+  // envelope a whole file when one mix was asked for.
+  assert.ok(!isSupported('flt', 'mix'), 'a mix has no filter envelope');
+  assert.ok(!isSupported('src', 'mix'), 'a mix has no src envelope');
+});
+
+test('the envelope has its own undo history, separate from Snd\u2019s', () => {
+  // "The Undo and Redo buttons can be used to move around in the list of
+  // envelope edits." Undoing a breakpoint one did not mean to add must not
+  // undo an edit to the sound.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'envelopeView.ts'), 'utf8');
+  assert.ok(/let history = \[/.test(panel), 'no envelope history');
+  assert.ok(/function goBack/.test(panel), 'no way to move through it');
+  assert.ok(/not Snd/.test(panel), 'the separation is not recorded');
+});
+
+test('every enved variable the dialog shows is a real Snd name', () => {
+  // Bill's dialog is a window over these; a typo here shows as a control that
+  // silently does nothing.
+  const index = new StaticIndex();
+  index.load(path.join(__dirname, '..', 'data', 'snd-index.json'));
+  for (const name of [
+    'enved-envelope',
+    'enved-base',
+    'enved-clip?',
+    'enved-wave?',
+    'enved-in-dB',
+    'enved-power',
+    'enved-style',
+    'enved-target',
+    'enved-filter-order',
+    'enved-amplitude',
+    'enved-spectrum',
+    'enved-srate',
+    'define-envelope',
+    'env-sound',
+    'filter-sound',
+    'src-sound',
+    'env-selection',
+    'filter-selection',
+    'src-selection',
+    'mix-amp-env',
+  ]) {
+    assert.ok(index.has(name), `${name} is not in Snd's index`);
+  }
+});
+
+// --- Snd's keyboard ----------------------------------------------------
+
+const { KEY_COMMANDS } = require('../out/waveformView.js');
+
+test("the panel offers Snd's own chords", () => {
+  // From snd.html: C-d deletes the sample at the cursor, C-k a 'line', C-m
+  // places a mark, C-j goes to the next one, C-y pastes the selection, C-w
+  // deletes it. A Snd user's hands already know these.
+  const byKey = new Map(KEY_COMMANDS.map(entry => [entry.key, entry.action]));
+  assert.equal(byKey.get('d'), 'delete-sample');
+  assert.equal(byKey.get('h'), 'delete-previous');
+  assert.equal(byKey.get('k'), 'delete-line');
+  assert.equal(byKey.get('o'), 'insert-zero');
+  assert.equal(byKey.get('z'), 'zero-sample');
+  assert.equal(byKey.get('m'), 'mark');
+  assert.equal(byKey.get('j'), 'next-mark');
+  assert.equal(byKey.get('y'), 'paste');
+  assert.equal(byKey.get('w'), 'delete-selection');
+  assert.equal(byKey.get('a'), 'start');
+  assert.equal(byKey.get('e'), 'end');
+  assert.equal(byKey.get('f'), 'forward');
+  assert.equal(byKey.get('b'), 'backward');
+  assert.equal(byKey.get('n'), 'down');
+  assert.equal(byKey.get('p'), 'up');
+});
+
+test('the key table is interpolated, not written out twice', () => {
+  // It was written out twice for about ten minutes, and a build-time regex
+  // dropped the three entries whose description contains an apostrophe —
+  // three keys that would have done nothing, with nothing to notice.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'waveformView.ts'), 'utf8');
+  assert.ok(/const keys = JSON\.stringify\(KEY_COMMANDS\)/.test(panel), 'not interpolated');
+  assert.ok(/const KEYS = \$\{keys\}/.test(panel), 'the webview has its own copy');
+});
+
+test('every key action exists in the bridge', () => {
+  // A chord pointing at an action the bridge does not know fails silently in
+  // the panel — the request errors and the key just seems dead.
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const op = /sv-define-op key \(params\)[\s\S]*?(?=\(sv-define-op)/.exec(bridge);
+  assert.ok(op, 'no key op');
+  for (const entry of KEY_COMMANDS) {
+    assert.ok(
+      op[0].includes(`"${entry.action}"`),
+      `${entry.action} (C-${entry.key}) is not handled by the bridge`
+    );
+  }
+});
+
+test('the envelope panel hears about a define-envelope in the REPL', () => {
+  // Snd has no hook for "a variable was defined", so the REPL saying
+  // "something ran" is the only signal there is — and without it a name
+  // defined a moment ago simply is not in the list, with nothing to suggest
+  // why.
+  assert.ok(/private afterEvaluation/.test(extensionSource), 'nothing runs after an eval');
+  const handler = /session\.onEvaluated = \(\) => \{[\s\S]*?\n  \};/.exec(extensionSource);
+  assert.ok(handler, 'no onEvaluated handler');
+  assert.ok(/EnvelopeView\.refresh/.test(handler[0]), 'the envelope panel is not refreshed');
+  // Coalesced: evaluating a file sends one of these per form.
+  assert.ok(/clearTimeout\(this\.evaluationTimer\)/.test(extensionSource), 'not coalesced');
+});
+
+// --- Find and sync -----------------------------------------------------
+
+test('Find evaluates a predicate, and only from a prompt', () => {
+  // "The expression it asks for is a function that takes one argument, the
+  // current sample value, and returns #t when it finds a match." A closure is
+  // allowed and is the point — his zero+ example keeps the previous sample in
+  // a let. So the expression is evaluated, which means it must come from a
+  // prompt the user typed into and never from a panel button.
+  assert.ok(/showInputBox/.test(extensionSource), 'Find does not prompt');
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const op = /sv-define-op find \(params\)[\s\S]*?(?=\(sv-define-op)/.exec(bridge);
+  assert.ok(op, 'no find op');
+  assert.ok(/eval-string expr \(rootlet\)/.test(op[0]), 'the expression is not evaluated');
+  assert.ok(/procedure\? predicate/.test(op[0]), 'a non-procedure is not refused');
+  // scan-channel is obsolete per the reference; a do loop over a sampler is
+  // what it recommends instead.
+  assert.ok(/make-sampler/.test(op[0]), 'the scan does not use a sampler');
+  assert.ok(!/scan-channel/.test(op[0]), 'scan-channel is obsolete');
+  // And Snd's own search-procedure is set, so C-s in a Motif window looks for
+  // the same thing.
+  assert.ok(/search-procedure/.test(op[0]), "Snd's own search-procedure is not set");
+});
+
+test('no panel sends a Find expression', () => {
+  // The one place arbitrary Scheme is evaluated on purpose is the REPL, and
+  // now Find. A webview must not be able to reach either.
+  for (const name of ['waveformView.ts', 'spectrumView.ts', 'envelopeView.ts', 'dialogPanel.ts']) {
+    const panel = fs.readFileSync(path.join(__dirname, '..', 'src', name), 'utf8');
+    assert.ok(!/type: 'find'/.test(panel), `${name} sends a find request`);
+  }
+});
+
+test('sync is shown in the tree', () => {
+  // A sound edited together with another one looks possessed otherwise: an
+  // edit here changes something over there, with nothing on screen to say so.
+  const explorer = fs.readFileSync(path.join(__dirname, '..', 'src', 'soundExplorer.ts'), 'utf8');
+  assert.ok(/sync \$\{node\.sound\.sync\}/.test(explorer), 'sync is not displayed');
+});

@@ -5,6 +5,9 @@ test/**
 tools/**
 out/**/*.map
 s7
+third-party/**
+.build/**
+examples/**
 .build/
 **/*.ts
 tsconfig.json

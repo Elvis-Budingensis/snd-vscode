@@ -20,9 +20,10 @@ import * as fs from 'fs';
 import { SndReplTerminal } from './replTerminal';
 import { WaveformView, Waveform } from './waveformView';
 import { SpectrumView, Spectrum, Sonogram } from './spectrumView';
-import { SoundExplorer, Sound, EditHistory } from './soundExplorer';
+import { SoundExplorer, Sound, EditHistory, Region, Mix } from './soundExplorer';
 import { SndHelpProvider, StaticIndex } from './helpProvider';
 import { DialogPanel, VariableValue } from './dialogPanel';
+import { EnvelopeView, EnvelopeState, EnvelopeTarget } from './envelopeView';
 import {
   CONTROLS_DIALOG,
   PREFERENCES_DIALOG,
@@ -40,6 +41,12 @@ class SndSession {
   private statusItem: vscode.StatusBarItem;
 
   onSoundsChanged: () => void = () => undefined;
+  /** Called once each time a session comes up. */
+  onReady: () => void = () => undefined;
+
+  /** Where the binary came from: configured, bundled, or PATH. */
+  private binarySource: 'configured' | 'bundled' | 'path' = 'path';
+  private warnedAboutGui = false;
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.bridge = new Bridge(line => {
@@ -107,6 +114,32 @@ class SndSession {
         this.process.markReady(frame.mode === 'gui' ? 'gui' : 'nogui');
         this.resolveReady?.();
         this.onSoundsChanged();
+        this.onReady();
+        // A Motif Snd found on PATH opens its own X window, which is
+        // legitimate and supported -- and startling if one expected the
+        // headless build and has just re-unpacked a release without bin/.
+        // Said once, with the two ways out, rather than left as a window
+        // nobody asked for.
+        if (frame.mode === 'gui' && this.binarySource === 'path' && !this.warnedAboutGui) {
+          this.warnedAboutGui = true;
+          void vscode.window
+            .showInformationMessage(
+              'This Snd has its own GUI (found on PATH). The panels work either way — ' +
+                'but for a headless session, build one with tools/build-snd.sh.',
+              'Open Log',
+              'How'
+            )
+            .then(answer => {
+              if (answer === 'Open Log') this.log.show();
+              if (answer === 'How') {
+                void vscode.env.openExternal(
+                  vscode.Uri.parse(
+                    'https://github.com/Elvis-Budingensis/snd-vscode#requirements'
+                  )
+                );
+              }
+            });
+        }
         break;
       case 'opened':
       case 'closed':
@@ -123,6 +156,7 @@ class SndSession {
         // The control panel too: apply-controls moves the edit position,
         // and Snd resets the controls to neutral when it does.
         DialogPanel.refreshAll();
+        EnvelopeView.refresh();
         break;
       case 'playing':
         this.playEvents++;
@@ -162,6 +196,7 @@ class SndSession {
       exists: candidate => fs.existsSync(candidate),
     });
     const command = resolved.command;
+    this.binarySource = resolved.source;
     this.log.appendLine(`[snd-vscode] Snd from ${resolved.source}: ${command}`);
     const args = settings.get<string[]>('args') ?? [];
     const bridgePath = path.join(this.context.extensionPath, 'scheme', 'snd-vscode.scm');
@@ -203,8 +238,26 @@ class SndSession {
 
   async evaluate(code: string): Promise<{ value: string; output: string }> {
     await this.ensure();
-    return this.bridge.evaluate(code);
+    const result = await this.bridge.evaluate(code);
+    // Anything evaluated can change what the panels are showing — most
+    // obviously a define-envelope, which adds a name the envelope editor has
+    // no other way of hearing about. Snd has no hook for "a variable was
+    // defined", so the REPL saying "something ran" is the only signal there
+    // is.
+    //
+    // Coalesced, because evaluating a file sends one of these per form.
+    this.afterEvaluation();
+    return result;
   }
+
+  private evaluationTimer: ReturnType<typeof setTimeout> | undefined;
+  private afterEvaluation(): void {
+    if (this.evaluationTimer) clearTimeout(this.evaluationTimer);
+    this.evaluationTimer = setTimeout(() => this.onEvaluated(), 200);
+  }
+
+  /** Set in activate; the panels that care refresh themselves. */
+  onEvaluated: () => void = () => undefined;
 
   async complete(prefix: string): Promise<string[]> {
     if (!this.ready()) return [];
@@ -232,6 +285,26 @@ class SndSession {
 
   edits(snd: number, chn: number): Promise<EditHistory> {
     return this.bridge.request('edits', { snd, chn });
+  }
+
+  regions(): Promise<Region[]> {
+    return this.bridge.request('regions');
+  }
+
+  mixes(snd: number, chn: number): Promise<Mix[]> {
+    return this.bridge.request('mixes', { snd, chn });
+  }
+
+  regionAction(params: Record<string, string | number>): Promise<any> {
+    return this.bridge.request('regionaction', params);
+  }
+
+  mixAction(params: Record<string, string | number>): Promise<any> {
+    return this.bridge.request('mixaction', params);
+  }
+
+  markAction(params: Record<string, string | number>): Promise<any> {
+    return this.bridge.request('markaction', params);
   }
 
   waveform(params: {
@@ -297,6 +370,45 @@ class SndSession {
 
   async stopPlaying(): Promise<void> {
     await this.bridge.request('stop');
+  }
+
+  envelope(snd: number, chn: number): Promise<EnvelopeState> {
+    return this.bridge.request('envelope', { snd, chn });
+  }
+
+  applyEnvelope(params: {
+    snd: number;
+    chn: number;
+    target: EnvelopeTarget;
+    base: number;
+    points: string;
+  }): Promise<{ applied: boolean; editPosition?: number }> {
+    return this.bridge.request('applyenvelope', params);
+  }
+
+  async storeEnvelope(points: string, base: number): Promise<void> {
+    await this.bridge.request('storeenvelope', { points, base });
+  }
+
+  async defineEnvelope(name: string, points: string, base: number): Promise<void> {
+    await this.bridge.request('defineenvelope', { name, points, base });
+  }
+
+  find(
+    expr: string,
+    snd: number,
+    chn: number,
+    backwards: boolean
+  ): Promise<{ found: boolean; sample?: number; value?: number }> {
+    return this.bridge.request('find', { expr, snd, chn, backwards });
+  }
+
+  async setSync(snd: number, value: number | string): Promise<void> {
+    await this.bridge.request('sync', { snd, value });
+  }
+
+  async key(action: string, snd: number, chn: number, count: number): Promise<void> {
+    await this.bridge.request('key', { action, snd, chn, count });
   }
 
   async edit(action: string, snd: number, chn: number): Promise<void> {
@@ -402,6 +514,32 @@ export function activate(context: vscode.ExtensionContext): void {
     start: () => session.start(),
   };
 
+  /**
+   * The REPL comes up with the session.
+   *
+   * A running Snd with no visible listener is a process one cannot talk to:
+   * the panels work, but there is nowhere to type, and nowhere for Snd's own
+   * output to appear — it goes to the terminal, and if the terminal does not
+   * exist it goes nowhere the user can see. Snd itself does the same thing;
+   * its listener is part of the window.
+   *
+   * `show(false)` keeps the focus where it was, because a session started by
+   * evaluating a form should leave the cursor in the file.
+   */
+  session.onEvaluated = () => {
+    // The envelope editor is the one that needs this: a define-envelope in
+    // the REPL is invisible to it otherwise. The others follow the edit
+    // hooks, which fire on their own.
+    EnvelopeView.refresh();
+    explorer.refresh();
+  };
+
+  session.onReady = () => {
+    if (vscode.workspace.getConfiguration('snd').get<boolean>('openReplOnStart', true)) {
+      SndReplTerminal.show(replHost);
+    }
+  };
+
   const waveformHost = {
     waveform: (params: any) => session.waveform(params),
     sounds: () => session.sounds(),
@@ -414,6 +552,21 @@ export function activate(context: vscode.ExtensionContext): void {
     undo: (snd: number, chn: number) => session.undo(snd, chn),
     redo: (snd: number, chn: number) => session.redo(snd, chn),
     edit: (action: string, snd: number, chn: number) => session.edit(action, snd, chn),
+    key: (action: string, snd: number, chn: number, count: number) =>
+      session.key(action, snd, chn, count),
+  };
+
+  const envelopeHost = {
+    envelope: (snd: number, chn: number) => session.envelope(snd, chn),
+    applyEnvelope: (params: any) => session.applyEnvelope(params),
+    storeEnvelope: (points: string, base: number) => session.storeEnvelope(points, base),
+    defineEnvelope: (name: string, points: string, base: number) =>
+      session.defineEnvelope(name, points, base),
+    play: (snd: number, chn: number, start: number, end?: number) =>
+      session.play(snd, chn, start, end),
+    stop: () => session.stopPlaying(),
+    undo: (snd: number, chn: number) => session.undo(snd, chn),
+    ready: () => session.ready(),
   };
 
   const spectrumHost = {
@@ -445,6 +598,26 @@ export function activate(context: vscode.ExtensionContext): void {
   const command = (name: string, handler: (...args: any[]) => any) =>
     context.subscriptions.push(vscode.commands.registerCommand(name, handler));
 
+  /**
+   * The sound a command should work on when none was named.
+   *
+   * Not sounds[0]: (new-sound) leaves an EMPTY sound behind, so the first in
+   * the list is often the blank one. Snd's own selected-sound first, then the
+   * last opened, and an empty one only if there is nothing else.
+   */
+  const firstSound = async (): Promise<number | undefined> => {
+    if (!session.ready()) await session.start();
+    const sounds = await session.sounds();
+    if (sounds.length === 0) {
+      void vscode.window.showInformationMessage('No sound open.');
+      return undefined;
+    }
+    const withData = sounds.filter(sound => !sound.empty);
+    const candidates = withData.length > 0 ? withData : sounds;
+    const chosen = candidates.find(sound => sound.selected) ?? candidates[candidates.length - 1];
+    return chosen.index;
+  };
+
   const guard = async (work: () => Promise<void>) => {
     try {
       await work();
@@ -457,7 +630,16 @@ export function activate(context: vscode.ExtensionContext): void {
   command('snd.stop', () => session.stop());
   command('snd.restart', () => guard(() => session.restart()));
   command('snd.openLog', () => session.log.show());
-  command('snd.openRepl', () => { SndReplTerminal.show(replHost); });
+  command('snd.openRepl', () =>
+    guard(async () => {
+      // Opening the REPL starts the session, rather than waiting for the
+      // first form to be typed. Asking for a listener is asking for something
+      // to listen to; a prompt in front of a process that does not exist yet
+      // looks like a REPL that is not working.
+      SndReplTerminal.show(replHost);
+      if (!session.ready()) await session.start();
+    })
+  );
 
   command('snd.showStatus', () =>
     guard(async () => {
@@ -660,6 +842,19 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  command('snd.showEnvelope', (snd?: number, chn?: number) =>
+    guard(async () => {
+      if (!session.ready()) await session.start();
+      if (snd === undefined) {
+        const chosen = await firstSound();
+        if (chosen === undefined) return;
+        snd = chosen;
+        chn = 0;
+      }
+      EnvelopeView.show(envelopeHost, snd, chn ?? 0);
+    })
+  );
+
   command('snd.showSpectrum', (snd?: number, chn?: number) =>
     guard(async () => {
       if (!session.ready()) await session.start();
@@ -800,16 +995,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // --- the Edit menu ---------------------------------------------------
 
-  const firstSound = async (): Promise<number | undefined> => {
-    if (!session.ready()) await session.start();
-    const sounds = await session.sounds();
-    if (sounds.length === 0) {
-      void vscode.window.showInformationMessage('No sound open.');
-      return undefined;
-    }
-    return sounds[0].index;
-  };
-
   for (const action of [
     'delete',
     'delete-smooth',
@@ -893,6 +1078,240 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!target) return;
       await session.saveSelection(target.fsPath);
       void vscode.window.showInformationMessage(`Selection written to ${target.fsPath}`);
+    })
+  );
+
+  // --- regions, mixes, marks -------------------------------------------
+
+  const afterEdit = () => {
+    WaveformView.refresh();
+    explorer.refresh();
+  };
+
+  command('snd.region.play', (node: any) =>
+    guard(async () => {
+      await session.regionAction({ action: 'play', region: node.region.index });
+    })
+  );
+
+  command('snd.region.insert', (node: any) =>
+    guard(async () => {
+      const snd = await firstSound();
+      if (snd === undefined) return;
+      // At the cursor, like Snd's own Edit menu — not at 0, which was the
+      // mistake insert-selection made this morning.
+      const at = await session.cursorOf(snd, 0);
+      await session.regionAction({
+        action: 'insert',
+        region: node.region.index,
+        at,
+        snd,
+        chn: 0,
+      });
+      afterEdit();
+    })
+  );
+
+  command('snd.region.mix', (node: any) =>
+    guard(async () => {
+      const snd = await firstSound();
+      if (snd === undefined) return;
+      const at = await session.cursorOf(snd, 0);
+      await session.regionAction({ action: 'mix', region: node.region.index, at, snd, chn: 0 });
+      afterEdit();
+    })
+  );
+
+  command('snd.region.save', (node: any) =>
+    guard(async () => {
+      const target = await vscode.window.showSaveDialog({
+        filters: { Sounds: ['wav', 'aiff', 'snd', 'flac'] },
+        saveLabel: 'Save region',
+      });
+      if (!target) return;
+      await session.regionAction({
+        action: 'save',
+        region: node.region.index,
+        file: target.fsPath,
+      });
+      void vscode.window.showInformationMessage(`Region written to ${target.fsPath}`);
+    })
+  );
+
+  command('snd.region.forget', (node: any) =>
+    guard(async () => {
+      // forget-region only drops Snd's copy — it does not touch any sound,
+      // and the confirmation says so, because "forget" reads like "delete".
+      const answer = await vscode.window.showWarningMessage(
+        `Forget region ${node.region.index}? The sounds are not affected — this only drops Snd's copy.`,
+        'Forget'
+      );
+      if (answer !== 'Forget') return;
+      await session.regionAction({ action: 'forget', region: node.region.index });
+      explorer.refresh();
+    })
+  );
+
+  command('snd.mix.play', (node: any) =>
+    guard(async () => {
+      await session.mixAction({ action: 'play', mix: node.mix.index });
+    })
+  );
+
+  command('snd.mix.amp', (node: any) =>
+    guard(async () => {
+      const answer = await vscode.window.showInputBox({
+        prompt: `Amplitude for mix ${node.mix.index}`,
+        value: String(node.mix.amp),
+      });
+      const amp = Number(answer);
+      if (!Number.isFinite(amp)) return;
+      await session.mixAction({ action: 'amp', mix: node.mix.index, value: amp });
+      afterEdit();
+    })
+  );
+
+  command('snd.mix.position', (node: any) =>
+    guard(async () => {
+      const answer = await vscode.window.showInputBox({
+        prompt: `Position of mix ${node.mix.index}, in samples`,
+        value: String(node.mix.position),
+      });
+      const position = Number(answer);
+      if (!Number.isFinite(position)) return;
+      await session.mixAction({
+        action: 'position',
+        mix: node.mix.index,
+        value: Math.round(position),
+        snd: node.sound.index,
+        chn: node.chn,
+      });
+      afterEdit();
+    })
+  );
+
+  command('snd.mark.add', () =>
+    guard(async () => {
+      const snd = await firstSound();
+      if (snd === undefined) return;
+      const sample = await session.cursorOf(snd, 0);
+      const name = await vscode.window.showInputBox({
+        prompt: `Name for the mark at sample ${sample} (optional)`,
+      });
+      if (name === undefined) return;
+      await session.markAction({ action: 'add', sample, snd, chn: 0, text: name });
+      afterEdit();
+    })
+  );
+
+  command('snd.mark.delete', (node: any) =>
+    guard(async () => {
+      // Marks follow the edit list, so this is undoable like any edit — no
+      // confirmation needed, and saying so is better than asking.
+      await session.markAction({ action: 'delete', mark: node.id });
+      afterEdit();
+    })
+  );
+
+  command('snd.mark.rename', (node: any) =>
+    guard(async () => {
+      const name = await vscode.window.showInputBox({
+        prompt: 'Mark name',
+        value: node.name,
+      });
+      if (name === undefined) return;
+      await session.markAction({ action: 'name', mark: node.id, text: name });
+      afterEdit();
+    })
+  );
+
+  // --- Find, and sync ---------------------------------------------------
+
+  /**
+   * Snd's Find, which is not a text search.
+   *
+   * "The expression it asks for is a function that takes one argument, the
+   * current sample value, and returns #t when it finds a match." The
+   * predicate may be a closure — his own zero+ example keeps the previous
+   * sample in a let to find zero crossings — so the expression is evaluated,
+   * and the prompt is the only way in. Nothing on a panel sends one.
+   */
+  let lastSearch = '(lambda (y) (> y .1))';
+
+  const runSearch = (backwards: boolean) =>
+    guard(async () => {
+      const snd = await firstSound();
+      if (snd === undefined) return;
+      const expr = await vscode.window.showInputBox({
+        prompt: backwards ? 'Search backwards for a sample where…' : 'Search for a sample where…',
+        value: lastSearch,
+        placeHolder: '(lambda (y) (> y .1))',
+      });
+      if (!expr) return;
+      lastSearch = expr;
+      const result = await session.find(expr, snd, 0, backwards);
+      if (!result.found) {
+        void vscode.window.showInformationMessage(
+          backwards ? 'No match before the cursor.' : 'No match after the cursor.'
+        );
+        return;
+      }
+      WaveformView.refresh();
+      SpectrumView.refresh();
+      void vscode.window.setStatusBarMessage(
+        `sample ${result.sample} = ${result.value?.toFixed(6)}`,
+        4000
+      );
+    });
+
+  command('snd.find', () => runSearch(false));
+  command('snd.findBackwards', () => runSearch(true));
+
+  command('snd.sync', (node?: any) =>
+    guard(async () => {
+      const snd = node?.sound?.index ?? (await firstSound());
+      if (snd === undefined) return;
+      // The three answers Snd's sync field actually has: on its own, a new
+      // group, or an existing one. "sync-max + 1" is how one gets a group
+      // that is guaranteed not to collect the sounds already grouped.
+      const choice = await vscode.window.showQuickPick(
+        [
+          { label: 'on its own', value: 0 },
+          { label: 'a new group', value: 'new' },
+          { label: 'group 1', value: 1 },
+          { label: 'group 2', value: 2 },
+          { label: 'group 3', value: 3 },
+        ],
+        { placeHolder: 'Edit and move this sound together with…' }
+      );
+      if (!choice) return;
+      await session.setSync(snd, choice.value as number | string);
+      explorer.refresh();
+    })
+  );
+
+  command('snd.listEnvelopes', () =>
+    guard(async () => {
+      // The same scan the envelope panel's list uses, printed. When the list
+      // shows fewer envelopes than expected, the question is whether the scan
+      // found them and the panel dropped them, or the scan never saw them —
+      // and that question is otherwise unanswerable from the outside.
+      if (!session.ready()) await session.start();
+      const state = await session.envelope(0, 0);
+      const named = state.named ?? [];
+      const lines = named.map(entry => `${entry.name}  '(${entry.points.join(' ')})`);
+      const document = await vscode.workspace.openTextDocument({
+        content:
+          `;;; ${named.length} named envelope${named.length === 1 ? '' : 's'} in this session\n` +
+          ';;;\n' +
+          ';;; Found by scanning the symbol table for even-length lists of reals,\n' +
+          ';;; which is what define-envelope leaves behind — there is no\n' +
+          ';;; Scheme-visible registry (all_envs lives in snd-env.c).\n\n' +
+          (lines.length ? lines.join('\n') : ';;; none — try (define-envelope ramp \'(0 0 1 1))') +
+          '\n',
+        language: 'scheme',
+      });
+      await vscode.window.showTextDocument(document, { preview: true });
     })
   );
 

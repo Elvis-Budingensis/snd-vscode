@@ -422,10 +422,22 @@ function draw() {
   // a step in the middle of every dB spectrum, which reads as an artefact of
   // the signal rather than of the drawing.
   const bins = Math.max(1, Math.min(values.length, Math.floor(current.size / 2)));
+  // -90 IS NOT A MEASUREMENT.
+  //
+  // snd-spectrum sets any bin whose raw magnitude is under 1e-6 to a flat
+  // -90 (snd-sig.c, with Bill Schottstaedt's own comment wondering whether it
+  // should be min-dB). Bins just above that threshold are computed and can be
+  // LOWER — -105.14 in this file. So -90 means "did not reach the threshold",
+  // and drawing it as part of the curve produces the step that made every dB
+  // spectrum look as though the signal did something at that frequency.
+  const NOT_MEASURED = -90;
+  const measured = current.linear
+    ? values.slice(0, bins)
+    : values.slice(0, bins).filter(value => value !== NOT_MEASURED);
   let low = Infinity, high = -Infinity;
-  for (let i = 0; i < bins; i++) {
-    if (values[i] < low) low = values[i];
-    if (values[i] > high) high = values[i];
+  for (const value of measured) {
+    if (value < low) low = value;
+    if (value > high) high = value;
   }
   if (!isFinite(low) || !isFinite(high) || high === low) { low = 0; high = 1; }
 
@@ -439,14 +451,36 @@ function draw() {
   // evenly spaced on screen, and drawing bin by bin would leave the stretched
   // low end as a handful of long diagonals.
   const steps = Math.max(2, Math.round(width));
+  let drawing = false;
   for (let step = 0; step < steps; step++) {
     const hz = fractionToHz(step / (steps - 1), nyquist);
     const bin = Math.min(bins - 1, Math.max(0, Math.round(hz / nyquist * (bins - 1))));
+    const value = values[bin];
     const x = step / (steps - 1) * width;
-    const y = height - (values[bin] - low) / (high - low) * (height - 4) - 2;
-    if (step === 0) context.moveTo(x, y); else context.lineTo(x, y);
+    if (!current.linear && value === NOT_MEASURED) {
+      // A gap, not a line to the floor: joining measured points across an
+      // unmeasured stretch draws a slope that is not in the data.
+      drawing = false;
+      continue;
+    }
+    const y = height - (value - low) / (high - low) * (height - 4) - 2;
+    if (!drawing) { context.moveTo(x, y); drawing = true; } else context.lineTo(x, y);
   }
   context.stroke();
+
+  // And the floor itself, marked, so that the empty part of the picture is
+  // visibly empty rather than merely blank.
+  if (!current.linear && measured.length < bins) {
+    context.strokeStyle = css('--vscode-panel-border', '#555');
+    context.setLineDash([4, 4]);
+    context.beginPath();
+    context.moveTo(0, height - 2); context.lineTo(width, height - 2);
+    context.stroke();
+    context.setLineDash([]);
+    context.fillStyle = css('--vscode-descriptionForeground', '#888');
+    context.font = '10px var(--vscode-font-family)';
+    context.fillText('below snd-spectrum\u2019s threshold (\u221290 dB)', 6, height - 6);
+  }
 
   let text = 'start ' + current.start + ' · size ' + current.size +
     ' · ' + (current.linear ? 'linear' : 'dB') + ' · ' +
@@ -455,7 +489,9 @@ function draw() {
   if (hover !== null) {
     const hz = fractionToHz(hover, nyquist);
     const bin = Math.min(bins - 1, Math.max(0, Math.round(hz / nyquist * (bins - 1))));
-    text += ' · at ' + Math.round(hz) + ' Hz: ' + values[bin].toFixed(3);
+    const value = values[bin];
+    text += ' · at ' + Math.round(hz) + ' Hz: ' +
+      (!current.linear && value === NOT_MEASURED ? 'under the threshold' : value.toFixed(3));
   }
   document.getElementById('status').textContent = text;
 }

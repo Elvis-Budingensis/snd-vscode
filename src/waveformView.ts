@@ -83,7 +83,38 @@ export interface WaveformHost {
    * check whether this build has it.
    */
   edit(action: string, snd: number, chn: number): Promise<void>;
+  /** One of Snd's keyboard commands, by name. */
+  key(action: string, snd: number, chn: number, count: number): Promise<void>;
 }
+
+/**
+ * Snd's keyboard, from snd.html.
+ *
+ * "Editing in Snd is modelled after Emacs in many regards ... Where an
+ * operation has an obvious analog in text editing, I've tried to use the
+ * associated Emacs command."
+ *
+ * The chords are Bill's, and the point of keeping them exactly is that a Snd
+ * user's hands already know them. Ctrl is used rather than VS Code's own
+ * chords because these run inside the panel, where nothing else claims them.
+ */
+export const KEY_COMMANDS: Array<{ key: string; action: string; what: string }> = [
+  { key: 'a', action: 'start', what: 'to the window start' },
+  { key: 'e', action: 'end', what: 'to the window end' },
+  { key: 'f', action: 'forward', what: 'forward' },
+  { key: 'b', action: 'backward', what: 'back' },
+  { key: 'n', action: 'down', what: "ahead one 'line' (128 samples)" },
+  { key: 'p', action: 'up', what: "back one 'line'" },
+  { key: 'j', action: 'next-mark', what: 'to the next mark' },
+  { key: 'd', action: 'delete-sample', what: 'delete the sample at the cursor' },
+  { key: 'h', action: 'delete-previous', what: 'delete the previous sample' },
+  { key: 'k', action: 'delete-line', what: "delete a 'line'" },
+  { key: 'o', action: 'insert-zero', what: 'insert a zero sample' },
+  { key: 'z', action: 'zero-sample', what: 'set the sample to zero' },
+  { key: 'm', action: 'mark', what: 'place a mark' },
+  { key: 'y', action: 'paste', what: 'paste the selection at the cursor' },
+  { key: 'w', action: 'delete-selection', what: 'delete the selection' },
+];
 
 export class WaveformView {
   private static instance: WaveformView | undefined;
@@ -244,6 +275,10 @@ export class WaveformView {
       case 'redo':
         await this.host.redo(this.snd, this.chn);
         break;
+      case 'key':
+        await this.host.key(message.action, this.snd, this.chn, Number(message.count) || 1);
+        await this.reload();
+        break;
       case 'edit':
         // Edits go to Snd, always. Snd's edit history is the one that gets
         // saved, so a local implementation here would be a second history
@@ -317,6 +352,12 @@ export class WaveformView {
   }
 
   private html(): string {
+    // The key table is interpolated from KEY_COMMANDS rather than written out
+    // twice. It was written out twice for about ten minutes, and a
+    // build-time regex silently dropped the three entries whose description
+    // contains an apostrophe — three keys that would have done nothing, with
+    // nothing to notice.
+    const keys = JSON.stringify(KEY_COMMANDS);
     return /* html */ `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
@@ -337,6 +378,7 @@ export class WaveformView {
            background: var(--vscode-editor-background); }
   .group { font-size: 11px; opacity: .6; text-transform: lowercase;
            letter-spacing: .06em; margin-right: 2px; }
+  .hint { opacity: .65; font-size: 11px; margin-top: 4px; }
   .status { font-size: 11px; opacity: .8; margin-top: 6px;
             font-family: var(--vscode-editor-font-family); }
   /* Above the canvas, not below it. A failed request used to render its
@@ -382,6 +424,7 @@ export class WaveformView {
 <div class="error" id="error"></div>
 <canvas id="wave"></canvas>
 <div class="status" id="status">…</div>
+<div class="hint" id="keys"></div>
 <script>
 const vscode = acquireVsCodeApi();
 const canvas = document.getElementById('wave');
@@ -698,6 +741,43 @@ for (const action of ['delete', 'delete-smooth', 'insert', 'mix', 'reverse', 'sm
   document.getElementById('e-' + action).onclick =
     () => vscode.postMessage({ type: 'edit', action });
 }
+
+// Snd's own chords, live in the panel.
+const KEYS = ${keys};
+
+document.getElementById('keys').textContent =
+  'keys: ' + KEYS.map(k => 'C-' + k.key).join(' ') +
+  ' — Snd\u2019s own bindings; C-u <number> first for a count, a decimal for seconds';
+
+let pendingCount = '';
+
+window.addEventListener('keydown', event => {
+  const tag = (event.target && event.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (!event.ctrlKey || event.metaKey || event.altKey) return;
+
+  // C-u introduces a numeric argument, as in Emacs and in Snd. The digits
+  // that follow are collected until a command key arrives.
+  if (event.key === 'u') {
+    event.preventDefault();
+    pendingCount = '';
+    document.getElementById('status').textContent = 'C-u …';
+    return;
+  }
+  if (/^[0-9.]$/.test(event.key)) {
+    pendingCount += event.key;
+    return;
+  }
+
+  const command = KEYS.find(entry => entry.key === event.key);
+  if (!command) return;
+  event.preventDefault();
+  // An integer is samples, a decimal is seconds — Snd's rule, applied in the
+  // bridge where the sampling rate is known.
+  const count = pendingCount === '' ? 1 : Number(pendingCount);
+  pendingCount = '';
+  vscode.postMessage({ type: 'key', action: command.action, count });
+});
 
 let reportedColumns = 0;
 function reportColumns() {

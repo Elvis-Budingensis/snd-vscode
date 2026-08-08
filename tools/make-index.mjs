@@ -105,6 +105,41 @@ for (const header of ['snd-strings.h', 'clm-strings.h', 'sndlib-strings.h']) {
   }
 }
 
+// NAMES BUILT BY CONCATENATION IN THE C SOURCE.
+//
+// Not every Snd name is a #define in a header. Some are assembled at the
+// point of registration:
+//
+//   Xen_define_typed_procedure(S_define_envelope "-1", g_define_envelope_w, ...)
+//
+// -- snd-env.c. That gives a real, callable `define-envelope-1`, which the
+// macro `define-envelope` expands into, and which appears in no string table
+// at all. Without this pass the index says it does not exist and the gate
+// that checks every name the bridge calls rejects a name that is right there
+// in the build.
+const suffixNames = new Set();
+{
+  const defines = new Map();
+  for (const header of ['snd-strings.h', 'clm-strings.h', 'sndlib-strings.h']) {
+    const headerPath = path.join(source, header);
+    if (!fs.existsSync(headerPath)) continue;
+    const text = fs.readFileSync(headerPath, 'utf8');
+    for (const match of text.matchAll(/#define\s+(S_[A-Za-z_0-9]+)\s+"((?:[^"\\]|\\.)+)"/g)) {
+      defines.set(match[1], match[2]);
+    }
+  }
+  for (const file of fs.readdirSync(source).filter(name => name.endsWith('.c'))) {
+    const text = fs.readFileSync(path.join(source, file), 'utf8');
+    // S_something "suffix" -- only a genuine suffix, never a separate word,
+    // so that S_foo "a comment" cannot invent a name.
+    for (const match of text.matchAll(/(S_[A-Za-z_0-9]+)\s+"([A-Za-z0-9?!*<>=+/-]+)"/g)) {
+      const base = defines.get(match[1]);
+      if (!base) continue;
+      suffixNames.add(base + match[2]);
+    }
+  }
+}
+
 const version =
   /#define SND_VERSION\s+"([^"]+)"/.exec(
     fs.existsSync(path.join(source, 'snd.h'))
@@ -117,6 +152,9 @@ const entries = [
   ...[...constantNames]
     .filter(name => !names.has(name))
     .map(name => ({ name, source: 'snd-constant' })),
+  ...[...suffixNames]
+    .filter(name => !names.has(name) && !constantNames.has(name))
+    .map(name => ({ name, source: 'snd-suffix' })),
   ...[...s7Names]
     .filter(name => !names.has(name) && !constantNames.has(name))
     .map(name => ({ name, source: 's7' })),
@@ -145,6 +183,7 @@ fs.writeFileSync(
 console.log(
   `${outputPath}: ${entries.length} names ` +
     `(${names.size} from help_names, ${constantNames.size} from snd-strings.h, ` +
+    `${suffixNames.size} built by concatenation, ` +
     `${entries.length - names.size - [...constantNames].filter(n => !names.has(n)).length} from s7), ` +
     `Snd ${version}`
 );

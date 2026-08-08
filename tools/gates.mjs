@@ -146,12 +146,21 @@ function sources(directory, extension) {
     // thing it is ruling out. Gate 1 already strips comments for exactly
     // this reason; doing it in only one of the two was the inconsistency.
     const text = file.text
-      .replace(/title="[^"]*"/g, 'title=""')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/^\s*\/\/.*$/gm, '');
     for (const name of banned) {
-      if (text.includes(name)) {
-        fail(gate, `${file.name} calls ${name} — edits belong in Snd`);
+      // A CALL, not a mention. The panels legitimately carry these names as
+      // data -- an action in a key table, a tooltip saying which Snd function
+      // a button stands for -- and that is the good case: the panel sends a
+      // NAME and the bridge decides what it means. What must not appear is
+      // Scheme being built here, which always looks like `(name`.
+      //
+      // The gate previously matched the bare name and fired twice on
+      // documentation: once on a tooltip, once on a key table. A rule that
+      // punishes the thing it is meant to encourage gets switched off.
+      const call = new RegExp(`\\(\\s*${name.replace(/[?*]/g, '\\$&')}[\\s)]`);
+      if (call.test(text)) {
+        fail(gate, `${file.name} builds a call to ${name} — edits belong in Snd`);
         clean = false;
       }
     }
@@ -446,9 +455,19 @@ function sources(directory, extension) {
       if (!pattern.test(line)) return;
       // The call may wrap; look at this line and the next two.
       const statement = lines.slice(index, index + 3).join(' ');
-      if (!/:[a-z-]+/.test(statement)) {
-        problems.push(`${name} at line ${index + 1} without keywords`);
-      }
+      if (/:[a-z-]+/.test(statement)) return;
+      // A call with ONE argument is the object alone, which is legitimate:
+      // "play plays an object. The object can be a string, a sound object or
+      // index, a mix, a region, the selection object ...". The rule being
+      // enforced is that anything AFTER the object must be named, not that
+      // there must be something after it. Without this distinction the gate
+      // pushes one towards adding a keyword that means nothing here, which is
+      // worse than the mistake it was written to catch.
+      const call = new RegExp(`\\(\\(symbol->value '${name}\\)([^)]*)\\)`).exec(statement);
+      const args = call ? call[1].trim() : 'unknown';
+      // `return` and not `continue`: this is a forEach callback, not a loop.
+      if (args === '' || !/\s/.test(args)) return;
+      problems.push(`${name} at line ${index + 1} with more than an object and no keywords`);
     });
   }
   if (problems.length > 0) fail(gate, problems.join('; '));
@@ -480,6 +499,134 @@ function sources(directory, extension) {
       `these are ignored copies of files that live elsewhere — delete them:\n     ` +
         strays.map(name => `${name}  (the real one is ${owned.get(name)}/${name})`).join('\n     ')
     );
+  } else {
+    pass(gate);
+  }
+}
+
+// --- gate 5m: envelopes are applied by Snd, in one edit ------------------
+//
+// env-channel, env-channel-with-base and env-selection each put ONE entry in
+// the edit history. Walking the samples and scaling each would put thousands
+// in and make undo useless -- the same rule as the panels not editing, and
+// the same temptation, because the loop is three lines and looks harmless.
+{
+  const gate = 'envelopes go through Snd, in one edit';
+  const bridge = fs.readFileSync(path.join(root, 'scheme', 'snd-vscode.scm'), 'utf8');
+  const op = /sv-define-op applyenvelope[\s\S]*?(?=\(sv-define-op)/.exec(bridge);
+  if (!op) {
+    fail(gate, 'the applyenvelope op is gone');
+  } else if (!/env-channel|env-selection/.test(op[0])) {
+    fail(gate, "it no longer calls Snd's envelope functions");
+  } else if (/set-samples|float-vector->channel|do \(\(i 0/.test(op[0])) {
+    fail(gate, 'it walks the samples itself');
+  } else if (!/sv-breakpoints/.test(op[0])) {
+    // Breakpoints are read as numbers, never evaluated: an envelope that goes
+    // through eval is an eval op with a friendlier name.
+    fail(gate, 'breakpoints are no longer parsed as numbers');
+  } else {
+    pass(gate);
+  }
+}
+
+// --- gate 5n: release readiness ----------------------------------------
+//
+// Only run when RELEASE=1. These are things that must be true before the
+// extension is published and that are merely noise during development --
+// a gate that fails every day for a reason nobody is acting on today is a
+// gate people learn to read past.
+if (process.env.RELEASE === '1') {
+  const gate = 'ready to publish';
+  const problems = [];
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+
+  // GPL-3.0 says the full text must accompany the program.
+  if (!fs.existsSync(path.join(root, 'COPYING'))) {
+    problems.push(
+      'COPYING is missing — curl -o COPYING https://www.gnu.org/licenses/gpl-3.0.txt'
+    );
+  }
+  for (const field of ['repository', 'bugs', 'homepage', 'publisher', 'license']) {
+    if (!manifest[field]) problems.push(`package.json has no ${field}`);
+  }
+  // A version still at 0.0.x, or a CHANGELOG whose top entry does not match
+  // the manifest, means the release notes describe something else.
+  const changelog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
+  if (!changelog.includes(manifest.version)) {
+    problems.push(`CHANGELOG.md does not mention version ${manifest.version}`);
+  }
+  if (/unreleased/i.test(changelog.split('\n').slice(0, 6).join(' '))) {
+    problems.push('the top CHANGELOG entry still says "unreleased"');
+  }
+  // vsce refuses a README that is only a stub, and a missing icon is a grey
+  // square in the marketplace.
+  if (!fs.existsSync(path.join(root, 'README.md'))) problems.push('README.md is missing');
+
+  // A .vsix carrying every platform's binary makes a Linux user download a
+  // macOS one. VS Code has platform-specific packages for exactly this, and
+  // the moment there is more than one binary the untargeted script is wrong.
+  const binaries = fs.existsSync(path.join(root, 'bin'))
+    ? fs.readdirSync(path.join(root, 'bin')).filter(name =>
+        fs.existsSync(path.join(root, 'bin', name, 'snd'))
+      )
+    : [];
+  if (binaries.length > 1) {
+    const targeted = Object.keys(manifest.scripts).filter(name =>
+      name.startsWith('package:')
+    );
+    for (const platform of binaries) {
+      if (!targeted.includes(`package:${platform}`)) {
+        problems.push(`bin/${platform} has no package:${platform} script (vsce --target)`);
+      }
+    }
+  }
+  // And the binaries must actually be in the package.
+  const ignore = fs.readFileSync(path.join(root, '.vscodeignore'), 'utf8');
+  if (/^bin\/?\*?\*?$/m.test(ignore)) {
+    problems.push('.vscodeignore excludes bin/ — the bundled Snd would not ship');
+  }
+
+  if (problems.length > 0) fail(gate, '\n     ' + problems.join('\n     '));
+  else pass(gate);
+}
+
+// --- gate 5o: every panel script runs -----------------------------------
+//
+// A webview script that throws stops there: every listener after the throw is
+// never attached, nothing is drawn, and there is no message anywhere -- the
+// console belongs to a webview nobody has open. It looks exactly like a panel
+// with nothing to draw.
+//
+// The envelope editor lost a dropdown to Bill's three buttons and kept the
+// line that wired an onchange onto it. One dead line, and the panel silently
+// stopped rendering; it was reported as "the envelopes are not shown", which
+// sent the search to the envelope code.
+{
+  const gate = 'every panel script runs against a stand-in DOM';
+  const result = spawnSync('node', ['tools/check-panels.mjs'], { cwd: root, encoding: 'utf8' });
+  if (result.status !== 0) {
+    fail(gate, '\n' + ((result.stdout ?? '') + (result.stderr ?? '')).trim());
+  } else {
+    const panels = (result.stdout ?? '').split('\n').filter(line => line.startsWith('ok')).length;
+    pass(`${gate} (${panels} panels)`);
+  }
+}
+
+// --- gate 5p: availability is not the same as procedure? ----------------
+//
+// s7's procedure? is #f for a macro, and Snd defines define-envelope as one
+// (snd-env.c, HAVE_SCHEME branch: a macro wrapping define-envelope-1). A
+// bridge that tests procedure? reports "not available in this Snd build" for
+// a name that works in the REPL two lines away -- a wrong answer that blames
+// the build, which is worse than no answer.
+{
+  const gate = 'availability accepts macros, not only procedures';
+  const bridge = fs.readFileSync(path.join(root, 'scheme', 'snd-vscode.scm'), 'utf8');
+  const have = /\(define \(sv-have\? name\)[\s\S]*?\n\n/.exec(bridge);
+  if (!have) {
+    fail(gate, 'sv-have? is gone');
+  } else if (!/macro\?/.test(have[0])) {
+    fail(gate, 'sv-have? still tests procedure? alone -- macros will report as missing');
   } else {
     pass(gate);
   }

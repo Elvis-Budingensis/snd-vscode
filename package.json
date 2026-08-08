@@ -5,6 +5,17 @@
   "version": "0.1.0",
   "publisher": "elvis-budingensis",
   "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "Daniel Hensel"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Elvis-Budingensis/snd-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Elvis-Budingensis/snd-vscode/issues"
+  },
+  "homepage": "https://github.com/Elvis-Budingensis/snd-vscode#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -105,6 +116,11 @@
       {
         "command": "snd.showSpectrum",
         "title": "Snd: Show Spectrum",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.showEnvelope",
+        "title": "Snd: Envelope Editor",
         "category": "Snd"
       },
       {
@@ -210,6 +226,81 @@
       {
         "command": "snd.apropos",
         "title": "Snd: Apropos",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.region.play",
+        "title": "Snd: Play Region",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.region.insert",
+        "title": "Snd: Insert Region at Cursor",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.region.mix",
+        "title": "Snd: Mix Region at Cursor",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.region.save",
+        "title": "Snd: Save Region As",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.region.forget",
+        "title": "Snd: Forget Region",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.mix.play",
+        "title": "Snd: Play Mix",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.mix.amp",
+        "title": "Snd: Set Mix Amplitude",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.mix.position",
+        "title": "Snd: Move Mix",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.mark.add",
+        "title": "Snd: Add Mark at Cursor",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.mark.delete",
+        "title": "Snd: Delete Mark",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.mark.rename",
+        "title": "Snd: Rename Mark",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.find",
+        "title": "Snd: Find",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.findBackwards",
+        "title": "Snd: Find Backwards",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.sync",
+        "title": "Snd: Sync This Sound With…",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.listEnvelopes",
+        "title": "Snd: List Named Envelopes",
         "category": "Snd"
       },
       {
@@ -349,6 +440,16 @@
         "command": "snd.stopPlaying",
         "key": "ctrl+c ctrl+t",
         "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'slime'"
+      },
+      {
+        "command": "snd.showEnvelope",
+        "key": "ctrl+c ctrl+v",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
+      },
+      {
+        "command": "snd.find",
+        "key": "ctrl+c ctrl+x",
+        "when": "editorTextFocus && (editorLangId == scheme || resourceExtname == .scm) && config.snd.keymap == 'inf-snd'"
       }
     ],
     "views": {
@@ -374,6 +475,54 @@
         },
         {
           "command": "snd.saveSound",
+          "when": "view == sndSounds && viewItem == sndSound"
+        },
+        {
+          "command": "snd.showEnvelope",
+          "when": "view == sndSounds && viewItem == sndChannel"
+        },
+        {
+          "command": "snd.region.play",
+          "when": "view == sndSounds && viewItem == sndRegion"
+        },
+        {
+          "command": "snd.region.insert",
+          "when": "view == sndSounds && viewItem == sndRegion"
+        },
+        {
+          "command": "snd.region.mix",
+          "when": "view == sndSounds && viewItem == sndRegion"
+        },
+        {
+          "command": "snd.region.save",
+          "when": "view == sndSounds && viewItem == sndRegion"
+        },
+        {
+          "command": "snd.region.forget",
+          "when": "view == sndSounds && viewItem == sndRegion"
+        },
+        {
+          "command": "snd.mix.play",
+          "when": "view == sndSounds && viewItem == sndMix"
+        },
+        {
+          "command": "snd.mix.amp",
+          "when": "view == sndSounds && viewItem == sndMix"
+        },
+        {
+          "command": "snd.mix.position",
+          "when": "view == sndSounds && viewItem == sndMix"
+        },
+        {
+          "command": "snd.mark.delete",
+          "when": "view == sndSounds && viewItem == sndMark"
+        },
+        {
+          "command": "snd.mark.rename",
+          "when": "view == sndSounds && viewItem == sndMark"
+        },
+        {
+          "command": "snd.sync",
           "when": "view == sndSounds && viewItem == sndSound"
         }
       ]
@@ -423,6 +572,11 @@
             "No keybindings; everything stays reachable from the command palette."
           ],
           "markdownDescription": "Which keymap to use. The default is `inf-snd.el`'s, because it is Snd's own: these chords are what a Snd user's hands already do, and `C-c C-p` for *play* and `C-c C-t` for *stop* only exist in a keymap written for a sound editor. The setting is exclusive rather than additive, because three chords disagree between the two: `C-c C-p` is eval-and-print in SLIME, `C-c C-t` is trace, and `C-c C-e` is an eval prompt. Two meanings on one chord is worse than either choice."
+        },
+        "snd.openReplOnStart": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Open the REPL terminal whenever a session starts. On by default: a running Snd with no visible listener is a process nobody can type into, and Snd's own stdout — its warnings and anything it prints on its own account — has nowhere to appear. The focus is not taken, so starting a session by evaluating a form leaves the cursor in the file."
         }
       }
     },
@@ -449,7 +603,11 @@
     "test:node": "node --test test/bridge.test.js test/session.test.js",
     "test:scheme": "node tools/run-scheme-tests.mjs",
     "gates": "node tools/gates.mjs",
-    "build:snd": "tools/build-snd.sh"
+    "build:snd": "tools/build-snd.sh",
+    "package": "vsce package",
+    "vscode:prepublish": "npm run compile",
+    "package:darwin-arm64": "vsce package --target darwin-arm64",
+    "test:panels": "node tools/check-panels.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
