@@ -355,6 +355,147 @@ and force keyword calls exist because of them.
   callable `define-envelope-1` that appears in no string table, so the gate
   rejected a name that is right there in the build. The generator now resolves
   those: 173 of them, and the index is 2236 names
+- **observers on eleven of Snd's hooks**: start-playing, stop-playing,
+  after-open, close, new-sound, mark, mix-release, mix-click, snd-error,
+  snd-warning, mus-error. Two rules, both tested — installed additively, and
+  never setting `(hook 'result)`, because the result is how a user's own hook
+  functions cancel an edit or refuse an exit, and a Snd user's `~/.snd` is
+  mostly hook functions. Watching must not become deciding
+- the playhead now hears that a play ENDED instead of inferring it from
+  `play-hook` going quiet; a sound that ended early left the line standing.
+  A play with no position yet says "playing…" rather than drawing a line at 0
+- marks and mixes moved from a script, a Motif window or a drag refresh the
+  tree; it used to be right only after the next edit
+- Snd's own errors and warnings arrive in the editor rather than in a terminal
+  that may be closed
+- three bugs found while writing the tests for this, all in my own work:
+  `stop-playing-hook` got a second handler because the install-once flag
+  guarded the observer table against itself and knew nothing about the play
+  code (found by COUNTING handlers, not by trusting the flag); the play
+  handler then emitted `stopped` twice, which the handler count could not see —
+  one handler, two events; and the rule forbidding `(set! (hook 'result) …)`
+  fired on the comment saying not to do it, the third check today to mistake
+  documentation for the thing it forbids
+- an s7 hook is called **positionally** — `(mark-hook 7 0 1 2)`, not with an
+  inlet — and builds the environment from its own argument names. Handing one
+  an inlet binds it to the first argument and every field reads `#f`, which is
+  what the first version of these tests did and looked exactly like a broken
+  bridge
+- **user drawing code reaches the panels.** `Snd: User Graph` runs
+  `lisp-graph-hook` and draws what it drew — `display-bark-fft` in dsp.scm,
+  `display-energy` in examp.scm, and anything anybody wrote for their own work.
+  The bridge wraps `graph` to record the calls and still calls Snd's own, so a
+  Motif build keeps showing what it showed. That wrapping is the only
+  redefinition of a Snd function in the file and is documented as such
+- `graph-hook`'s result is **read**: "If it returns #t, the display is not
+  updated". Not an exception to the no-result rule but its other side — an
+  observer must not write a result; a caller standing in for Snd's redraw must
+  read one, or the hook looks supported while being ignored
+- calling an s7 hook returns the **result**, already unwrapped, not the hook
+  environment. Reading `'result` off the return value gave `#f` for every hook
+  that ever fired: a suppression check that never suppressed, found by a test
+  that installed a function returning `#t`
+- a list of numbers passed to `graph` is an **envelope**, and its x values are
+  its own — `(0 0 0.1 1 2 0)` peaks near the start, and resampling it as an
+  evenly spaced curve moves the peak to the middle
+- **the 3D spectrogram**, from Snd's own `spectro-*` angles and scales rather
+  than a nice-looking angle of mine — the Motif defaults (90/0/358, z 0.1) and
+  the OpenGL ones (300/320/0, z 1.0) are very different pictures from the same
+  code, so they are read. Orthographic, because Snd's is: perspective would
+  make the near end of a ridge taller than the far end for no reason to do with
+  sound. Painted back to front so the surface occludes itself, with the slice
+  order taken from each slice's own projected depth and not its index — a
+  rotation about z reverses which end of the time axis is nearer
+- the same request serves the sonogram and the spectrogram, as in Snd, where
+  the two differ in the drawing and not in what is computed. A second op would
+  be a second chance for them to disagree about a window or a floor
+- **undo and redo in the waveform panel did nothing visible.** They were the
+  only two message cases without a reload afterwards: Snd did the undo and the
+  panel kept showing the old picture, which reads as a broken button while the
+  button works. A test now walks every mutating case and insists on the reload
+- **the 3D spectrogram was a field of vertical stripes**, and the cause was
+  arithmetic rather than rendering. Snd puts the rotated point on screen as
+  `xx = xyz[0]`, `yy = xyz[1] + xyz[2]` (snd-chn.c) — screen y is the SUM of the
+  rotated y and z, with no depth axis at all. My version used the third
+  component as depth, so at Snd's own Motif defaults the level went entirely
+  into a depth an orthographic view cannot show and every ribbon came out the
+  same height. The rotation is now Snd's `rotate_matrix`, term for term, with
+  its pixel units (`xincr = width/bins`, `yincr = height/slices`), and the
+  matrix is interpolated into the webview from one implementation because the
+  first line to drift would be `ry + rz`
+- the matrix is tested against a hand-evaluated case rather than against
+  itself, and separately that the level is legible at BOTH of Snd's defaults —
+  Motif 90/0/358 with z 0.1 and OpenGL 300/320/0 with z 1.0 are very different
+  pictures from the same code
+- **the spectrogram was still flat**, and Snd's geometry says why. Three
+  details from snd-chn.c, each of which flattens the picture on its own:
+  `fheight = y_axis_y1 - y_axis_y0` is **negative** (pixel y counts down, the
+  axis runs up), so `yincr` is negative and the slices stack *upward* and
+  `zscl = -(z_scale * fheight)` comes out positive; and the rotation is about
+  the **centre** of the frame, `(x - x0, y - y0)` with x0 and y0 added back
+  afterwards. With a positive height both signs flip and the surface collapses
+  onto its own baseline
+- **panels follow a new sound** unless the user picked one. `with-sound` makes
+  a sound and a panel still showing the previous one reads as broken; choosing
+  a sound from the list pins the panel, because switching away from a
+  deliberate choice is worse than not following
+- `oboe.snd` and `fm-violin.snd` are **not in the Snd tarball** — 676 entries,
+  no audio at all; they live on Bill's site and are fetched separately, which
+  is why every example in the documentation that opens `oboe.snd` assumes you
+  already have it. What does ship is better for a tour: `v.scm` (the fm-violin
+  itself), `clm-ins.scm`, `dsp.scm`, `examp.scm`. `snd.sourcePath` and a
+  `loadpath` op put them on `*load-path*`, and the tour now synthesises three
+  fm-violin notes instead of opening a file nobody has
+- `*load-path*` is a plain settable variable; `(*s7* 'load-path)` is
+  `#<undefined>` in this s7, so my first version wrote a field nobody consults
+  while looking exactly like it worked. Checked in s7 rather than assumed
+- the spectrogram honours **spectrum-start and spectrum-end**, as Snd does
+  (`start_bin = target_bins * spectrum_start`), and the range menu goes down to
+  a fiftieth of Nyquist. Without a range, a 330 Hz note at 4096 points puts
+  everything of interest in the first two percent of the width and the rest is
+  a flat plain — arithmetically correct and saying nothing, which is why every
+  spectrogram in the documentation is of a restricted range
+- the tour spells out the fm-violin's argument order and that an instrument
+  needs an open output, because my own earlier text did not: `(fm-violin 330 .2)`
+  fails with a message about `hz->radians` getting a boolean, and
+  `(fm-violin 0 4 330 .2)` on its own returns `#<do-unspecified>` and writes
+  nowhere. It also says that sounds are `open-sound`ed and not `load`ed, a
+  mistake the surrounding examples invite
+- the spectrogram asked for the **sonogram's** bin count. 256 is right for a
+  sonogram, where one bin is one pixel row and more rows than the panel is tall
+  buy nothing; the spectrogram draws a line per bin along the width and can use
+  everything the transform has. It reported "512 of 512 bins" for a 2048-point
+  transform that has 1024 — the status line stating the loss without either of
+  us reading it as one
+- **the spectrogram never followed a newly opened sound**, and the reason is the
+  oldest bug in this project wearing a new coat: `after-open-hook` passes a
+  sound OBJECT, so the `opened` event carried the string `"#<sound 1>"`, the
+  extension's `typeof frame.snd === 'number'` was false, and nothing followed.
+  The ops learned this on day one — integers on the wire, converted at the
+  boundary, `integer?` asked first — and the event path never had to, because
+  until the hooks arrived it only carried numbers Snd had already reduced.
+  `sv-wire` now reduces sounds, marks, mixes and regions wherever a hook
+  argument enters
+- and the `edited` event has been sending `"#<sound 1>"` since the day the edit
+  watch was written. Nothing noticed because the extension refreshes everything
+  and never reads the field — a field nobody reads is still wrong, and the first
+  reader would have found it the hard way
+- a gate for the event path, and it found two mistakes of its own while being
+  written: comparing two `indexOf` results to check predicate order (a term that
+  is not found returns −1, and every position is greater than −1, so the check
+  fired on correct code), and matching a trailing character after `'snd` (in
+  `(list 'snd snd)` there is nothing after it). Both are the same shape as the
+  bug they guard: a comparison that is true for the wrong reason
+- **`examples/sounds/oboe.snd` ships with the extension** — the file every
+  worked example in Snd's documentation opens, and the first thing in this
+  project with a real attack, moving harmonics and a decay, which is what the
+  spectrogram is for. Checked against both tarballs — snd-26.5 with 676 entries
+  and snd-26 with 683 — and neither carries a single audio file. Snd's `COPYING`
+  is a very permissive grant covering "this software and its documentation";
+  whether a recording distributed from the same page counts as the latter is a
+  question with two reasonable answers and one person entitled to give it, so
+  `examples/sounds/README.md` records it as open rather than assumed. Nothing
+  depends on the file and one command removes it
 - `npm run gates`: five structural gates, tsc, 56 node checks, 63 s7 checks
 
 Found by the gates while writing it, and worth recording because neither

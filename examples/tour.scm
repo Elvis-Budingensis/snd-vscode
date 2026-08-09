@@ -91,41 +91,89 @@
 (set! (filter-control-envelope) '(0 1 0.1 1 0.2 0 1 0))
 (set! (filter-control?) #t)
 ;; Now "apply" in the control panel, or:
-(apply-controls)
+;; (apply-controls)
 
+;; --- Snd's own instruments -------------------------------------------
+;;
+;; oboe.snd, fm-violin.snd, pistol.snd and the rest are NOT in the Snd
+;; tarball. I looked: all 676 entries, no audio at all. They live on Bill's
+;; site and get downloaded separately, which is why every example in the
+;; documentation that opens oboe.snd assumes you already have it.
+;;
+;; What DOES ship is better for a tour anyway: the instruments themselves.
+;; v.scm is the fm-violin, clm-ins.scm two dozen more, dsp.scm the analysis
+;; and filtering library, examp.scm the examples the reference quotes.
+;;
+;; Point snd.sourcePath at your Snd sources (or set SND_SOURCE) and these
+;; work; without it, load-from-path will say which file it could not find.
 
-(define (filter-sweep flt chan)
-  (let ((phase 0.0)
-	(freq 0.0)
-	(incr (/ (* 2 pi) 44100.0))
-        (samps (seconds->samples 0.5)))
-    (do ((i 0 (+ i 1)))
-	((= i samps))
-      (let ((sval (* .8 (sin phase))))
-	(set! phase (+ phase freq)) 
-	(set! freq (+ freq incr))
-	(out-any i (flt sval) chan)))))
+;; The fm-violin, from v.scm -- Bill's own instrument, and the one that made
+;; the ".snd" files everybody quotes.
+(if (not (provided? 'snd-v.scm)) (load-from-path "v.scm"))
+(if (not (provided? 'snd-ws.scm)) (load-from-path "ws.scm"))
 
-(with-sound (:channels 5 :output "test.snd")
-  (filter-sweep (make-butterworth-lowpass 8 .1) 0)
-  (filter-sweep (make-bessel-lowpass 8 .1) 1)
-  (filter-sweep (make-chebyshev-lowpass 8 .1) 2)
-  (filter-sweep (make-inverse-chebyshev-lowpass 8 .1) 3)
-  (filter-sweep (make-elliptic-lowpass 8 .1) 4))
+;; THE ARGUMENTS ARE (start dur frequency amplitude ...), in that order, and
+;; every one of them is required:
+;;
+;;   (fm-violin 330 .2)          -> hz->radians argument, #f, is boolean
+;;                                  but should be a real
+;;
+;; because .2 landed on `dur` and `frequency` was left unset. And an instrument
+;; called on its own writes nowhere:
+;;
+;;   (fm-violin 0 4 330 .2)      -> #<do-unspecified>, and no sound
+;;
+;; It needs an open output, which is what with-sound provides. with-sound is a
+;; MACRO whose first argument is a list of options -- so the notes go INSIDE
+;; it, they are not arguments to it:
+;;
+;;   (with-sound fm-violin 0 4 330 .2)  -> apply's last argument should be a
+;;                                         proper list: fm-violin
+(with-sound (:output "violin.snd" :channels 1)
+  (fm-violin 0 1 440 0.3)
+  (fm-violin 0.5 1 660 0.2 :fm-index 2.0)
+  (fm-violin 1.0 1.5 330 0.25 :reverb-amount 0.1))
 
-
-(add-envelopes '(0 0 1 1) '(0 0 1 1 2 0))
+;; Now the panels have something with structure in them: "Snd: Show Waveform"
+;; for the three overlapping notes, and the spectrogram for the FM sidebands
+;; appearing and going again.
 (play)
-(define brfft
-  (let ((+documentation+ "(brfft lofrq hifrq) removes all frequencies between lofrq and hifrq: (brfft 1000.0 2000.0)"))
-    (lambda (lofrq hifrq)
-      (let* ((fsize (let ((len (framples)))
-                      (expt 2 (ceiling (log len 2)))))
-	     (ctr -1)
-	     (lo (round (/ (* fsize lofrq) (srate))))
-	     (hi (round (/ (* fsize hifrq) (srate)))))
-        (filter-fft (lambda (y)
-		      (set! ctr (+ 1 ctr))
-		      (if (>= hi ctr lo)
-		          0.0
-		          y)))))))
+
+;; dsp.scm, which is where display-bark-fft lives -- the function that makes
+;; "Snd: User Graph" show something. Load it, push it onto lisp-graph-hook,
+;; and the panel draws a bark-scale spectrum:
+;;
+;;   (load-from-path "dsp.scm")
+;;   (hook-push lisp-graph-hook
+;;     (lambda (h) (display-bark-fft (h 'snd) (h 'chn))))
+;;
+;; examp.scm has display-energy, which is smaller and needs no arguments
+;; beyond the channel.
+
+;; --- oboe.snd, which ships with this extension -----------------------
+;;
+;; examples/sounds/oboe.snd: the file every worked example in Snd's
+;; documentation opens. A real instrument -- an attack, harmonics that move, a
+;; decay -- which is what the spectrogram and the waveform panel are actually
+;; for; a synthesised sine has none of it.
+;;
+;; See examples/sounds/README.md for where it came from and for the one thing
+;; about it that is not settled: it is not in the Snd tarball, and its
+;; redistribution terms are not written down anywhere I could find.
+;;
+;; Opened, not loaded:
+;;
+;;   (load "oboe.snd")      -> tries to READ it as Scheme source
+;;   (open-sound "oboe.snd") -> #<sound 1>
+;;
+;; load is for programs, open-sound for sounds. The mistake is easy because
+;; every other file in this tour is loaded.
+;;
+;; Relative to this file, so it works wherever the extension is installed:
+(open-sound "sounds/oboe.snd")
+
+;; Now try the panels on something real:
+;;   "Snd: Show Waveform"  -- the attack and the decay
+;;   "Snd: Show Spectrum"  -- view: spectrogram (3D), log freq on, size 2048
+;;                            and the oboe's harmonics stand up as ridges
+;;   space in the waveform panel, or (play)

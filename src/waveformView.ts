@@ -126,6 +126,8 @@ export class WaveformView {
   private start = 0;
   private dur = 0;
   private snd = 0;
+  /** The user chose this sound, so do not follow new ones. */
+  private pinned = false;
   /** Which channel the edit commands and the spectrum follow. */
   private chn = 0;
   /** Empty means every channel of the sound. */
@@ -162,6 +164,37 @@ export class WaveformView {
    */
   static playhead(frame: number | undefined): void {
     void this.instance?.panel.webview.postMessage({ type: 'playhead', frame });
+  }
+
+  /**
+   * A play started or ended, from start-playing-hook and stop-playing-hook.
+   *
+   * Separate from playhead(): a running play with no position yet is not the
+   * same as no play, and the panel should not have to infer the difference
+   * from the absence of updates -- which is exactly what it used to do.
+   */
+  /**
+   * A new sound appeared; show it unless the user picked this one.
+   *
+   * Synthesising something and having the panel keep showing the previous
+   * sound is the common case and reads as the panel being broken: `with-sound`
+   * makes a new sound, and "show me what I just made" is the only reasonable
+   * expectation. But once someone has chosen a sound from the list, following
+   * would take it away from them, so the choice pins the panel.
+   */
+  static follow(snd: number): void {
+    const panel = this.instance;
+    if (!panel || panel.pinned) return;
+    panel.snd = snd;
+    panel.chn = 0;
+    panel.chns = '';
+    panel.start = 0;
+    panel.dur = 0;
+    void panel.reload();
+  }
+
+  static playing(running: boolean): void {
+    void this.instance?.panel.webview.postMessage({ type: 'playing', running });
   }
 
   static isOpen(): boolean {
@@ -235,6 +268,10 @@ export class WaveformView {
         await this.reload();
         break;
       case 'sound':
+        // The user chose a sound, so stop following new ones. Switching away
+        // from a sound somebody deliberately picked is worse than not
+        // following at all.
+        this.pinned = true;
         this.snd = Number(message.snd) || 0;
         this.chn = 0;
         this.chns = '';
@@ -271,9 +308,15 @@ export class WaveformView {
         break;
       case 'undo':
         await this.host.undo(this.snd, this.chn);
+        // The reload is the whole point. Snd DID the undo; without refetching,
+        // the panel keeps showing the old picture and the button looks broken
+        // — the one failure mode that reads as "the feature does not work"
+        // while the feature works.
+        await this.reload();
         break;
       case 'redo':
         await this.host.redo(this.snd, this.chn);
+        await this.reload();
         break;
       case 'key':
         await this.host.key(message.action, this.snd, this.chn, Number(message.count) || 1);
@@ -434,6 +477,9 @@ let drag = null;
 let layout = 'separate';
 let focusedChannel = 0;
 let playhead = undefined;
+// Whether a play is running at all, which is not the same as knowing where it
+// has got to: stop-playing-hook says the first, play-hook the second.
+let running = false;
 
 function css(name, fallback) {
   const value = getComputedStyle(document.body).getPropertyValue(name);
@@ -581,6 +627,13 @@ function drawChannel(channel, index, count, box, width, w) {
     // happen and stays put; this moves and means nothing afterwards. Drawing
     // both in red would make playback look as though it were dragging the
     // edit point along with it.
+    if (running && playhead === undefined) {
+      // Playing, position not known yet. Said in words rather than drawn as a
+      // line at 0, which would be a claim about where the sound is.
+      context.fillStyle = css('--vscode-charts-green', '#89d185');
+      context.font = '10px var(--vscode-font-family)';
+      context.fillText('playing…', 6, 12);
+    }
     if (playhead !== undefined) {
       const x = (playhead - w.start) / w.dur * width;
       if (x >= 0 && x <= width) {
@@ -665,6 +718,10 @@ window.addEventListener('message', event => {
     document.getElementById('layout').style.display =
       current.channels.length > 1 ? '' : 'none';
     document.getElementById('error').textContent = '';
+    draw();
+  } else if (message.type === 'playing') {
+    running = message.running;
+    if (!running) playhead = undefined;
     draw();
   } else if (message.type === 'playhead') {
     playhead = message.frame;

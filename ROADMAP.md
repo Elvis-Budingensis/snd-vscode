@@ -48,6 +48,28 @@ had nowhere to draw it.
 - [ ] `enved-wave?` in `flt` mode: the filter's actual frequency response
       drawn over the envelope
 
+See GAPS.md for the measured version of this list — what the reference
+documents against what the bridge and the variable registry actually reach,
+with the deliberate omissions named so the count is not mistaken for a
+to-do list.
+
+The three that would change the most, in order:
+
+- [x] **graph-hook and lisp-graph-hook** — user drawing code in a panel
+- [x] **the 3D spectrogram** — Snd's own angles, orthographic, self-occluding
+- [ ] the **wavogram** (`graph-as-wavogram`, `wavo-hop`, `wavo-trace`) — the
+      time-domain counterpart, and the last of Snd's four display types
+- [ ] **hooks** (14 of 27) — `stop-playing-hook` so the playhead knows when a
+      play ended rather than inferring it; `edit-hook` for protected history;
+      `snd-error-hook` into the Problems pane; and `graph-hook` /
+      `lisp-graph-hook`, without which twenty years of user-written drawing
+      code cannot reach these panels
+- [ ] **edit lists** (1 of 8) — `save-edit-history`, `edit-list->function`,
+      `as-one-edit`. The region and mix commands should already be using
+      `as-one-edit`
+- [ ] **files and headers** (2 of 20) — Edit Header, Save As with a header and
+      sample-type choice, `update-sound`, `read-only`, `save-state`
+
 ## Infrastructure
 
 - [x] gate chain: structural checks, tsc, node tests, s7 tests

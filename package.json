@@ -119,6 +119,11 @@
         "category": "Snd"
       },
       {
+        "command": "snd.showUserGraph",
+        "title": "Snd: User Graph (lisp-graph-hook)",
+        "category": "Snd"
+      },
+      {
         "command": "snd.showEnvelope",
         "title": "Snd: Envelope Editor",
         "category": "Snd"
@@ -577,6 +582,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Open the REPL terminal whenever a session starts. On by default: a running Snd with no visible listener is a process nobody can type into, and Snd's own stdout — its warnings and anything it prints on its own account — has nowhere to appear. The focus is not taken, so starting a session by evaluating a form leaves the cursor in the file."
+        },
+        "snd.sourcePath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where the Snd sources are, so that `(load-from-path \"v.scm\")` finds Snd's own Scheme files — `v.scm` (the fm-violin), `clm-ins.scm`, `dsp.scm`, `examp.scm`, `ws.scm`. These ship with Snd; the sound files everybody quotes (`oboe.snd`, `fm-violin.snd`) do **not**, and are downloaded separately. Empty means: use the source tree `tools/build-snd.sh` left in `.build`, if there is one, and otherwise leave `*load-path*` alone."
         }
       }
     },

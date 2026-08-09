@@ -141,6 +141,12 @@
 (define (mix-length m) 300)
 (define (mix-home m) (list 'sound 0 0))
 
+;; Marks are objects too, with the same validity-predicate shape as sounds.
+(define (make-mark-object i) (list '*mark* i))
+(define (mark? x) (or (and (pair? x) (eq? (car x) '*mark*)) (and (integer? x) (>= x 0))))
+(define (mark->integer m) (if (pair? m) (cadr m) m))
+(define (integer->mark i) (make-mark-object i))
+
 (define *mark-log* ())
 (define (add-mark sample . rest)
   (set! *mark-log* (cons (cons 'add (cons sample rest)) *mark-log*))
@@ -175,6 +181,35 @@
   (dilambda (lambda* ((snd 0)) *sync-value*)
             (lambda* ((snd 0) v) (set! *sync-value* v))))
 (define (sync-max) 3)
+
+;; Snd's global hooks, as real s7 hooks -- with each hook's OWN argument names
+;; in the documented order, because an s7 hook is called POSITIONALLY:
+;;
+;;   (mark-hook 7 0 1 2)   not   (mark-hook (inlet 'id 7 ...))
+;;
+;; The hook builds the environment from its argument names and passes THAT to
+;; the functions on it. Handing a hook an inlet instead binds the inlet to its
+;; first argument, so every field reads #f -- which is what the first version
+;; of these tests did, and it looked exactly like a broken bridge.
+;;
+;; Missing trailing arguments are #f, and 'result exists on every hook.
+(define start-playing-hook (make-hook 'snd))
+(define stop-playing-hook (make-hook 'snd))
+(define stop-playing-selection-hook (make-hook))
+(define new-sound-hook (make-hook 'name))
+(define mark-hook (make-hook 'id 'snd 'chn 'reason))
+(define mix-release-hook (make-hook 'id 'samples))
+(define mix-click-hook (make-hook 'id))
+(define snd-error-hook (make-hook 'message))
+(define snd-warning-hook (make-hook 'message))
+(define mus-error-hook (make-hook 'type 'message))
+
+;; `graph` as Snd has it: data xlabel x0 x1 y0 y1 snd chn force-display.
+;; Recorded so a test can tell the wrapper called the original.
+(define *graph-calls* ())
+(define (graph . args) (set! *graph-calls* (cons args *graph-calls*)) 0)
+(define lisp-graph-hook (make-hook 'snd 'chn))
+(define graph-hook (make-hook 'snd 'chn 'y0 'y1))
 
 (define (snd-help sym) (string-append "help for " (symbol->string sym)))
 (define (snd-version) "Snd 26.5 (test stub)")
@@ -1235,6 +1270,212 @@
        (list 'sv-macro-test (list 0.0 1.0 1.0 0.0) 3.0)
        (car *defined-envelopes*))
 (check "defineenvelope: reported ok" #t ((last-frame) 'ok))
+
+
+;; --- the hooks the editor watches -----------------------------------
+;;
+;; Snd's customization model is hooks, and a Snd user's ~/.snd is mostly hook
+;; functions. Two rules follow, and both are testable:
+;;   1. install ADDITIVELY -- never replace what is already on the hook
+;;   2. never set (hook 'result) -- watching must not become deciding
+
+;; EXACTLY ONE handler on stop-playing-hook, counted rather than assumed.
+;; The play code installs one there to reset the playhead, and the observer
+;; table used to add a second -- two handlers each emitting 'stopped. The
+;; install-once flag did not catch it, because it guarded the table against
+;; itself and knew nothing about the play code. Counting catches it.
+(check "hooks: one handler on stop-playing-hook, not two"
+       1 (length (hook-functions stop-playing-hook)))
+(check-true "hooks: installed on mark-hook"
+            (= 1 (length (hook-functions mark-hook))))
+
+;; Twice must not install twice: Snd runs every handler, so a second one means
+;; two events per occurrence.
+(sv-observe-hooks)
+(check "hooks: installing twice is a no-op" 1 (length (hook-functions mark-hook)))
+
+;; A user function already on the hook survives, and still runs.
+(define *user-ran* #f)
+(set! (hook-functions stop-playing-hook)
+      (cons (lambda (h) (set! *user-ran* #t)) (hook-functions stop-playing-hook)))
+(set! captured ())
+(stop-playing-hook 0)
+(check-true "hooks: the user's own function still runs" *user-ran*)
+(check "hooks: and the event was emitted" "stopped" ((last-frame) 'event))
+;; Once, not twice.
+;; Once, not twice: two handlers each emitting it would look identical from
+;; the panel's side except for the doubled work.
+(check "hooks: exactly one stopped event" 1
+       (let loop ((rest captured) (n 0))
+         (cond ((null? rest) n)
+               ((and (let? (car rest))
+                     (defined? 'event (car rest))
+                     (equal? ((car rest) 'event) "stopped"))
+                (loop (cdr rest) (+ n 1)))
+               (else (loop (cdr rest) n)))))
+
+;; The event carries the hook's own arguments, under Snd's names.
+(set! captured ())
+(mark-hook 7 0 1 2)
+(let ((f (last-frame)))
+  (check "hooks: mark event" "markchanged" (f 'event))
+  (check "hooks: carries the mark id" 7 (f 'id))
+  (check "hooks: and the reason" 2 (f 'reason)))
+
+;; Snd's warnings become events rather than vanishing into a terminal.
+(set! captured ())
+(snd-warning-hook "watch out")
+(check "hooks: warnings are forwarded" "watch out" ((last-frame) 'message))
+
+;; NEVER 'result. Setting it would take over a decision belonging to the
+;; user's hook functions -- cancelling an edit, refusing an exit, suppressing
+;; a warning.
+;; NEVER 'result. A hook's result is how the user's own functions cancel an
+;; edit, refuse an exit or suppress a warning; an observer that sets it takes
+;; that decision away silently. Checked by watching what the hook's own
+;; environment holds after a run -- the observers must leave it #f.
+(define (sv-test-result-after hook . args)
+  (let ((seen 'nothing))
+    (set! (hook-functions hook)
+          (append (hook-functions hook)
+                  (list (lambda (env) (set! seen (env 'result))))))
+    (apply hook args)
+    seen))
+;; UNSPECIFIED, not #f: that is how s7 initialises a hook's result, and it is
+;; the distinction that matters -- #f would be an answer ("do not cancel"),
+;; unspecified is no answer at all, which is what an observer must leave
+;; behind. A test expecting #f would pass just as well if an observer set it.
+(check-true "hooks: result is left untouched"
+            (eq? #<unspecified> (sv-test-result-after stop-playing-hook 0)))
+(check-true "hooks: a warning's result is left untouched too"
+            (eq? #<unspecified> (sv-test-result-after snd-warning-hook "careful")))
+
+;; A hook argument the build does not carry must not take the handler down --
+;; a handler that raises inside a hook takes the operation with it.
+(set! captured ())
+(mark-hook 3)
+(check "hooks: a missing argument is #f, not an error" #f ((last-frame) 'snd))
+
+
+;; --- user drawing code: graph-hook and lisp-graph-hook ---------------
+;;
+;; The extension point that decides whether these panels are the same editor
+;; or a parallel one. display-bark-fft in dsp.scm, display-energy in examp.scm
+;; and twenty years of private code all work by calling `graph`.
+
+;; A user function of exactly the documented shape, from examp.scm:
+;;   (hook-push lisp-graph-hook (lambda (hook) (display-energy (hook 'snd) (hook 'chn))))
+(set! (hook-functions lisp-graph-hook)
+      (list (lambda (h)
+              (graph (float-vector 0.0 0.5 1.0 0.5 0.0) "energy" 0.0 1.0 0.0 1.0
+                     (h 'snd) (h 'chn) #f))))
+
+(sv-request "170" 'lispgraph (inlet 'snd 0 'chn 0))
+(let ((v ((last-frame) 'value)))
+  (check "lispgraph: the hook was seen" 1 (v 'installed))
+  (check "lispgraph: one graph came back" 1 (length (v 'graphs)))
+  (let ((g (car (v 'graphs))))
+    (check "lispgraph: the label survives" "energy" (g 'label))
+    (check "lispgraph: and the x range" 1.0 (g 'x1))
+    (check "lispgraph: the data came through" (list 0.0 0.5 1.0 0.5 0.0)
+           (car (g 'traces)))))
+
+;; The original `graph` still runs: in a Motif build both editors then show it.
+(check-true "lispgraph: Snd's own graph was still called" (pair? *graph-calls*))
+
+;; A list of numbers is an ENVELOPE, not a trace -- "If 'data' is a list of
+;; numbers, it is assumed to be an envelope (a list of breakpoints)". Keeping
+;; it as breakpoints matters: resampling a curve that has none invents points.
+(set! (hook-functions lisp-graph-hook)
+      (list (lambda (h) (graph '(0 0 1 1 2 0) "env" 0.0 2.0))))
+(sv-request "171" 'lispgraph (inlet 'snd 0 'chn 0))
+(let ((g (car (((last-frame) 'value) 'graphs))))
+  (check "lispgraph: an envelope is marked as one" #t (g 'envelope))
+  (check "lispgraph: with its breakpoints intact" (list 0.0 0.0 1.0 1.0 2.0 0.0)
+         (car (g 'traces))))
+
+;; Several traces at once: "The 'data' argument can be a list of float-vectors".
+(set! (hook-functions lisp-graph-hook)
+      (list (lambda (h)
+              (graph (list (float-vector 0.0 1.0) (float-vector 1.0 0.0)) "two"))))
+(sv-request "172" 'lispgraph (inlet 'snd 0 'chn 0))
+(check "lispgraph: two traces" 2 (length ((car (((last-frame) 'value) 'graphs)) 'traces)))
+
+;; A user function that raises must be reported, not swallowed and not fatal.
+(set! (hook-functions lisp-graph-hook)
+      (list (lambda (h) (vector-ref h 99))))
+(sv-request "173" 'lispgraph (inlet 'snd 0 'chn 0))
+(check "lispgraph: still a successful frame" #t ((last-frame) 'ok))
+(check-true "lispgraph: and the failure is named"
+            (string? (((last-frame) 'value) 'failed)))
+(set! (hook-functions lisp-graph-hook) ())
+
+;; graph-hook's RESULT is read, because "If it returns #t, the display is not
+;; updated" -- the panels stand in for Snd's redraw here. Not writing a result
+;; is the observer rule; not reading this one would make the hook look
+;; supported while being ignored.
+(check "graph-hook: nothing installed means nothing suppressed" #f
+       (sv-graph-hook-suppresses? 0 0 -1.0 1.0))
+(set! (hook-functions graph-hook)
+      (list (lambda (h) (set! (h 'result) #t))))
+(check "graph-hook: a #t result suppresses the display" #t
+       (sv-graph-hook-suppresses? 0 0 -1.0 1.0))
+(set! (hook-functions graph-hook)
+      (list (lambda (h) (set! (h 'result) #f))))
+(check "graph-hook: any other result does not" #f
+       (sv-graph-hook-suppresses? 0 0 -1.0 1.0))
+;; A user function that only adjusts something -- Snd's own example sets
+;; dot-size -- returns nothing and must not suppress anything.
+(set! (hook-functions graph-hook) (list (lambda (h) 'adjusted)))
+(check "graph-hook: a function that just adjusts does not suppress" #f
+       (sv-graph-hook-suppresses? 0 0 -1.0 1.0))
+(set! (hook-functions graph-hook) ())
+
+
+;; --- the load path --------------------------------------------------
+
+(let ((before (length *load-path*)))
+  (sv-request "180" 'loadpath (inlet 'path "/tmp/sv-test-path"))
+  (check "loadpath: added" (+ before 1) (length *load-path*))
+  ;; Twice must not add twice: a path added on every session start would grow
+  ;; *load-path* by one entry per restart, and a duplicate that shadows nothing
+  ;; looks harmless for a hundred restarts.
+  (sv-request "181" 'loadpath (inlet 'path "/tmp/sv-test-path"))
+  (check "loadpath: not added twice" (+ before 1) (length *load-path*)))
+;; Prepended, so Snd's own files win over anything already on the path with the
+;; same name.
+(check "loadpath: prepended" "/tmp/sv-test-path" (car *load-path*))
+(sv-request "182" 'loadpath (inlet 'path ""))
+(check "loadpath: an empty path changes nothing" "/tmp/sv-test-path"
+       (car *load-path*))
+
+
+;; --- Snd objects in events ------------------------------------------
+;;
+;; A hook argument is whatever Snd passes, and Snd passes OBJECTS:
+;; after-open-hook a sound, mark-hook a mark, mix-release-hook a mix. Sent as
+;; they are they encode as "#<sound 1>" -- a string where the panels expect a
+;; number, so nothing follows a newly opened sound. The same mistake as
+;; (sounds) returning objects, in the one path that had never needed the
+;; lesson.
+
+(check "wire: a sound object becomes its index" 1 (sv-wire (make-sound-object 1)))
+(check "wire: a mark object becomes its index" 7 (sv-wire (make-mark-object 7)))
+(check "wire: a mix object becomes its index" 2 (sv-wire (make-mix-object 2)))
+(check "wire: a region object becomes its index" 1 (sv-wire (make-region-object 1)))
+;; And an integer STAYS an integer: sound? and friends are validity
+;; predicates, not type predicates -- each says #t for a valid index, so asking
+;; them before integer? sends integers through sound->integer, which refuses
+;; them.
+(check "wire: an integer stays an integer" 3 (sv-wire 3))
+(check "wire: a string stays a string" "x" (sv-wire "x"))
+(check "wire: a boolean stays a boolean" #f (sv-wire #f))
+
+;; Through a real hook, which is how it actually arrives.
+(set! captured ())
+(mark-hook (make-mark-object 4) 0 0 2)
+(check "wire: the mark event carries an integer" 4 ((last-frame) 'id))
+(check-true "wire: really an integer" (integer? ((last-frame) 'id)))
 
 (set! sv-emit original-emit)
 

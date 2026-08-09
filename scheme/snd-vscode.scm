@@ -707,6 +707,37 @@
   ((symbol->value 'save-sound) (sv-arg params 'snd 0))
   #t)
 
+(sv-define-op loadpath (params)
+  ;; Put a directory on s7's *load-path*, so (load-from-path "v.scm") finds
+  ;; Snd's own Scheme files.
+  ;;
+  ;; This is what makes the fm-violin available -- and the fm-violin is what
+  ;; made the .snd files every example in the documentation opens. Those files
+  ;; are not in the tarball: 676 entries, no audio. The instruments are, which
+  ;; is the better half to have.
+  ;;
+  ;; Prepended, not appended, and only once: a path added on every session
+  ;; start would grow *load-path* by one entry per restart, and the duplicate
+  ;; that shadows nothing is exactly the kind of thing that looks harmless for
+  ;; a hundred restarts.
+  ;; *load-path*, not (*s7* 'load-path). The latter is not a field of *s7* in
+  ;; this s7 -- it reads as #<undefined>, and setting it would have written a
+  ;; field nobody consults while looking exactly like it worked. The load path
+  ;; is an ordinary settable variable:
+  ;;
+  ;;   > *load-path*
+  ;;   ()
+  (let ((path (sv-arg params 'path "")))
+    (when (and (> (length path) 0) (defined? '*load-path*))
+      (let ((current (symbol->value '*load-path*)))
+        (unless (member path current)
+          ;; A plain set! on the variable, verified in s7 rather than assumed:
+          ;; the symbol table also holds a set-*load-path* accessor, and going
+          ;; through that would be a guess where a check was available.
+          (eval (list 'set! '*load-path* (list 'quote (cons path current)))
+                (rootlet)))))
+    (inlet 'loadPath (if (defined? '*load-path*) (symbol->value '*load-path*) ()))))
+
 (sv-define-op load (params)
   (let ((file (sv-arg params 'file "")))
     (inlet 'value (object->string (load file)))))
@@ -1271,7 +1302,16 @@
          (columns (max 1 (min 1024 (round (sv-arg params 'columns 400)))))
          (size (let loop ((p 64))
                  (if (>= p (min 16384 (sv-arg params 'size 1024))) p (loop (* p 2)))))
-         (bins (max 8 (min 512 (round (sv-arg params 'bins 256)))))
+         ;; 512 was a cap on the SONOGRAM, where one row is one pixel and more
+         ;; rows than the panel is tall buy nothing. The spectrogram draws a
+         ;; line per bin along the width, so the same cap throws away half the
+         ;; resolution of a 2048-point transform for no reason -- "512 of 512
+         ;; bins" for a size where 1024 exist.
+         ;;
+         ;; 2048 now, still capped: the array is columns times bins and an
+         ;; uncapped bin count at 1024 columns is a megabyte of base64 per
+         ;; redraw.
+         (bins (max 8 (min 2048 (round (sv-arg params 'bins 256)))))
          (linear (sv-arg params 'linear #f))
          (window (sv-arg params 'window 'blackman2-window))
          (window-value (if (and (symbol? window) (defined? window))
@@ -1333,6 +1373,26 @@
            'floorDB floor-dB
            'srate ((symbol->value 'srate) snd)
            'frames frames
+           ;; The viewing angles and scales, so the 3D view uses SND'S own
+           ;; orientation rather than one of its own invention: change them in
+           ;; Snd's Color/Orientation dialog, or in this extension's View
+           ;; dialog, and both editors turn the surface the same way. Bill's
+           ;; defaults are 90/0/358 with a z scale of 0.1 in Motif, and quite
+           ;; different under OpenGL (300/320/0, z scale 1.0), which is why
+           ;; they are read rather than assumed.
+           'spectro (let ((var (lambda (name fallback)
+                                 (if (sv-have? name)
+                                     (catch #t
+                                       (lambda () (* 1.0 ((symbol->value name))))
+                                       (lambda args fallback))
+                                     fallback))))
+                      (inlet 'xAngle (var 'spectro-x-angle 90.0)
+                             'yAngle (var 'spectro-y-angle 0.0)
+                             'zAngle (var 'spectro-z-angle 358.0)
+                             'xScale (var 'spectro-x-scale 1.0)
+                             'yScale (var 'spectro-y-scale 1.0)
+                             'zScale (var 'spectro-z-scale 0.1)
+                             'hop (var 'spectro-hop 4.0)))
            ;; Column-major: one column is one transform, and the webview
            ;; walks columns to build the image.
            'cells (sv-base64 cells))))
@@ -1513,6 +1573,160 @@
               (+ 1 ((symbol->value 'sync-max)))
               value))
     (inlet 'sync ((symbol->value 'sync) snd))))
+
+;; ------------------------------------------------------------------
+;; graph-hook and lisp-graph-hook: user drawing code
+;;
+;; This is the extension point that decides whether these panels are the same
+;; editor or a parallel one. `display-bark-fft` in dsp.scm lives here, so does
+;; `display-energy` in examp.scm, and so does whatever anybody has written for
+;; their own work over twenty years. All of it works by calling `graph`:
+;;
+;;   (graph data "energy" x0 x1 y0 y1 snd chn #f)
+;;
+;; -- which in a GUI build draws into the third pane beside the time and fft
+;; graphs, and in a headless build draws nowhere.
+;;
+;; So: WRAP `graph`. The original is kept and still called (harmless in nogui,
+;; correct in a Motif build where both editors then show it), and the arguments
+;; are recorded on the way past. Then the hook is run on demand and whatever it
+;; drew comes back as data.
+;;
+;; Wrapping a Snd function that user code calls is a real intrusion and is
+;; worth stating plainly rather than burying: after this, `graph` is not
+;; exactly Snd's `graph`. It is Snd's `graph` plus a recorder. Nothing else in
+;; this file redefines anything of Snd's.
+;;
+;; TWO HOOKS, TWO DIFFERENT CONTRACTS:
+;;
+;;   lisp-graph-hook (snd chn) -- "called just before the lisp graph is updated
+;;   or redisplayed". Running it ourselves is what makes user drawing appear;
+;;   it has no result to honour, and its functions expect to be called during
+;;   a redraw, which is exactly when we call it.
+;;
+;;   graph-hook (snd chn y0 y1) -- "If it returns #t, the display is not
+;;   updated." Here the result MATTERS, and honouring it is the one place this
+;;   file reads a hook result rather than leaving it alone. That is not an
+;;   exception to the observer rule but the other side of it: an observer must
+;;   not WRITE a result; a caller standing in for Snd's own redraw must READ
+;;   one, or a user function that says "do not draw this" is ignored.
+;; ------------------------------------------------------------------
+
+(define sv-graph-traces ())
+(define sv-graph-original #f)
+(define sv-graph-wrapped #f)
+
+(define (sv-graph-points data limit)
+  ;; A trace as numbers, sampled evenly to at most `limit` points. Not min/max
+  ;; reduced like a waveform: this is a computed curve, and its shape is the
+  ;; message -- an envelope of a spectrum has no meaningful "range within a
+  ;; column", it has values.
+  (catch #t
+    (lambda ()
+      (let* ((n (length data))
+             (step (max 1 (round (/ n (max 1 limit)))))
+             (out ()))
+        (do ((i 0 (+ i step)))
+            ((>= i n) (reverse out))
+          (set! out (cons (* 1.0 (data i)) out)))))
+    (lambda (type info) ())))
+
+(define (sv-note-graph arguments)
+  ;; `graph` takes data xlabel x0 x1 y0 y1 snd chn force-display show-axes.
+  ;; data can be a float-vector, a LIST of float-vectors (several traces at
+  ;; once, drawn in the superimposed-channel colours), or a list of numbers,
+  ;; which Snd reads as an envelope -- "If 'data' is a list of numbers, it is
+  ;; assumed to be an envelope (a list of breakpoints)".
+  (let* ((data (if (pair? arguments) (car arguments) #f))
+         (rest (if (pair? arguments) (cdr arguments) ()))
+         (nth (lambda (i default)
+                (let loop ((r rest) (k 0))
+                  (cond ((null? r) default)
+                        ((= k i) (if (car r) (car r) default))
+                        (else (loop (cdr r) (+ k 1)))))))
+         (label (nth 0 ""))
+         (x0 (nth 1 0.0))
+         (x1 (nth 2 1.0))
+         (traces (cond ((float-vector? data) (list (sv-graph-points data 1024)))
+                       ((and (pair? data) (float-vector? (car data)))
+                        (map (lambda (v) (sv-graph-points v 1024)) data))
+                       ((and (pair? data) (number? (car data)))
+                        ;; An envelope: breakpoints, not a trace. Kept as it
+                        ;; is so the panel can draw it as line segments rather
+                        ;; than resampling a curve that has none.
+                        (list (map (lambda (v) (* 1.0 v)) data)))
+                       (else ()))))
+    (when (pair? traces)
+      (set! sv-graph-traces
+            (cons (inlet 'label (if (string? label) label "")
+                         'x0 (* 1.0 x0)
+                         'x1 (* 1.0 x1)
+                         'envelope (and (pair? data) (number? (car data)) #t)
+                         'traces traces)
+                  sv-graph-traces)))))
+
+(define (sv-wrap-graph!)
+  (unless sv-graph-wrapped
+    (when (sv-have? 'graph)
+      (catch #t
+        (lambda ()
+          (set! sv-graph-original (symbol->value 'graph))
+          (eval (list 'define 'graph
+                      (list 'lambda 'arguments
+                            (list 'sv-note-graph 'arguments)
+                            ;; The original still runs, in a catch: in a nogui
+                            ;; build it may refuse for want of a widget, and a
+                            ;; user's drawing function must not fail because of
+                            ;; that -- it did its job by calling graph.
+                            (list 'catch #t
+                                  (list 'lambda ()
+                                        (list 'apply 'sv-graph-original 'arguments))
+                                  (list 'lambda '(type info) #f))))
+                (rootlet))
+          (set! sv-graph-wrapped #t))
+        (lambda (type info) #f)))))
+
+(sv-define-op lispgraph (params)
+  ;; Run the user's lisp-graph-hook and return what it drew.
+  (let ((snd (sv-arg params 'snd 0))
+        (chn (sv-arg params 'chn 0)))
+    (sv-wrap-graph!)
+    (set! sv-graph-traces ())
+    (let* ((hook (sv-hook-of 'lisp-graph-hook))
+           (functions (if hook (hook-functions hook) ()))
+           (failed #f))
+      (when (pair? functions)
+        ;; POSITIONALLY: an s7 hook is called (hook snd chn) and builds the
+        ;; environment its functions read. Handing it an inlet binds the inlet
+        ;; to the first argument and every field reads #f.
+        (catch #t
+          (lambda () (hook snd chn))
+          (lambda (type info)
+            (set! failed (object->string info)))))
+      (inlet 'installed (length functions)
+             'graphs (reverse sv-graph-traces)
+             'failed (or failed #f)))))
+
+(define (sv-graph-hook-suppresses? snd chn y0 y1)
+  ;; graph-hook: "If it returns #t, the display is not updated."
+  ;;
+  ;; READ, not written. The panels stand in for Snd's own redraw here, and a
+  ;; user function that says "do not draw this" has to be obeyed or it is
+  ;; worse than not supporting the hook at all -- it would look supported.
+  (let ((hook (sv-hook-of 'graph-hook)))
+    (if (or (not hook) (null? (hook-functions hook)))
+        #f
+        (catch #t
+          (lambda ()
+            ;; Calling an s7 hook returns the RESULT, not the environment --
+            ;; (h 0 1) gives back whatever the functions left in (h 'result),
+            ;; already unwrapped. Expecting an environment and reading
+            ;; 'result off it yields #f for every hook that ever fired, which
+            ;; is a suppression check that never suppresses: the hook would
+            ;; look supported and be ignored, the exact failure the comment
+            ;; above warns about.
+            (eq? (hook snd chn y0 y1) #t))
+          (lambda (type info) #f)))))
 
 ;; ------------------------------------------------------------------
 ;; Find
@@ -1872,7 +2086,147 @@
          (and (sv-hook? value) value))))
 
 (define (sv-add-hook! hook handler)
+  ;; ADDITIVE, and at the FRONT is fine because in Scheme every function on a
+  ;; hook runs and the order does not decide the outcome: "In Scheme, all
+  ;; functions are run, each takes one argument, the hook environment, and any
+  ;; return values are ignored. It is up to the individual functions to track
+  ;; (hook 'result) if intermediate results matter."
+  ;;
+  ;; Which gives the rule this whole file follows: an observer installed from
+  ;; here NEVER sets (hook 'result). Setting it would silently take over a
+  ;; decision that belongs to the user's own hook functions -- cancelling an
+  ;; edit, refusing an exit, suppressing a warning -- and a Snd user's ~/.snd
+  ;; is mostly hook functions. Watching must not become deciding.
   (set! (hook-functions hook) (cons handler (hook-functions hook))))
+
+;; ------------------------------------------------------------------
+;; What the editor watches
+;;
+;; Snd's customization model is hooks, and until now the bridge installed two
+;; of twenty-seven. The rest are events the panels and the tree were guessing
+;; at, or not noticing at all.
+;;
+;; Each entry: the hook's name, the event to emit, and which of the hook's own
+;; arguments to carry along -- the names are Snd's, read out of the hook
+;; environment with (hook 'name), which is how Scheme hooks pass arguments.
+(define sv-observed-hooks
+  '((start-playing-hook   playing      (snd))
+    ;; stop-playing-hook is NOT in this table, though it is the one the
+    ;; playhead needed -- until now the playhead stopped because play-hook
+    ;; stopped being called, which works and is an inference.
+    ;;
+    ;; It lives in sv-install-play-hooks, which already had a handler there to
+    ;; reset the position, and that handler now emits the event as well. Two
+    ;; handlers on one hook is perfectly legal in Snd -- every handler runs --
+    ;; but two handlers each emitting 'stopped is one event too many, and the
+    ;; reset has to happen BEFORE the panels hear about it or a refetch reads
+    ;; the old playhead.
+    ;;
+    ;; Found by a test that COUNTED the handlers instead of trusting the
+    ;; install-once flag: the flag guarded this table against itself and knew
+    ;; nothing about the play code.
+    (stop-playing-selection-hook stopped ())
+    ;; after-open-hook and close-hook are NOT here. They are installed in
+    ;; sv-install-hooks because opening also has to hang the edit watch on the
+    ;; new channels, which this table has no way to express. Listing them in
+    ;; both places would install two handlers, and Snd runs every handler on a
+    ;; hook -- two 'edited events per edit, and the panels fetching a waveform
+    ;; twice per keystroke. That double install has already cost an evening
+    ;; once, in sv-watch-channel.
+    (new-sound-hook       newsound     (name))
+    ;; Marks and mixes move from places the editor cannot see -- a script, a
+    ;; Motif window, a drag. Without these the tree is right only after the
+    ;; next edit.
+    (mark-hook            markchanged  (id snd chn reason))
+    (mix-release-hook     mixmoved     (id samples))
+    (mix-click-hook       mixclicked   (id))
+    ;; Snd's own warnings go to the listener, and in a headless build to a
+    ;; terminal that may not be open. They belong where a VS Code user looks.
+    (snd-error-hook       snderror     (message))
+    (snd-warning-hook     sndwarning   (message))
+    (mus-error-hook       muserror     (type message))))
+
+(define sv-installed-hooks (make-hash-table))
+
+;; ------------------------------------------------------------------
+;; Snd objects on the wire, one last time
+;;
+;; A hook argument is whatever Snd passes it, and Snd passes OBJECTS:
+;; after-open-hook gets a sound object, mark-hook a mark, mix-release-hook a
+;; mix. Sent as they are, they encode as "#<sound 1>" -- a string where the
+;; panel expects a number, so `typeof frame.snd === 'number'` is false and
+;; nothing follows the new sound. Which is exactly the bug that opened this
+;; whole project: (sounds) returning objects, encoded as "#<sound 1>", and
+;; rejected three requests later.
+;;
+;; The ops learned this and convert at their boundary. The EVENT path never
+;; did, because until today it only ever carried numbers that Snd had already
+;; reduced.
+;;
+;; INTEGER? IS ASKED FIRST, and that is the other half of the same lesson:
+;; sound?, mark?, mix? and region? are validity predicates, not type
+;; predicates -- each says #t for a valid index as readily as for the object,
+;; so asking sound? first sends integers through sound->integer, which refuses
+;; them.
+(define (sv-wire value)
+  (cond ((integer? value) value)
+        ((real? value) value)
+        ((string? value) value)
+        ((boolean? value) value)
+        ((not (sv-in-snd?)) value)
+        ((and (sv-have? 'sound?) (sv-have? 'sound->integer)
+              (catch #t (lambda () ((symbol->value 'sound?) value)) (lambda args #f)))
+         ((symbol->value 'sound->integer) value))
+        ((and (sv-have? 'mark?) (sv-have? 'mark->integer)
+              (catch #t (lambda () ((symbol->value 'mark?) value)) (lambda args #f)))
+         ((symbol->value 'mark->integer) value))
+        ((and (sv-have? 'mix?) (sv-have? 'mix->integer)
+              (catch #t (lambda () ((symbol->value 'mix?) value)) (lambda args #f)))
+         ((symbol->value 'mix->integer) value))
+        ((and (sv-have? 'region?) (sv-have? 'region->integer)
+              (catch #t (lambda () ((symbol->value 'region?) value)) (lambda args #f)))
+         ((symbol->value 'region->integer) value))
+        ;; Anything else as text rather than dropped: an event that mentions
+        ;; something unrecognised is more use than an event that does not
+        ;; arrive.
+        (else (object->string value))))
+
+(define (sv-hook-argument env name)
+  ;; (hook 'name), guarded: not every hook carries every name in every build,
+  ;; and a missing one must not take the handler down -- a handler that raises
+  ;; inside a hook takes the operation the hook was reporting on with it.
+  (catch #t
+    (lambda () (if (defined? name env) (sv-wire (env name)) #f))
+    (lambda args #f)))
+
+(define (sv-observe-hooks)
+  (for-each
+   (lambda (entry)
+     (let* ((name (car entry))
+            (event (cadr entry))
+            (arguments (caddr entry)))
+       (unless (sv-installed-hooks name)
+         (let ((hook (sv-hook-of name)))
+           (when hook
+             (catch #t
+               (lambda ()
+                 (sv-add-hook!
+                  hook
+                  (lambda (h)
+                    ;; NO (set! (h 'result) ...) -- see sv-add-hook!.
+                    (catch #t
+                      (lambda ()
+                        (sv-event event
+                                  (let loop ((rest arguments) (out ()))
+                                    (if (null? rest)
+                                        (reverse out)
+                                        (loop (cdr rest)
+                                              (cons (sv-hook-argument h (car rest))
+                                                    (cons (car rest) out)))))))
+                      (lambda (type info) #f))))
+                 (set! (sv-installed-hooks name) #t))
+               (lambda (type info) #f)))))))
+   sv-observed-hooks))
 
 (define sv-watched-channels (make-hash-table))
 
@@ -1907,7 +2261,16 @@
                         (begin
                           (sv-add-hook!
                            hook
-                           (lambda (h) (sv-event 'edited (list 'snd snd 'chn chn))))
+                           ;; sv-wire, because `snd` here came from
+                           ;; after-open-hook and is an OBJECT. This event has
+                           ;; been carrying "#<sound 1>" since the day the edit
+                           ;; watch was written; nothing noticed because the
+                           ;; extension's handler refreshes everything and never
+                           ;; reads the field. A field nobody reads is still
+                           ;; wrong, and the first reader would have found it
+                           ;; the hard way.
+                           (lambda (h)
+                             (sv-event 'edited (list 'snd (sv-wire snd) 'chn chn))))
                           (set! (sv-watched-channels key) #t))))))
           (lambda (type info) #f)))))
 
@@ -2012,7 +2375,14 @@
           (let ((hook (sv-hook-of 'play-hook)))
             (when hook (sv-add-hook! hook (lambda (h) (sv-play-note-buffer (h 'size))))))
           (let ((hook (sv-hook-of 'stop-playing-hook)))
-            (when hook (sv-add-hook! hook (lambda (h) (sv-play-ended)))))
+            (when hook
+              ;; sv-play-ended EMITS the 'stopped event itself, with the final
+              ;; frame -- which is why stop-playing-hook is not in
+              ;; sv-observed-hooks and why nothing is emitted here. Adding an
+              ;; emit alongside it was the same double-event bug one level
+              ;; down, and the handler count did not catch that one: one
+              ;; handler, two events.
+              (sv-add-hook! hook (lambda (h) (sv-play-ended)))))
           #t)
         (lambda (type info)
           (sv-emit (inlet 'event "play-hook-install-failed"
@@ -2035,11 +2405,19 @@
                             ;; The edit watch can only be hung on a channel
                             ;; that exists, so it is hung here.
                             (sv-watch-sound snd)
-                            (sv-event 'opened (list 'snd snd)))))))
+                            ;; The INDEX, not the object: after-open-hook
+                            ;; passes a sound object, and "#<sound 1>" on the
+                            ;; wire is a string where the panels expect a
+                            ;; number -- so nothing followed the new sound.
+                            (sv-event 'opened (list 'snd (sv-wire snd))))))))
       (let ((closed (sv-hook-of 'close-hook)))
         (when closed
-          (sv-add-hook! closed (lambda (h) (sv-event 'closed (list 'snd (h 'snd)))))))
+          (sv-add-hook! closed
+                        (lambda (h) (sv-event 'closed (list 'snd (sv-wire (h 'snd))))))))
       (sv-install-play-hooks)
+      ;; And the rest of Snd's hooks, as observers: they emit events and
+      ;; decide nothing.
+      (sv-observe-hooks)
       ;; Sounds already open when we loaded -- Snd opens files named on its
       ;; command line before it gets to -l.
       (when (sv-in-snd?)

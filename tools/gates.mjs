@@ -632,6 +632,68 @@ if (process.env.RELEASE === '1') {
   }
 }
 
+// --- gate 5q: events carry indices, not objects -------------------------
+//
+// A hook argument is whatever Snd passes it, and Snd passes objects:
+// after-open-hook a sound, mark-hook a mark. Sent as they are they encode as
+// "#<sound 1>" -- a string where the panels expect a number, so nothing
+// follows a newly opened sound. The ops learned this on day one; the event
+// path had never needed it, because until the hooks arrived it only carried
+// numbers Snd had already reduced.
+{
+  const gate = 'events carry indices, not Snd objects';
+  const bridge = fs.readFileSync(path.join(root, 'scheme', 'snd-vscode.scm'), 'utf8');
+  const code = bridge.replace(/;[^\n]*/g, '');
+  const problems = [];
+  // Every hook argument goes through sv-wire.
+  const argument = /\(define \(sv-hook-argument env name\)[\s\S]*?\n\n/.exec(code);
+  if (!argument || !/sv-wire/.test(argument[0])) {
+    problems.push('sv-hook-argument does not normalise its value');
+  }
+  // And the hand-written emits do too: (sv-event 'opened (list 'snd snd)) is
+  // the shape that was wrong.
+  for (const match of code.matchAll(/\(sv-event '(\w+) \(list ([\s\S]*?)\)\)/g)) {
+    // The field VALUE, whatever follows 'snd up to the next field or the end.
+    // Matching on a trailing character was the first attempt and missed the
+    // real case exactly: in `(list 'snd snd)` there is nothing after `snd`,
+    // because the capture stops at the paren. The check has to look at the
+    // value, not at its neighbourhood.
+    const value = /'snd\s+([^\s)]+)/.exec(match[2]);
+    if (!value) continue;
+    const bare = value[1];
+    if (bare === '(sv-wire' || /^\d+$/.test(bare)) continue;
+    // A variable that was normalised WHERE IT WAS SET is fine, and requiring
+    // the conversion at the emit instead would be cargo cult: sv-play-snd is
+    // assigned as (sv-snd-index snd) and carries an integer from then on. So
+    // the rule is that the value must be reduced SOMEWHERE, and the assignment
+    // is checked for it — a name that is never assigned an index is the thing
+    // to complain about.
+    const assigned = new RegExp(
+      `\\(set! ${bare.replace(/[.*+?^$()[\]{}|\\]/g, '\\$&')} \\((?:sv-wire|sv-snd-index)`
+    );
+    if (!assigned.test(code)) {
+      problems.push(`the ${match[1]} event sends 'snd as ${bare}, never reduced to an index`);
+    }
+  }
+  // integer? first, or integers go through sound->integer, which refuses them.
+  const wire = /\(define \(sv-wire value\)[\s\S]*?\n\n/.exec(code);
+  if (!wire) {
+    problems.push('sv-wire is gone');
+  } else {
+    // The FIRST predicate must be integer?. Comparing two indexOf results was
+    // the obvious way and wrong: a term that is not found returns -1, and every
+    // position is greater than -1, so the check fired on correct code. Which is
+    // the same shape as the bug it guards -- a comparison that is true for the
+    // wrong reason.
+    const first = /\(cond \(\((\w+\??) value\)/.exec(wire[0]);
+    if (!first || first[1] !== 'integer?') {
+      problems.push(`sv-wire asks ${first ? first[1] : 'something else'} before integer?`);
+    }
+  }
+  if (problems.length > 0) fail(gate, problems.join('; '));
+  else pass(gate);
+}
+
 // --- gate 6: tsc ------------------------------------------------------
 {
   const gate = 'tsc';

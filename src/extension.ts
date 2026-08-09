@@ -24,6 +24,7 @@ import { SoundExplorer, Sound, EditHistory, Region, Mix } from './soundExplorer'
 import { SndHelpProvider, StaticIndex } from './helpProvider';
 import { DialogPanel, VariableValue } from './dialogPanel';
 import { EnvelopeView, EnvelopeState, EnvelopeTarget } from './envelopeView';
+import { UserGraphView, UserGraphState } from './userGraphView';
 import {
   CONTROLS_DIALOG,
   PREFERENCES_DIALOG,
@@ -41,8 +42,17 @@ class SndSession {
   private statusItem: vscode.StatusBarItem;
 
   onSoundsChanged: () => void = () => undefined;
+  showLog(): void {
+    this.log.show();
+  }
+
   /** Called once each time a session comes up. */
   onReady: () => void = () => undefined;
+  /** A sound appeared; -1 when the event did not say which. */
+  onNewSound: (snd: number) => void = () => undefined;
+
+  /** Snd said something on its own account. */
+  onSndDiagnostic: (severity: 'error' | 'warning', message: string) => void = () => undefined;
 
   /** Where the binary came from: configured, bundled, or PATH. */
   private binarySource: 'configured' | 'bundled' | 'path' = 'path';
@@ -142,6 +152,13 @@ class SndSession {
         }
         break;
       case 'opened':
+        this.onSoundsChanged();
+        // Show what just appeared. with-sound makes a sound and a panel still
+        // showing the previous one reads as broken — "show me what I just
+        // made" is the only reasonable expectation. The panels themselves
+        // refuse if the user has chosen a sound explicitly.
+        this.onNewSound(typeof frame.snd === 'number' ? frame.snd : -1);
+        break;
       case 'closed':
         this.onSoundsChanged();
         break;
@@ -157,11 +174,45 @@ class SndSession {
         // and Snd resets the controls to neutral when it does.
         DialogPanel.refreshAll();
         EnvelopeView.refresh();
+        // The user's drawing function reads the channel, so its output is as
+        // stale as the waveform after an edit.
+        UserGraphView.refresh();
         break;
       case 'playing':
         this.playEvents++;
         WaveformView.playhead(Number(frame.frame));
         break;
+      case 'playing':
+        // start-playing-hook. Nothing to draw yet -- play-hook supplies the
+        // positions -- but the panel can say that a play is running, which is
+        // the difference between a still playhead and no playhead.
+        WaveformView.playing(true);
+        break;
+      case 'markchanged':
+      case 'mixmoved':
+        // A mark or a mix moved from somewhere the editor cannot see -- a
+        // script, a Motif window, a drag. Without these the tree was right
+        // only after the next edit.
+        this.onSoundsChanged();
+        WaveformView.refresh();
+        break;
+      case 'newsound':
+        this.onSoundsChanged();
+        this.onNewSound(-1);
+        break;
+      case 'snderror':
+      case 'sndwarning':
+      case 'muserror': {
+        // Snd's own warnings go to its listener, and in a headless build to a
+        // terminal that may not be open. This is where a VS Code user looks.
+        const message = String(frame.message ?? '');
+        if (!message) break;
+        this.log.appendLine(
+          `[snd] ${frame.event === 'sndwarning' ? 'warning' : 'error'}: ${message}`
+        );
+        this.onSndDiagnostic(frame.event === 'sndwarning' ? 'warning' : 'error', message);
+        break;
+      }
       case 'stopped':
         WaveformView.playhead(undefined);
         break;
@@ -287,6 +338,10 @@ class SndSession {
     return this.bridge.request('edits', { snd, chn });
   }
 
+  lispGraph(snd: number, chn: number): Promise<UserGraphState> {
+    return this.bridge.request('lispgraph', { snd, chn });
+  }
+
   regions(): Promise<Region[]> {
     return this.bridge.request('regions');
   }
@@ -403,6 +458,10 @@ class SndSession {
     return this.bridge.request('find', { expr, snd, chn, backwards });
   }
 
+  async addLoadPath(directory: string): Promise<void> {
+    await this.bridge.request('loadpath', { path: directory });
+  }
+
   async setSync(snd: number, value: number | string): Promise<void> {
     await this.bridge.request('sync', { snd, value });
   }
@@ -502,6 +561,24 @@ export function activate(context: vscode.ExtensionContext): void {
   // Coalesced: after-edit-hook fires per edit, and refreshing the tree per
   // edit means a request per keystroke of a Scheme loop.
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  session.onNewSound = async (snd: number) => {
+    // The event does not always carry an index — new-sound-hook passes a name.
+    // Asking for the list is one request and gives the right answer in both
+    // cases: the newest sound is the last one Snd lists.
+    let target = snd;
+    if (target < 0) {
+      try {
+        const sounds = await session.sounds();
+        if (sounds.length === 0) return;
+        target = sounds[sounds.length - 1].index;
+      } catch {
+        return;
+      }
+    }
+    WaveformView.follow(target);
+    SpectrumView.follow(target);
+  };
+
   session.onSoundsChanged = () => {
     if (refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => explorer.refresh(), 120);
@@ -526,6 +603,26 @@ export function activate(context: vscode.ExtensionContext): void {
    * `show(false)` keeps the focus where it was, because a session started by
    * evaluating a form should leave the cursor in the file.
    */
+  /**
+   * Snd's own errors and warnings.
+   *
+   * They arrive through snd-error-hook, snd-warning-hook and mus-error-hook,
+   * which is the only way to see them at all without a listener: in a headless
+   * build they go to a terminal, and if the terminal is closed they go
+   * nowhere. Shown as a notification for errors, quietly in the log for
+   * warnings, because a warning per DAC underrun in a modal box would teach
+   * the user to dismiss everything.
+   */
+  session.onSndDiagnostic = (severity, message) => {
+    if (severity === 'error') {
+      void vscode.window.showErrorMessage(`Snd: ${message}`, 'Open Log').then(answer => {
+        if (answer === 'Open Log') session.showLog();
+      });
+    } else {
+      void vscode.window.setStatusBarMessage(`Snd: ${message}`, 6000);
+    }
+  };
+
   session.onEvaluated = () => {
     // The envelope editor is the one that needs this: a define-envelope in
     // the REPL is invisible to it otherwise. The others follow the edit
@@ -535,6 +632,27 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   session.onReady = () => {
+    // Snd's own Scheme files on the load path, so (load-from-path "v.scm")
+    // works — the fm-violin, clm-ins, dsp, examp. Done on every session start
+    // because the setting can change between them; the bridge refuses to add
+    // the same path twice.
+    void (async () => {
+      const configured = vscode.workspace
+        .getConfiguration('snd')
+        .get<string>('sourcePath', '')
+        .trim();
+      const fallback = path.join(context.extensionPath, '.build', 'snd-26.5');
+      const chosen = configured || (fs.existsSync(fallback) ? fallback : '');
+      if (chosen) {
+        try {
+          await session.addLoadPath(chosen);
+        } catch {
+          // Not fatal: the session works without it, and the failure shows up
+          // as load-from-path saying which file it could not find, which is a
+          // better message than anything shown here would be.
+        }
+      }
+    })();
     if (vscode.workspace.getConfiguration('snd').get<boolean>('openReplOnStart', true)) {
       SndReplTerminal.show(replHost);
     }
@@ -1287,6 +1405,24 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!choice) return;
       await session.setSync(snd, choice.value as number | string);
       explorer.refresh();
+    })
+  );
+
+  const userGraphHost = {
+    lispGraph: (snd: number, chn: number) => session.lispGraph(snd, chn),
+    ready: () => session.ready(),
+  };
+
+  command('snd.showUserGraph', (snd?: number, chn?: number) =>
+    guard(async () => {
+      if (!session.ready()) await session.start();
+      if (snd === undefined) {
+        const chosen = await firstSound();
+        if (chosen === undefined) return;
+        snd = chosen;
+        chn = 0;
+      }
+      UserGraphView.show(userGraphHost, snd, chn ?? 0);
     })
   );
 

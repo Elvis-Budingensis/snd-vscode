@@ -71,20 +71,126 @@ const WINDOWS = [
   'gaussian-window',
 ];
 
+/**
+ * Snd's own rotation matrix, from `rotate_matrix` in snd-chn.c.
+ *
+ * Not a projection of my own devising. The first version here was, and it was
+ * wrong in a way that produced a picture: at Snd's Motif defaults (x 90, y 0,
+ * z 358) the level went entirely into a depth that an orthographic view cannot
+ * show, so every ribbon came out the same height and the surface rendered as a
+ * field of vertical stripes.
+ *
+ * The real thing, copied term for term:
+ *
+ *   mat[0] = cosy * cosz * xscl;
+ *   mat[1] = (sinx * siny * cosz - cosx * sinz) * yscl;
+ *   mat[2] = (cosx * siny * cosz + sinx * sinz) * zscl;
+ *   mat[3] = cosy * sinz * xscl;
+ *   mat[4] = (sinx * siny * sinz + cosx * cosz) * yscl;
+ *   mat[5] = (cosx * siny * sinz - sinx * cosz) * zscl;
+ *   mat[6] = -siny * xscl;
+ *   mat[7] = sinx * cosy * yscl;
+ *   mat[8] = cosx * cosy * zscl;
+ *
+ * and how Snd puts the result on screen, which is the part I had guessed at:
+ *
+ *   xx = (int)(xyz[0] + x0);
+ *   yy = (int)(xyz[1] + xyz[2] + y0);
+ *
+ * SCREEN Y IS THE SUM of the second and third components. There is no depth
+ * axis at all: the third component is added to the vertical, which is what
+ * makes the level stand up out of the plane whatever the angles are. That one
+ * line is the whole difference between a landscape and a striped rectangle,
+ * and no amount of reasoning about rotations would have produced it — it had to
+ * be read.
+ */
+export interface Orientation {
+  xAngle: number;
+  yAngle: number;
+  zAngle: number;
+  xScale: number;
+  yScale: number;
+  zScale: number;
+}
+
+export function rotationMatrix(o: Orientation): number[] {
+  const deg = Math.PI / 180;
+  const x = o.xAngle * deg;
+  const y = o.yAngle * deg;
+  const z = o.zAngle * deg;
+  const sinx = Math.sin(x), siny = Math.sin(y), sinz = Math.sin(z);
+  const cosx = Math.cos(x), cosy = Math.cos(y), cosz = Math.cos(z);
+  return [
+    cosy * cosz * o.xScale,
+    (sinx * siny * cosz - cosx * sinz) * o.yScale,
+    (cosx * siny * cosz + sinx * sinz) * o.zScale,
+    cosy * sinz * o.xScale,
+    (sinx * siny * sinz + cosx * cosz) * o.yScale,
+    (cosx * siny * sinz - sinx * cosz) * o.zScale,
+    -siny * o.xScale,
+    sinx * cosy * o.yScale,
+    cosx * cosy * o.zScale,
+  ];
+}
+
+/**
+ * A point through the matrix and onto the screen, Snd's way.
+ *
+ * x is across the bins, y is the slice offset, z is the level — in Snd's units,
+ * which are pixels: `xincr = width / bins`, `yincr = height / slices`. Keeping
+ * those units means the angles behave here exactly as they do in its dialog
+ * rather than approximately.
+ */
+export function place(
+  x: number,
+  y: number,
+  z: number,
+  mat: number[]
+): { x: number; y: number } {
+  const rx = mat[0] * x + mat[1] * y + mat[2] * z;
+  const ry = mat[3] * x + mat[4] * y + mat[5] * z;
+  const rz = mat[6] * x + mat[7] * y + mat[8] * z;
+  // yy = xyz[1] + xyz[2]: the level is ADDED to the vertical.
+  return { x: rx, y: ry + rz };
+}
+
+const rotationMatrixSource = { toString: () => rotationMatrix.toString() };
+const placeSource = { toString: () => place.toString() };
+
 export class SpectrumView {
   private static instance: SpectrumView | undefined;
   private readonly panel: vscode.WebviewPanel;
 
   private snd = 0;
+  /** The user chose this sound, so do not follow new ones. */
+  private pinned = false;
   private chn = 0;
   private size = 4096;
   private linear = false;
   private window = 'blackman2-window';
   private followCursor = true;
   /** single = one transform at the cursor; sonogram = many over time. */
-  private mode: 'single' | 'sonogram' = 'single';
+  private mode: 'single' | 'sonogram' | 'spectrogram' = 'single';
   private columns = 500;
+  /** Set from the panel's height; see requestedBins for how it is used. */
   private bins = 256;
+
+  /**
+   * How many frequency bins to ask for.
+   *
+   * The panel's height decides for the SONOGRAM, where one bin is one pixel row
+   * and more rows than the panel is tall buy nothing.
+   *
+   * The spectrogram is a different picture from the same data: it draws a line
+   * per bin along the WIDTH, so it can use everything the transform has. Using
+   * the sonogram's number there reported "512 of 512 bins" for a 2048-point
+   * transform that has 1024 — seven eighths of the resolution thrown away, and
+   * the status line stating the loss without either of us reading it as one.
+   */
+  private requestedBins(): number {
+    if (this.mode !== 'spectrogram') return this.bins;
+    return Math.max(this.bins, Math.min(2048, Math.round(this.size / 2)));
+  }
   /**
    * Snd's own two settings for making a spectrum readable, and they exist
    * because without them one is unreadable: a 440 Hz partial on a linear axis
@@ -95,6 +201,8 @@ export class SpectrumView {
   private logFreqStart = 32;
   /** Fraction of Nyquist shown — Snd's spectrum-end, the '% of spectrum' slider. */
   private spectrumEnd = 1;
+  /** Snd's spectrum-start: where the displayed range begins. */
+  private spectrumStart = 0;
   private inFlight = false;
   private again = false;
 
@@ -105,6 +213,15 @@ export class SpectrumView {
     this.instance.panel.reveal(vscode.ViewColumn.Beside, true);
     void this.instance.reload();
     return this.instance;
+  }
+
+  /** A new sound appeared; show it unless the user picked this one. */
+  static follow(snd: number): void {
+    const panel = this.instance;
+    if (!panel || panel.pinned) return;
+    panel.snd = snd;
+    panel.chn = 0;
+    void panel.reload();
   }
 
   static refresh(): void {
@@ -161,7 +278,10 @@ export class SpectrumView {
         await this.reload();
         break;
       case 'mode':
-        this.mode = message.mode === 'sonogram' ? 'sonogram' : 'single';
+        this.mode =
+          message.mode === 'sonogram' || message.mode === 'spectrogram'
+            ? message.mode
+            : 'single';
         await this.reload();
         break;
       case 'geometry':
@@ -189,6 +309,11 @@ export class SpectrumView {
       logFrequency: this.logFrequency,
       logFreqStart: this.logFreqStart,
       spectrumEnd: this.spectrumEnd,
+      // Snd has a start as well as an end (spectrum-start), and the
+      // spectrogram reads both. Sending only the end would have left the
+      // spectrogram's firstBin permanently 0 while looking like it honoured a
+      // range.
+      spectrumStart: this.spectrumStart,
     };
   }
 
@@ -202,14 +327,19 @@ export class SpectrumView {
     }
     this.inFlight = true;
     try {
-      if (this.mode === 'sonogram') {
+      // The spectrogram is the SAME request as the sonogram: one matrix of
+      // bands by time slices. Snd makes the same choice -- graph-as-sonogram
+      // and graph-as-spectrogram differ in how the data is drawn, not in what
+      // is computed, and a second op would be a second chance for the two
+      // views to disagree about a window or a floor.
+      if (this.mode === 'sonogram' || this.mode === 'spectrogram') {
         const sonogram = await this.host.sonogram({
           snd: this.snd,
           chn: this.chn,
           start: 0,
           dur: 0,
           columns: this.columns,
-          bins: this.bins,
+          bins: this.requestedBins(),
           size: this.size,
           linear: this.linear,
           window: this.window,
@@ -270,6 +400,11 @@ export class SpectrumView {
   }
 
   private html(): string {
+    // The matrix and the screen mapping go into the webview from the single
+    // implementation above. Written out twice they would drift, and the first
+    // line to drift would be `ry + rz`.
+    const rotationMatrix = rotationMatrixSource;
+    const place = placeSource;
     return /* html */ `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground);
@@ -289,6 +424,7 @@ export class SpectrumView {
   <label>view <select id="mode">
     <option value="single">single transform</option>
     <option value="sonogram">sonogram</option>
+    <option value="spectrogram">spectrogram (3D)</option>
   </select></label>
   <label>size <select id="size"></select></label>
   <label>window <select id="window"></select></label>
@@ -297,6 +433,10 @@ export class SpectrumView {
   <label>up to <select id="end">
     <option value="1">Nyquist</option>
     <option value="0.5">half</option>
+    <option value="0.25">quarter</option>
+    <option value="0.1">a tenth</option>
+    <option value="0.05">a twentieth</option>
+    <option value="0.02">a fiftieth</option>
     <option value="0.25">quarter</option>
     <option value="0.1">10%</option>
     <option value="0.05">5%</option>
@@ -312,7 +452,7 @@ const vscode = acquireVsCodeApi();
 const canvas = document.getElementById('plot');
 const context = canvas.getContext('2d');
 let current = null, settings = null, hover = null, hoverY = 0, sonogram = null, mode = 'single';
-let axes = { logFrequency: false, logFreqStart: 32, spectrumEnd: 1 };
+let axes = { logFrequency: false, logFreqStart: 32, spectrumEnd: 1, spectrumStart: 0 };
 
 // Snd's own log-frequency mapping, including the part that looks like a
 // detail and is not: "the lowest are all inaudible, it seemed more informative
@@ -346,6 +486,137 @@ for (const size of [256, 512, 1024, 2048, 4096, 8192, 16384]) {
 function css(name, fallback) {
   const value = getComputedStyle(document.body).getPropertyValue(name);
   return (value && value.trim()) || fallback;
+}
+
+// --- the 3D spectrogram ----------------------------------------------
+//
+// Snd's own arrangement, from snd-chn.c: its rotation matrix, its pixel units,
+// and its screen mapping -- screen y is the SUM of the rotated y and z, so the
+// level stands up out of the plane. See rotationMatrix() and place() in the
+// extension for the code this mirrors and for what went wrong when it did not.
+//
+// The matrix and the mapping are INTERPOLATED from that single implementation
+// rather than written twice: a copy here would drift, and the first thing to
+// drift would be the one line that decides whether the picture is a landscape.
+const rotationMatrix = ${rotationMatrix.toString()};
+const place = ${place.toString()};
+
+function drawSpectrogram(width, height) {
+  const s = sonogram;
+  const bytes = atob(s.cells);
+  const o = s.spectro || { xAngle: 90, yAngle: 0, zAngle: 358,
+                           xScale: 1, yScale: 1, zScale: 0.1 };
+
+  // How many slices: spectro-hop, "the distance (in pixels) moved between
+  // successive spectrogram traces". Snd's own meaning, so its value decides.
+  // The RANGE, which is what decides whether a spectrogram is readable.
+  //
+  // Snd draws only the bins between spectrum-start and spectrum-end:
+  //
+  //   start_bin = (int)(si->target_bins * cp->spectrum_start);
+  //   bins      = (int)(si->target_bins * (spectrum_end - spectrum_start));
+  //
+  // Without it a 330 Hz note at 4096 points puts everything of interest in the
+  // first two percent of the width and the rest is a flat plain — a picture
+  // that is arithmetically correct and says nothing. This is why every
+  // spectrogram in Bill's documentation is of a restricted range.
+  const firstBin = Math.min(s.bins - 2, Math.max(0, Math.floor(s.bins * (axes.spectrumStart ?? 0))));
+  const lastBin = Math.max(firstBin + 1,
+                           Math.min(s.bins - 1, Math.ceil(s.bins * (axes.spectrumEnd ?? 1))));
+  const shownBins = lastBin - firstBin + 1;
+
+  const hop = Math.max(1, Math.round(o.hop || 4));
+  const columns = [];
+  const step = Math.max(1, Math.round(s.columns / Math.max(8, Math.floor(height / hop))));
+  for (let col = 0; col < s.columns; col += step) columns.push(col);
+
+  // SND'S OWN GEOMETRY, from snd-chn.c. Three details, each of which flattens
+  // the picture on its own if it is guessed at instead of read:
+  //
+  //   fheight = y_axis_y1 - y_axis_y0;   /* negative! */
+  //   yincr   = fheight / active_slices;
+  //   zscl    = -(spectro_z_scale * fheight / scl);
+  //   x0 = (x_axis_x0 + x_axis_x1) * 0.5;
+  //   y0 = (y_axis_y0 + y_axis_y1) * 0.5;
+  //
+  // The height is NEGATIVE, because pixel y counts downward and the axis runs
+  // up: so yincr is negative and the slices stack UPWARD, and zscl comes out
+  // positive from the double negation, which is what lifts the level off the
+  // baseline. With a positive height both signs flip and the whole surface
+  // collapses onto its own baseline — stacked downward, level pressed into it.
+  //
+  // And the rotation is about the CENTRE of the frame, not the origin:
+  // xyz = (x - x0, y - y0, level), rotated, then x0 and y0 added back. About
+  // the origin instead, any angle swings the surface out of frame and the fit
+  // afterwards scales it back to a sliver.
+  const fheight = -height;
+  const xincr = width / Math.max(1, shownBins);
+  const yincr = fheight / Math.max(1, columns.length);
+  const zscl = -(o.zScale * fheight);
+  const x0 = width * 0.5;
+  const y0 = height * 0.5;
+
+  const mat = rotationMatrix({ ...o, zScale: zscl });
+  const slices = [];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  columns.forEach((col, index) => {
+    const trace = [];
+    for (let row = firstBin; row <= lastBin; row++) {
+      const level = bytes.charCodeAt(col * s.bins + row) / 255;
+      const p = place((row - firstBin) * xincr - x0, index * yincr, level, mat);
+      const x = p.x + x0;
+      const y = p.y + y0;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      trace.push({ x, y });
+    }
+    const base = place(0, index * yincr, 0, mat);
+    slices.push({ trace, base: base.y + y0 });
+  });
+  if (!isFinite(minX) || maxX === minX || maxY === minY) return;
+
+  // Fit what came out into the frame, so any angle fills the panel: a rotation
+  // that pushed the surface off-screen would read as a bug in the angle rather
+  // than a framing question.
+  const pad = 10;
+  const scale = Math.min((width - 2 * pad) / (maxX - minX),
+                         (height - 2 * pad) / (maxY - minY));
+  const ox = pad - minX * scale;
+  const oy = pad - minY * scale;
+  const px = v => ox + v * scale;
+  const py = v => oy + v * scale;
+
+  // Snd walks slice 0 upward, each trace drawn over the ones before it. Same
+  // order here: the near traces are the low indices, at the bottom.
+  const fill = css('--vscode-editor-background', '#1e1e1e');
+  const line = css('--vscode-charts-blue', '#4fc1ff');
+  for (const slice of slices) {
+    context.beginPath();
+    slice.trace.forEach((p, i) => {
+      if (i === 0) context.moveTo(px(p.x), py(p.y)); else context.lineTo(px(p.x), py(p.y));
+    });
+    const last = slice.trace[slice.trace.length - 1];
+    context.lineTo(px(last.x), py(slice.base));
+    context.lineTo(px(slice.trace[0].x), py(slice.base));
+    context.closePath();
+    context.fillStyle = fill;
+    context.globalAlpha = 0.88;
+    context.fill();
+    context.globalAlpha = 1;
+    context.strokeStyle = line;
+    context.lineWidth = 1;
+    context.stroke();
+  }
+
+  document.getElementById('status').textContent =
+    'spectrogram · ' + slices.length + ' of ' + s.columns + ' slices · ' +
+    shownBins + ' of ' + s.bins + ' bins (0\u2013' +
+    Math.round(s.srate / 2 * (axes.spectrumEnd ?? 1)) + ' Hz) · x ' + Math.round(o.xAngle) + '\u00b0 y ' +
+    Math.round(o.yAngle) + '\u00b0 z ' + Math.round(o.zAngle) +
+    '\u00b0 · z scale ' + (o.zScale || 0).toFixed(2) + ' · hop ' + hop +
+    ' \u2014 all six are Snd\u2019s own, in the View dialog';
 }
 
 // The sonogram is built as an ImageData and put on the canvas in one call.
@@ -406,6 +677,10 @@ function draw() {
   canvas.width = width * ratio; canvas.height = height * ratio;
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
+  if (mode === 'spectrogram') {
+    if (sonogram) drawSpectrogram(width, height);
+    return;
+  }
   if (mode === 'sonogram') {
     if (sonogram) drawSonogram(width, height);
     return;

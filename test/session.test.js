@@ -1265,3 +1265,312 @@ test('sync is shown in the tree', () => {
   const explorer = fs.readFileSync(path.join(__dirname, '..', 'src', 'soundExplorer.ts'), 'utf8');
   assert.ok(/sync \$\{node\.sound\.sync\}/.test(explorer), 'sync is not displayed');
 });
+
+// --- the hooks the editor watches --------------------------------------
+
+test("Snd's own errors and warnings reach the user", () => {
+  // They arrive through snd-error-hook, snd-warning-hook and mus-error-hook,
+  // which is the only way to see them without a listener: in a headless build
+  // they go to a terminal, and if it is closed they go nowhere.
+  assert.ok(/case 'snderror'/.test(extensionSource), 'snd-error-hook is not handled');
+  assert.ok(/case 'sndwarning'/.test(extensionSource), 'snd-warning-hook is not handled');
+  assert.ok(/case 'muserror'/.test(extensionSource), 'mus-error-hook is not handled');
+  const handler = /session\.onSndDiagnostic = \([\s\S]*?\n  \};/.exec(extensionSource);
+  assert.ok(handler, 'no diagnostic handler');
+  // Errors are shown; warnings are not modal. A box per DAC underrun teaches
+  // the user to dismiss everything.
+  assert.ok(/showErrorMessage/.test(handler[0]), 'errors are silent');
+  assert.ok(/setStatusBarMessage/.test(handler[0]), 'warnings are modal');
+});
+
+test('marks and mixes moved elsewhere refresh the tree', () => {
+  // From a script, a Motif window, a drag. Without these the tree was right
+  // only after the next edit.
+  assert.ok(/case 'markchanged'/.test(extensionSource), 'mark-hook is not handled');
+  assert.ok(/case 'mixmoved'/.test(extensionSource), 'mix-release-hook is not handled');
+});
+
+test('observers never decide, they only report', () => {
+  // A hook's result is how the user's own functions cancel an edit, refuse an
+  // exit or suppress a warning. An observer that sets it takes that away
+  // silently — and a Snd user's ~/.snd is mostly hook functions.
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const table = /define sv-observed-hooks[\s\S]*?\n\n/.exec(bridge);
+  assert.ok(table, 'no observed-hook table');
+  const installer = /\(define \(sv-observe-hooks\)[\s\S]*?\n\n/.exec(bridge);
+  assert.ok(installer, 'no installer');
+  // Comments stripped first. The comment saying NOT to set the result matched
+  // a rule looking for setting the result — the third time today that a check
+  // fired on documentation of the very thing it forbids. A rule that punishes
+  // writing down the reason is a rule people stop writing reasons for.
+  const code = installer[0].replace(/;[^\n]*/g, '');
+  assert.ok(!/set! \(h 'result\)/.test(code), 'an observer sets the hook result');
+  // Additively: replacing hook-functions would delete the user's own.
+  assert.ok(/sv-add-hook!/.test(installer[0]), 'not installed through sv-add-hook!');
+  const adder = /\(define \(sv-add-hook! hook handler\)[\s\S]*?\n\n/.exec(bridge);
+  assert.ok(/cons handler \(hook-functions hook\)/.test(adder[0]), 'sv-add-hook! is not additive');
+});
+
+test('stop-playing-hook has exactly one handler', () => {
+  // The play code needs one there to reset the position, and it emits the
+  // event itself. A second one in the observer table meant two 'stopped
+  // events, and the install-once flag did not notice: it guarded the table
+  // against itself and knew nothing about the play code.
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const table = /define sv-observed-hooks[\s\S]*?\n\n/.exec(bridge)[0];
+  assert.ok(
+    !/\(stop-playing-hook\s+stopped/.test(table),
+    'stop-playing-hook is in the observer table as well as in the play hooks'
+  );
+});
+
+test('a running play is distinguishable from no play', () => {
+  // A play with no position yet is not the same as no play, and the panel
+  // should not have to infer it from the absence of updates.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'waveformView.ts'), 'utf8');
+  assert.ok(/static playing\(running: boolean\)/.test(panel), 'no playing state');
+  assert.ok(/playing…|playing\\u2026/.test(panel), 'nothing says a play is running');
+});
+
+// --- user drawing code -------------------------------------------------
+
+const { traceRange, envelopePoints } = require('../out/userGraphView.js');
+
+test('all traces share one y range', () => {
+  // Snd draws a list of float-vectors in ONE graph with one axis. Scaling
+  // them separately would make curves of different magnitude look the same
+  // size, which is the one thing a comparison graph must not do.
+  const range = traceRange([
+    { label: 'a', x0: 0, x1: 1, envelope: false, traces: [[0, 1], [0, 100]] },
+  ]);
+  assert.equal(range.low, 0);
+  assert.equal(range.high, 100);
+});
+
+test('a flat trace still gets a drawable range', () => {
+  const range = traceRange([
+    { label: 'flat', x0: 0, x1: 1, envelope: false, traces: [[0.5, 0.5]] },
+  ]);
+  assert.ok(range.high > range.low, 'a flat trace collapses the axis');
+});
+
+test('an envelope keeps its own x values', () => {
+  // "If 'data' is a list of numbers, it is assumed to be an envelope (a list
+  // of breakpoints)." (0 0 0.1 1 2 0) has its peak near the start; resampling
+  // it as an evenly spaced curve would move the peak to the middle.
+  const points = envelopePoints([0, 0, 0.1, 1, 2, 0]);
+  assert.equal(points.length, 3);
+  assert.ok(points[1].x < 0.1, `the peak moved to ${points[1].x}`);
+  assert.equal(points[2].x, 1);
+});
+
+test('the bridge wraps graph and still calls the original', () => {
+  // Wrapping a Snd function that user code calls is a real intrusion. It is
+  // the only one in the file, and the original has to keep running or a Motif
+  // build stops showing what it used to show.
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const wrapper = /\(define \(sv-wrap-graph!\)[\s\S]*?\n\n/.exec(bridge);
+  assert.ok(wrapper, 'graph is not wrapped');
+  assert.ok(/sv-graph-original/.test(wrapper[0]), "Snd's own graph is not kept");
+  assert.ok(/apply 'sv-graph-original/.test(wrapper[0]), "Snd's own graph is not called");
+});
+
+test("graph-hook's result is read, and no observer writes one", () => {
+  // Two different contracts. graph-hook: "If it returns #t, the display is not
+  // updated" — the panels stand in for Snd's redraw, so this one must be
+  // obeyed. Everything in the observer table must not write a result.
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const suppress = /\(define \(sv-graph-hook-suppresses\?[\s\S]*?\n\n/.exec(bridge);
+  assert.ok(suppress, 'nothing reads graph-hook');
+  // Calling an s7 hook returns the result already unwrapped; expecting an
+  // environment there yields #f for every hook that ever fired, which is a
+  // suppression check that never suppresses.
+  assert.ok(
+    /eq\? \(hook snd chn y0 y1\) #t/.test(suppress[0]),
+    'the hook result is read off an environment rather than from the call'
+  );
+});
+
+// --- the 3D spectrogram ------------------------------------------------
+
+const { rotationMatrix, place } = require('../out/spectrumView.js');
+
+const MOTIF = { xAngle: 90, yAngle: 0, zAngle: 358, xScale: 1, yScale: 1, zScale: 0.1 };
+
+test("the matrix is Snd's, term for term", () => {
+  // From rotate_matrix in snd-chn.c. Checked against a hand-evaluated case
+  // rather than against itself: at x=90, y=0, z=0 the terms reduce to
+  // sinx=1, cosx=0, siny=0, cosy=1, sinz=0, cosz=1, so
+  //   mat = [1, 0*1*1-0*0, 0*0*1+1*0, 0, 0+0, 0-1, 0, 1, 0]
+  //       = [1, 0, 0, 0, 0, -1, 0, 1, 0]
+  const mat = rotationMatrix({ xAngle: 90, yAngle: 0, zAngle: 0,
+                               xScale: 1, yScale: 1, zScale: 1 });
+  const expected = [1, 0, 0, 0, 0, -1, 0, 1, 0];
+  mat.forEach((value, i) => {
+    assert.ok(Math.abs(value - expected[i]) < 1e-9, `mat[${i}] is ${value}, not ${expected[i]}`);
+  });
+});
+
+test('screen y is the sum of the rotated y and z', () => {
+  // yy = (int)(xyz[1] + xyz[2] + y0), from snd-chn.c. There is no depth axis:
+  // the third component is ADDED to the vertical, which is what makes the level
+  // stand up out of the plane whatever the angles are.
+  //
+  // My own first attempt used the third component as depth instead. At these
+  // very defaults the level then went entirely into a depth an orthographic
+  // view cannot show, every ribbon came out the same height, and the surface
+  // rendered as a field of vertical stripes.
+  const mat = rotationMatrix(MOTIF);
+  const quiet = place(0, 0, 0, mat);
+  const loud = place(0, 0, 100, mat);
+  assert.ok(
+    Math.abs(loud.y - quiet.y) > 1,
+    'the level does not move the screen position at all — it went into a depth'
+  );
+  // And upward: screen y grows downward, so a louder band must have the smaller
+  // y. Getting this backwards gives a plausible landscape that is upside down.
+  assert.ok(loud.y < quiet.y, `loud is drawn below quiet (${loud.y} vs ${quiet.y})`);
+});
+
+test('the level is visible at both of Snd\u2019s defaults', () => {
+  // Motif 90/0/358 with z scale 0.1, OpenGL 300/320/0 with z scale 1.0. Very
+  // different pictures from the same code, and the level has to be legible in
+  // both or the view is only right by accident.
+  for (const o of [
+    MOTIF,
+    { xAngle: 300, yAngle: 320, zAngle: 0, xScale: 1.5, yScale: 1, zScale: 1 },
+  ]) {
+    const mat = rotationMatrix(o);
+    const quiet = place(0, 0, 0, mat);
+    const loud = place(0, 0, 100, mat);
+    assert.ok(Math.abs(loud.y - quiet.y) > 1, `the level is flat at x=${o.xAngle}`);
+  }
+});
+
+test('the scales scale', () => {
+  const one = rotationMatrix({ ...MOTIF, xScale: 1 });
+  const two = rotationMatrix({ ...MOTIF, xScale: 2 });
+  assert.ok(Math.abs(place(100, 0, 0, two).x) > Math.abs(place(100, 0, 0, one).x),
+            'xScale has no effect');
+  const flat = rotationMatrix({ ...MOTIF, zScale: 0.1 });
+  const tall = rotationMatrix({ ...MOTIF, zScale: 1 });
+  assert.ok(Math.abs(place(0, 0, 100, tall).y) > Math.abs(place(0, 0, 100, flat).y),
+            'zScale has no effect');
+});
+
+test('the webview does not carry its own copy of the matrix', () => {
+  // Written out twice it would drift, and the first line to drift would be the
+  // one that decides whether the picture is a landscape.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'spectrumView.ts'), 'utf8');
+  assert.ok(/const rotationMatrix = \$\{rotationMatrix\}/.test(panel) ||
+            /rotationMatrix\.toString\(\)/.test(panel),
+            'the matrix is not interpolated from one implementation');
+  // One definition of the term list, not two — comments stripped first,
+  // because the C original is quoted above the implementation, and a rule that
+  // counts the quotation as a copy is a rule against citing your source. The
+  // fourth time today, and by now the habit is: strip, then count.
+  const code = panel
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  assert.equal((code.match(/sinx \* siny \* cosz/g) ?? []).length, 1,
+               'the matrix terms appear more than once in the code');
+});
+
+test("the spectrogram uses Snd's own angles, not its own", () => {
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const op = /sv-define-op sonogram[\s\S]*?(?=\(sv-define-op)/.exec(bridge)[0];
+  for (const name of ['spectro-x-angle', 'spectro-y-angle', 'spectro-z-angle',
+                      'spectro-x-scale', 'spectro-y-scale', 'spectro-z-scale',
+                      'spectro-hop']) {
+    assert.ok(op.includes(name), `${name} is not read`);
+  }
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'spectrumView.ts'), 'utf8');
+  assert.ok(
+    /'sonogram' \|\| this\.mode === 'spectrogram'/.test(panel),
+    'the spectrogram fetches separately from the sonogram'
+  );
+});
+
+test('every panel action that changes the sound reloads afterwards', () => {
+  // undo and redo were the only two that did not. Snd did the work and the
+  // panel kept showing the old picture, which reads as "the button does
+  // nothing" while the button works — the worst kind of bug to look for,
+  // because the logs are clean.
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'waveformView.ts'), 'utf8');
+  const handler = /private async onMessage[\s\S]*?\n  \}/.exec(panel);
+  assert.ok(handler, 'no message handler');
+  // Split into cases and check each mutating one reloads.
+  const cases = handler[0].split(/case '/).slice(1);
+  for (const block of cases) {
+    const name = block.slice(0, block.indexOf("'"));
+    if (!['undo', 'redo', 'edit', 'key', 'select', 'unselect'].includes(name)) continue;
+    assert.ok(
+      /this\.reload\(\)/.test(block.split('break;')[0]),
+      `case '${name}' changes the sound without reloading`
+    );
+  }
+});
+
+test('panels follow a new sound unless the user pinned one', () => {
+  // with-sound makes a sound, and a panel still showing the previous one reads
+  // as broken: "show me what I just made" is the only reasonable expectation.
+  // But switching away from a sound somebody deliberately chose is worse than
+  // not following, so choosing pins the panel.
+  for (const name of ['waveformView.ts', 'spectrumView.ts']) {
+    const panel = fs.readFileSync(path.join(__dirname, '..', 'src', name), 'utf8');
+    assert.ok(/static follow\(snd: number\)/.test(panel), `${name} cannot follow`);
+    assert.ok(/panel\.pinned/.test(panel), `${name} follows even when pinned`);
+    assert.ok(/private pinned = false/.test(panel), `${name} has no pinned flag`);
+  }
+  // And choosing a sound sets it.
+  const waveform = fs.readFileSync(path.join(__dirname, '..', 'src', 'waveformView.ts'), 'utf8');
+  const chosen = /case 'sound':[\s\S]*?break;/.exec(waveform);
+  assert.ok(/this\.pinned = true/.test(chosen[0]), 'choosing a sound does not pin the panel');
+  // The event does not always carry an index — new-sound-hook passes a name —
+  // so the handler has to be able to ask.
+  assert.ok(/session\.onNewSound/.test(extensionSource), 'nothing follows new sounds');
+  assert.ok(/sounds\[sounds\.length - 1\]/.test(extensionSource),
+            'the newest sound is not resolved when the event has no index');
+});
+
+test("Snd's own Scheme files can be reached", () => {
+  // oboe.snd and fm-violin.snd are NOT in the Snd tarball — 676 entries, no
+  // audio. The instruments are: v.scm is the fm-violin, and it is what made
+  // those files. So the load path matters more than the sounds would.
+  const manifest2 = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')
+  );
+  const setting = manifest2.contributes.configuration.properties['snd.sourcePath'];
+  assert.ok(setting, 'no snd.sourcePath setting');
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const op = /sv-define-op loadpath[\s\S]*?(?=\(sv-define-op)/.exec(bridge);
+  assert.ok(op, 'no loadpath op');
+  // *load-path*, not (*s7* 'load-path): the latter is #<undefined> in this s7,
+  // so setting it would write a field nobody consults while looking correct.
+  // Comments stripped before the negative check — the comment in the bridge
+  // names the wrong form in order to explain it, and by now this is a habit
+  // rather than a surprise: strip, then check.
+  const code = op[0].replace(/;[^\n]*/g, '');
+  assert.ok(/\*load-path\*/.test(code), 'the load path variable is not used');
+  assert.ok(!/\(\*s7\* 'load-path\)/.test(code), "(*s7* 'load-path) is not a field");
+  // Added once: a path added per session start would grow the list per restart.
+  assert.ok(/member path current/.test(op[0]), 'the path can be added twice');
+});
+
+test('the bundled sound is accounted for', () => {
+  // A binary in a repository needs a note saying what it is and where it came
+  // from — and this one needs more than that: it is not in the Snd tarball and
+  // its redistribution terms are not written down anywhere. Recorded rather
+  // than assumed, and removable in one command.
+  const sounds = path.join(__dirname, '..', 'examples', 'sounds');
+  if (!fs.existsSync(sounds)) return;
+  const readme = path.join(sounds, 'README.md');
+  assert.ok(fs.existsSync(readme), 'examples/sounds has no README');
+  const text = fs.readFileSync(readme, 'utf8');
+  assert.ok(/sha256/i.test(text), 'no checksum');
+  assert.ok(/not stated|not settled|not written down/i.test(text),
+            'the licence question is not recorded as open');
+  // And nothing may depend on it: the tour has to work without it.
+  const tour = fs.readFileSync(path.join(__dirname, '..', 'examples', 'tour.scm'), 'utf8');
+  assert.ok(/fm-violin/.test(tour), 'the tour has no synthesised alternative');
+});

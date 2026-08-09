@@ -212,6 +212,85 @@ while dragging a point leave one entry in the edit history, not twenty.
 top of the edit history — if anything else happened since, the next audition
 stacks, because undoing would remove that other work instead.
 
+## Hooks: what the editor watches, and what it must not decide
+
+Snd's customization model is hooks, and a Snd user's `~/.snd` is mostly hook
+functions. The bridge installs observers on eleven of them — `start-playing`,
+`stop-playing`, `after-open`, `close`, `new-sound`, `mark`, `mix-release`,
+`mix-click`, `snd-error`, `snd-warning`, `mus-error` — under two rules that
+matter more than the list:
+
+**Additively.** Never `(set! (hook-functions h) …)`, always a `cons` onto what
+is already there. Replacing would delete the user's own functions.
+
+**Never `(hook 'result)`.** In Scheme every function on a hook runs and their
+return values are ignored; the result is how the user's own functions cancel an
+edit, refuse an exit or suppress a warning. An observer that sets it takes that
+decision away silently. Watching must not become deciding — a test checks it by
+running a hook and looking at what the environment holds afterwards, and the
+expected value is *unspecified* rather than `#f`, because `#f` is an answer
+("do not cancel") and unspecified is no answer at all.
+
+What this buys, concretely:
+
+- **the playhead knows when a play ends.** It used to stop because `play-hook`
+  stopped being called, which works and is an inference — a sound that ended
+  early left the green line standing. A running play with no position yet now
+  says "playing…" rather than drawing a line at 0, which would be a claim about
+  where the sound is.
+- **marks and mixes moved elsewhere** — from a script, a Motif window, a drag —
+  refresh the tree. It used to be right only after the next edit.
+- **Snd's own errors and warnings arrive.** They go to Snd's listener, and in a
+  headless build to a terminal that may not be open; from there, nowhere.
+  Errors are shown, warnings go to the status bar and the log — a modal box per
+  DAC underrun teaches people to dismiss everything.
+
+## Your own drawing code
+
+`Snd: User Graph (lisp-graph-hook)`.
+
+Snd's third graph pane is where `display-bark-fft` (dsp.scm),
+`display-energy` (examp.scm) and twenty years of private code put their
+output, and all of it works the same way: a function on `lisp-graph-hook`
+calls `graph` with a float-vector.
+
+```scheme
+(hook-push lisp-graph-hook
+  (lambda (hook) (display-energy (hook 'snd) (hook 'chn))))
+```
+
+The bridge **wraps `graph`** to record those calls, runs the hook on demand,
+and the panel draws what came out. Snd's own `graph` still runs, so with a
+Motif build the same curve appears in its third pane as well.
+
+Wrapping a Snd function that user code calls is a real intrusion, and it is
+the only one in the file: after this, `graph` is Snd's `graph` plus a recorder.
+Said here rather than buried, because a Snd user has a right to know which of
+their functions is no longer exactly theirs.
+
+Two details that are easy to get wrong and are tested:
+
+**A list of numbers is an envelope, not a trace.** *"If 'data' is a list of
+numbers, it is assumed to be an envelope (a list of breakpoints)."* Its x
+values are its own — `(0 0 0.1 1 2 0)` peaks near the start, and resampling it
+as an evenly spaced curve moves the peak to the middle.
+
+**All traces share one y range.** Snd draws a list of float-vectors in one
+graph with one axis; scaling them separately would make curves of different
+magnitude look the same size, which is the one thing a comparison graph must
+not do.
+
+`graph-hook` is the other half, and it has the opposite contract: *"If it
+returns #t, the display is not updated."* Here the result **matters**, and the
+panels read it — which is not an exception to the no-result rule but the other
+side of it. An observer must not *write* a result; a caller standing in for
+Snd's own redraw must *read* one, or a user function saying "do not draw this"
+would be ignored while the hook looked supported.
+
+Still missing, and the reason `GAPS.md` still lists hooks: `edit-hook` for
+protected history, and `before-transform-hook`, which the spectrum panel
+ignores because it computes its own transform.
+
 ## Snd's keyboard, in the waveform panel
 
 "Editing in Snd is modelled after Emacs in many regards ... Where an operation
@@ -263,6 +342,81 @@ together with another one otherwise looks possessed, an edit here changing
 something over there with nothing on screen to say why. "A new group" uses
 `sync-max + 1`, which is how one gets a group guaranteed not to collect the
 sounds already grouped.
+
+## The spectrogram
+
+`view` → **spectrogram (3D)** in the spectrum panel. Bill's surface view, from
+Snd's own angles.
+
+`spectro-x-angle`, `-y-angle`, `-z-angle` and the three matching scales are Snd
+variables, set from its Color/Orientation dialog or from this extension's View
+dialog — so turning the surface here and turning it in Snd are the same act.
+They are read, never assumed: the Motif defaults are 90/0/358 with a z scale of
+0.1, and under OpenGL 300/320/0 with z scale 1.0, which are very different
+pictures from the same code.
+
+The rotation is **Snd's own matrix**, copied term for term from
+`rotate_matrix` in `snd-chn.c`, and so is the way the result reaches the
+screen:
+
+```c
+xx = (int)(xyz[0] + x0);
+yy = (int)(xyz[1] + xyz[2] + y0);
+```
+
+Screen y is the **sum** of the rotated y and z. There is no depth axis at all:
+the third component is added to the vertical, which is what makes the level
+stand up out of the plane whatever the angles are.
+
+That one line is the whole difference between a landscape and a striped
+rectangle. The first version here used the third component as depth, which is
+the obvious reading and wrong: at Snd's own Motif defaults the level then went
+entirely into a depth an orthographic view cannot show, every ribbon came out
+the same height, and the picture rendered as a field of vertical stripes. No
+amount of reasoning about rotations would have found it — it had to be read out
+of the source.
+
+The matrix and the screen mapping are interpolated into the webview from one
+implementation rather than written twice, because the first line to drift would
+be `ry + rz`. Slices are drawn back to front so the surface occludes itself,
+and how many of them is `spectro-hop`'s business — exactly the question that
+variable exists to answer.
+
+It is the **same request** as the sonogram: one matrix of bands by time slices,
+drawn two ways. Snd makes the same choice — `graph-as-sonogram` and
+`graph-as-spectrogram` differ in the drawing, not in what is computed — and a
+second op would be a second chance for the two views to disagree about a window
+or a dB floor.
+
+## oboe.snd
+
+`examples/sounds/oboe.snd` ships with the extension: the file every worked
+example in Snd's documentation opens, and the first sound in this project with
+a real attack, harmonics that move, and a decay — which is what the spectrogram
+and the waveform panel are for.
+
+It is **not** in the Snd tarball, and its redistribution terms are not written
+down anywhere I could find. `examples/sounds/README.md` records that as an open
+question rather than assuming an answer, along with its checksum and the one
+command that removes it. Nothing depends on it.
+
+## Snd's own instruments
+
+`oboe.snd`, `fm-violin.snd`, `pistol.snd` — the files every example in the
+documentation opens — are **not in the Snd tarball**. All 676 entries, no audio.
+They live on Bill's site and are downloaded separately.
+
+What does ship is the better half: `v.scm` is the fm-violin, `clm-ins.scm` two
+dozen more instruments, `dsp.scm` the analysis library where `display-bark-fft`
+lives, `examp.scm` the examples the reference quotes. Point **`snd.sourcePath`**
+at your Snd sources and `(load-from-path "v.scm")` works; the session puts the
+directory on `*load-path*` when it starts, and falls back to whatever
+`tools/build-snd.sh` left in `.build`.
+
+`examples/tour.scm` ends with three fm-violin notes rather than an `open-sound`
+of a file nobody has — which also gives the panels something with structure in
+them: overlapping notes in the waveform, FM sidebands appearing and going in the
+spectrogram.
 
 ## Regions and mixes
 
