@@ -966,8 +966,30 @@
 (sv-request "75" 'play (inlet 'snd 0 'chn 0 'start 100 'end 200))
 (check "play: the end is a keyword too" 200 (cadr (memq :end *played*)))
 (check "play: still no :edit-position" #f (and (memq :edit-position *played*) #t))
-(check "play: reports the throttle interval it will use" (sv-play-interval)
+;; PLAY IS SYNCHRONOUS IN A BUILD WITH NO TOOLKIT LOOP, and the reply says so
+;; rather than announcing a transport that is already over. The stand-in has no
+;; main-widgets, so this is the nogui answer.
+(check "play: a build with no loop plays synchronously" #t
+       (((last-frame) 'value) 'synchronous))
+(check "play: and does not claim to still be playing" #f
+       (((last-frame) 'value) 'playing))
+
+;; The other branch, forced: with main-widgets answering like a live toolkit,
+;; play returns before the sound ends and the throttle interval is what the
+;; panels need in order to place the playhead. It goes in the ROOTLET, because
+;; sv-async-play? reaches the name through symbol->value from its own closure,
+;; and a local define is invisible there -- the same reason the bridge looks
+;; every Snd name up that way rather than closing over it.
+(varlet (rootlet) 'main-widgets (lambda () (list 'shell)))
+(sv-request "75b" 'play (inlet 'snd 0 'chn 0 'start 100))
+(check "play: an asynchronous build reports the throttle interval"
+       (sv-play-interval)
        (((last-frame) 'value) 'interval))
+(check-true "play: and says it is playing"
+            (((last-frame) 'value) 'playing))
+(cutlet (rootlet) 'main-widgets)
+(check-true "play: back to the nogui answer once the toolkit is gone"
+            (not (sv-async-play?)))
 
 (set! captured ())
 ;; sv-install-hooks already did this. A second install must add nothing:

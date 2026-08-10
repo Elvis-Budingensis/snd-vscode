@@ -196,6 +196,24 @@
 (define (sv-in-snd?)
   (sv-have? 'open-sound))
 
+;; Does play return BEFORE the sound has finished?
+;;
+;; Only in a build with a running toolkit loop. The DAC writer is scheduled as
+;; an idle work procedure through BACKGROUND_ADD; under USE_NO_GUI that macro
+;; is an immediate one-shot call rather than a scheduler, so play is forced
+;; down the blocking path and :wait has nothing left to decide. Switching it to
+;; "background" by hand would write the first buffer and then underrun.
+;;
+;; Same test as sv-start uses to decide whether to run its own read loop, and
+;; for the same underlying reason -- a loop that feeds the DAC is the loop that
+;; reads stdin. Kept as one function so the two answers cannot drift apart.
+(define (sv-async-play?)
+  (and (sv-in-snd?)
+       (sv-have? 'main-widgets)
+       (let ((w (catch #t (lambda () ((symbol->value 'main-widgets)))
+                       (lambda args #f))))
+         (and w (pair? w) (car w) #t))))
+
 (define (sv-arg params key default)
   (let ((value (if (and (let? params) (defined? key params))
                    (let ((v (params key)))
@@ -680,7 +698,32 @@
     (if end
         ((symbol->value 'play) snd :start start :end end :channel (or chn #f))
         ((symbol->value 'play) snd :start start :channel (or chn #f)))
-    (inlet 'playing #t 'start start 'interval (sv-play-interval))))
+    ;; SYNCHRONOUS IN A NOGUI BUILD, and the return value has to say so.
+    ;;
+    ;; The asynchronous path schedules the DAC writer as an idle work
+    ;; procedure through the toolkit's BACKGROUND_ADD; under USE_NO_GUI that
+    ;; macro is an immediate one-shot call, not a scheduler, so play is forced
+    ;; down the blocking path and :wait has nothing to decide. By the time
+    ;; this line runs the sound has already finished.
+    ;;
+    ;; Saying 'playing #t there would be a lie with consequences: the status
+    ;; bar shows a transport that is over, the stop command has nothing to
+    ;; stop, and a panel that clears its playhead on 'stopped keeps one
+    ;; standing if the hook did not fire. So the answer is what actually
+    ;; happened, and the extension needs no knowledge of which build it is
+    ;; talking to.
+    ;;
+    ;; Not the same question as (play) returning #f with no object -- that is
+    ;; Snd asking for the SELECTED sound, of which a build with no GUI has
+    ;; none. The op never does that: snd defaults to 0 above.
+    (if (sv-async-play?)
+        (inlet 'playing #t 'start start 'interval (sv-play-interval))
+        (begin
+          ;; The playhead events, if any, have been emitted from inside the
+          ;; blocking call already; this closes the transport for the panels
+          ;; whether or not stop-playing-hook fired.
+          (sv-play-ended)
+          (inlet 'playing #f 'start start 'synchronous #t)))))
 
 (sv-define-op stop (params)
   (when (sv-have? 'stop-playing) ((symbol->value 'stop-playing)))

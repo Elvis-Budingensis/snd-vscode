@@ -458,7 +458,12 @@ class SndSession {
   }
 
   async play(snd: number, chn: number, start: number, end?: number): Promise<void> {
-    await this.bridge.request('play', { snd, chn, start, end });
+    const reply = await this.bridge.request('play', { snd, chn, start, end });
+    // A NOGUI BUILD HAS ALREADY FINISHED by the time this returns: the DAC
+    // writer is an idle work procedure of the toolkit loop, and without a loop
+    // play takes the blocking path. So there is nothing to wait for and
+    // nothing to warn about — the op says so with 'synchronous.
+    if (reply && (reply as { synchronous?: boolean }).synchronous) return;
     // If the playhead never moves, the reason is almost always that this
     // build has no working audio device — play returns without error and
     // simply produces nothing. Saying so beats a silent still playhead,
