@@ -2610,13 +2610,20 @@
 ;; correct it.  We are counting the same buffers, so we inherit the same
 ;; error, and we apply the same correction.
 ;;
-;; DO NOT EMIT PER BUFFER.  dac-size defaults to 256 frames, which at 44100
-;; is 172 events per second, each a JSON frame down a pipe -- and Snd's own
-;; note about cursor-update-interval is that too small a value causes audible
-;; clicks, because the redraw competes with filling the buffer.  The same
-;; applies here: this hook runs on the audio path.  So emission is throttled
-;; to cursor-update-interval, which is Snd's own setting for exactly this
-;; decision.
+;; DO NOT EMIT PER BUFFER.  Measured in this build, playing oboe.snd: 795 hook
+;; calls for 50828 framples, so dac-size is 64 -- not the 256 the reference's
+;; example uses.  That is 345 events per second at 22050 and 690 at 44100, each
+;; a JSON frame down a pipe.  Snd's own note about cursor-update-interval is
+;; that too small a value causes audible clicks, because the redraw competes
+;; with filling the buffer.  The same applies here: this hook runs on the audio
+;; path, and the rate is four times what a 256-frame buffer would give.  So
+;; emission is throttled to cursor-update-interval, which is Snd's own setting
+;; for exactly this decision.
+;;
+;; The count is also the reason a duplicate handler is worth guarding against
+;; rather than tolerating: two handlers count every buffer twice at 690 calls
+;; per second, and the playhead runs at double speed, which reads as a
+;; sample-rate mistake.
 ;; ------------------------------------------------------------------
 
 (define sv-play-frames 0)      ; frames handed to the DAC since play began

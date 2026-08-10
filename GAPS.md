@@ -68,38 +68,55 @@ Edit Header and `save-state` are covered. What remains:
   tree shows names; these show the fragments, which is what one reads when an
   edit did not do what it looked like.
 
-## 4. Play — 5 of 15
+## 4. Play — 8 of 15
 
 **First, the thing that explains the rest of this section.** In a build with no
-toolkit loop, playback is synchronous and there is no transport to ask about.
+toolkit loop, playback is synchronous: `play` returns when the sound is over.
 The DAC writer is scheduled as an idle work procedure through the toolkit's
 `BACKGROUND_ADD`; under `USE_NO_GUI` that macro is an immediate one-shot call
 rather than a scheduler, so `play` is forced down the blocking path and `:wait`
 has nothing left to decide. Setting it to "background" by hand would write the
-first buffer and then underrun. So `play` returns when the sound is over, and
-the op reports `'synchronous #t` and `'playing #f` rather than announcing a
-transport that has already finished.
+first buffer and then underrun.
 
-`pausing` and `playing` are therefore not oversights: in this build there is no
-running output to pause or to ask after. They are listed because a Motif build
-has both, and `sv-async-play?` is the one place that decides which case holds.
+**But the output IS running while it blocks, and it can be watched.** Measured
+in this build, playing `oboe.snd`: `play-hook` fired 795 times inside one
+blocking call, which for 50828 framples is one call per 64-frame buffer. Those
+events go out through `sv-emit` on stderr while the bridge is still inside the
+call, and the extension reads them independently of the pending request — so
+the playhead moves during synchronous playback. The op reports `'synchronous #t`
+and `'playing #f` because that describes what it RETURNED, not what happened
+along the way.
+
+So `pausing` and `playing` are not absent state. They are unreachable state:
+for the duration of the sound the bridge is not reading stdin, so nothing can
+be asked or set until `play` comes back. That is a different limit with a
+different remedy — `char-ready?` works here, and 795 hook calls are 795 chances
+to service a waiting request, which would make stop and pause work without an
+event loop. Not built: a request that reaches an edit from inside the hook while
+the DAC is reading is a re-entrancy question, and it deserves measuring before
+code.
+
+They are registered as variables regardless, because a build whose `play`
+returns early has both, and `sv-async-play?` is the one place that decides which
+case holds.
 
 A separate thing that looks the same and is not: `(play)` with no argument
 returns `#f`. Snd is asking for the SELECTED sound, and a build with no GUI has
-no selection. The op never does that — `snd` defaults to index 0 — but typing
-it in the REPL is the obvious first test of playback, and it answers `#f`
-without an error, which reads as broken audio.
+no selection. The op never does that — `snd` defaults to index 0 — but typing it
+in the REPL is the obvious first test of playback, and it answers `#f` without
+an error, which reads as broken audio.
 
 - **`pausing`** — space pauses and resumes during playback in Snd. Here space
-  auditions an envelope and does nothing during a play. See above: there is no
-  play to pause in a nogui build.
-- **`playing`** — no way to ask whether output is running, so two plays can be
-  started without noticing. Synchronously the second cannot start until the
-  first is over, so this costs nothing here and everything in a Motif build.
+  auditions an envelope and does nothing during a play. Registered; reachable
+  in a build with a loop.
+- **`playing`** — whether output is running. Registered read-only; synchronously
+  the second play cannot start until the first is over, so it costs nothing
+  here and everything in a Motif build.
 - **`make-player` / `add-player` / `start-playing`** — per-channel amplitudes
   and custom control panels; `play-with-envs` in `enved.scm` is built on it.
 - **`dac-size`** — the fix for interruptions on stereo 44.1k, per the
-  reference. Not exposed.
+  reference. Now registered: it is 64 in this build, so it also sets how often
+  the playhead path runs — 690 hook calls per second at 44.1k.
 
 ## 5. Marks — 6 of 14
 

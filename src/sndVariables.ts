@@ -454,6 +454,24 @@ export const PREFERENCES_DIALOG: DialogSpec = {
       ],
     },
     {
+      title: 'playback',
+      variables: [
+        // MEASURED, not assumed. dac-size in this build is 64, not the 256 the
+        // reference's example uses: at 22050 that is 345 play-hook calls per
+        // second, and 690 at 44.1k. It is the setting the reference names for
+        // interruptions on stereo 44.1k, and it decides how often the playhead
+        // path runs, so it belongs where a user can reach it.
+        { name: 'dac-size', label: 'DAC buffer (frames)', kind: 'int', min: 16, max: 4096, step: 16 },
+        // Both of these are reachable in a build whose play returns before the
+        // sound ends. In a nogui build the output IS running -- play-hook fired
+        // 795 times inside one blocking call -- but the bridge is not reading
+        // stdin for the duration, so nothing can be asked or set until it
+        // returns. Not an absent state; an unreachable one.
+        { name: 'pausing', label: 'paused', kind: 'bool' },
+        { name: 'playing', label: 'output running', kind: 'readonly' },
+      ],
+    },
+    {
       title: 'files',
       variables: [
         { name: 'save-dir', label: 'save-state directory', kind: 'string' },
