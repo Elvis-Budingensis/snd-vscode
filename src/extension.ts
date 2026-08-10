@@ -611,6 +611,41 @@ class SndSession {
   }
 }
 
+/**
+ * The directories that go on s7's *load-path* when a session becomes ready.
+ *
+ * Two of them, for two different reasons, and the order is the answer to
+ * "which one wins when both hold a file of the same name":
+ *
+ *   1. THE EXTENSION'S OWN DIRECTORY, so the shipped examples load by the name
+ *      their own header gives — `(load "examples/vscode-ui.scm")`. Snd's cwd is
+ *      the workspace, not the extension, so without this the documented line
+ *      fails and the only thing that works is an absolute path pasted in front
+ *      of it. Every reader hits that once.
+ *   2. SND'S OWN SOURCE TREE, so `(load-from-path "v.scm")` finds the
+ *      fm-violin, clm-ins, dsp and examp.
+ *
+ * Extracted from onReady so it can be checked without a running Snd: it is one
+ * `await` in a closure otherwise, and a refactor that dropped it would leave
+ * nothing red anywhere.
+ */
+export function loadPathsFor(args: {
+  configured: string;
+  extensionPath: string;
+  exists: (candidate: string) => boolean;
+}): string[] {
+  const { configured, extensionPath, exists } = args;
+  const paths: string[] = [];
+  if (extensionPath) paths.push(extensionPath);
+  const trimmed = (configured ?? '').trim();
+  const fallback = path.join(extensionPath, '.build', 'snd-26.5');
+  const source = trimmed || (exists(fallback) ? fallback : '');
+  if (source) paths.push(source);
+  // The bridge refuses a duplicate, but sending one would still be a request
+  // whose only outcome is a no-op, and the caller cannot tell the two apart.
+  return paths.filter((entry, index) => paths.indexOf(entry) === index);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const session = new SndSession(context);
 
@@ -716,19 +751,19 @@ export function activate(context: vscode.ExtensionContext): void {
       } catch (error) {
         session.log.appendLine(`[snd-vscode] custom UI snapshot failed: ${String(error)}`);
       }
-      const configured = vscode.workspace
-        .getConfiguration('snd')
-        .get<string>('sourcePath', '')
-        .trim();
-      const fallback = path.join(context.extensionPath, '.build', 'snd-26.5');
-      const chosen = configured || (fs.existsSync(fallback) ? fallback : '');
-      if (chosen) {
+      const directories = loadPathsFor({
+        configured: vscode.workspace.getConfiguration('snd').get<string>('sourcePath', ''),
+        extensionPath: context.extensionPath,
+        exists: candidate => fs.existsSync(candidate),
+      });
+      for (const directory of directories) {
         try {
-          await session.addLoadPath(chosen);
+          await session.addLoadPath(directory);
         } catch {
           // Not fatal: the session works without it, and the failure shows up
-          // as load-from-path saying which file it could not find, which is a
-          // better message than anything shown here would be.
+          // as load saying which file it could not find, which is a better
+          // message than anything shown here would be. Kept per directory so
+          // one unreachable path does not cost the other.
         }
       }
     })();
