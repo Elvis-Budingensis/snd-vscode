@@ -2,7 +2,7 @@
   "name": "snd-vscode",
   "displayName": "Snd – programmable sound editor in VS Code",
   "description": "Snd (Bill Schottstaedt's sound editor) as a VS Code session: the inferior s7 of inf-snd.el, plus the channel graph and the spectrum as editor panels.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "elvis-budingensis",
   "license": "GPL-3.0-or-later",
   "author": {
