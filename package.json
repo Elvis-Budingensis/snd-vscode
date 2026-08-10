@@ -2,7 +2,7 @@
   "name": "snd-vscode",
   "displayName": "Snd – programmable sound editor in VS Code",
   "description": "Snd (Bill Schottstaedt's sound editor) as a VS Code session: the inferior s7 of inf-snd.el, plus the channel graph and the spectrum as editor panels.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "elvis-budingensis",
   "license": "GPL-3.0-or-later",
   "author": {
@@ -114,6 +114,11 @@
         "category": "Snd"
       },
       {
+        "command": "snd.showWavogram",
+        "title": "Snd: Show Wavogram",
+        "category": "Snd"
+      },
+      {
         "command": "snd.showSpectrum",
         "title": "Snd: Show Spectrum",
         "category": "Snd"
@@ -216,6 +221,11 @@
       {
         "command": "snd.saveSound",
         "title": "Snd: Save Sound",
+        "category": "Snd"
+      },
+      {
+        "command": "snd.editHeader",
+        "title": "Snd: Edit Header",
         "category": "Snd"
       },
       {
@@ -471,6 +481,11 @@
           "command": "snd.refreshSounds",
           "when": "view == sndSounds",
           "group": "navigation"
+        },
+        {
+          "command": "snd.saveState",
+          "when": "view == sndSounds",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -479,7 +494,15 @@
           "when": "view == sndSounds && viewItem == sndChannel"
         },
         {
+          "command": "snd.showWavogram",
+          "when": "view == sndSounds && viewItem == sndChannel"
+        },
+        {
           "command": "snd.saveSound",
+          "when": "view == sndSounds && viewItem == sndSound"
+        },
+        {
+          "command": "snd.editHeader",
           "when": "view == sndSounds && viewItem == sndSound"
         },
         {
@@ -612,6 +635,7 @@
     "index": "node tools/make-index.mjs",
     "test:node": "node --test test/bridge.test.js test/session.test.js",
     "test:scheme": "node tools/run-scheme-tests.mjs",
+    "test:snd": "node tools/run-real-snd-tests.mjs",
     "gates": "node tools/gates.mjs",
     "build:snd": "tools/build-snd.sh",
     "package": "vsce package",

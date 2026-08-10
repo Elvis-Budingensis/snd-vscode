@@ -1491,6 +1491,46 @@ test("the spectrogram uses Snd's own angles, not its own", () => {
   );
 });
 
+test("the wavogram is Snd's fourth display, not a local picture mode", () => {
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'wavogramView.ts'), 'utf8');
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  assert.match(panel, /from '\.\/spectrumView'/, 'wavogram does not share the projection');
+  assert.match(panel, /setWavogram/, 'wavogram never writes Snd\'s display values');
+  const setter = /sv-define-op setwavogram[\s\S]*?(?=\(sv-define-op)/.exec(bridge)?.[0] ?? '';
+  for (const name of ['wavo-trace', 'wavo-hop', 'time-graph-type', 'graph-as-wavogram']) {
+    assert.ok(setter.includes(name), `${name} is not kept in step with Snd`);
+  }
+});
+
+test('Edit Header is explicit, warned, and outside the panel undo stack', () => {
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'src', 'headerPanel.ts'), 'utf8');
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  assert.match(panel, /This changes the file header immediately/);
+  assert.match(panel, /id="confirm"/);
+  assert.match(panel, /id="apply" disabled/);
+  const op = /sv-define-op editheader[\s\S]*?(?=\(sv-define-op)/.exec(bridge)?.[0] ?? '';
+  assert.match(op, /sv-set-sound-field 'header-type/);
+  assert.match(op, /comment-changed \(not had-edits\)/,
+               'a comment could save unrelated pending sample edits');
+});
+
+test('save-state is a bridge operation and remembers its last destination', () => {
+  const extension = fs.readFileSync(path.join(__dirname, '..', 'src', 'extension.ts'), 'utf8');
+  assert.match(extension, /bridge\.request\('savestate', \{ file \}\)/);
+  assert.match(extension, /workspaceState\.get<string>\('snd\.lastStateFile'\)/);
+  assert.match(extension, /workspaceState\.update\('snd\.lastStateFile'/);
+});
+
+test('the final gate starts a real Snd and crosses the actual protocol', () => {
+  const runner = fs.readFileSync(path.join(__dirname, '..', 'tools', 'run-real-snd-tests.mjs'), 'utf8');
+  const gates = fs.readFileSync(path.join(__dirname, '..', 'tools', 'gates.mjs'), 'utf8');
+  assert.match(runner, /spawn\(executable/);
+  for (const op of ['waveforms', 'spectrum', 'sonogram', 'wavogram', 'editheader', 'savestate']) {
+    assert.ok(runner.includes(`request('${op}'`), `real-Snd gate does not call ${op}`);
+  }
+  assert.match(gates, /real Snd integration/);
+});
+
 test('every panel action that changes the sound reloads afterwards', () => {
   // undo and redo were the only two that did not. Snd did the work and the
   // panel kept showing the old picture, which reads as "the button does

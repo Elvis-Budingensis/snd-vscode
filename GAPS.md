@@ -40,21 +40,16 @@ That last point is the strategic one: a Snd user's own hook code is the reason
 they have their `~/.snd`. If it cannot reach these panels, the panels are a
 parallel world rather than the same editor.
 
-## 2. Files and headers — 2 of 20
+## 2. Files and headers — 4 of 20
 
-- **Edit Header** (`header-type`, `sample-type`, `data-location`, `data-size`,
-  `comment`) — Snd's own dialog for adding, removing or fixing a header. The
-  reference is blunt about the danger, which is a reason to render it
-  carefully, not a reason to leave it out: a raw file with the wrong srate is
-  a common thing to be handed.
+Edit Header and `save-state` are covered. What remains:
+
 - **Save As with a choice of header and sample type** — `save-sound-as` takes
   `:header-type` and `:sample-type` keywords. The extension writes with
   whatever the sound already had.
 - **`update-sound`** — re-read a file changed on disk behind Snd's back.
   Related: `auto-update`, and the warning about two conflicting versions.
 - **`read-only`** / the lock icon — a view-only sound looks editable here.
-- **`save-state`** — the whole session as a loadable program. This is Snd's
-  answer to "come back tomorrow", and it is one bridge op.
 - **`sound-loop-info`, `soundfont-info`** — loop points and soundfont regions;
   `mark-loops` in `examp.scm` places marks at them.
 
@@ -91,19 +86,13 @@ parallel world rather than the same editor.
 - **`mark-properties`** — the reference's own `describe-mark` and
   `mark-click-info` use them.
 
-## 6. Transforms — 26 of 34
+## 6. Transforms — 27 of 34
 
 Mostly covered, and the remainder is real:
 
 - **`peaks`** — the FFT peak list. Snd's transform dialog shows it beside the
   spectrum; `max-transform-peaks` is already in the registry but nothing
   displays them.
-- **the wavogram** (`time-graph-type` as `graph-as-wavogram`, `wavo-hop`,
-  `wavo-trace`) — the time-domain counterpart of the spectrogram, and now the
-  only one of Snd's four display types without a counterpart here. The
-  projection is already written and tested; what it needs is the trace length
-  question, and "It is important to set the length of each trace so that
-  successive peaks line up" is the whole difficulty.
 - **`add-transform`** — a user-defined transform joins the list. The
   reference's histogram and Hankel examples are ten lines each.
 - **`transform-framples`, `transform-sample`** — reading the transform Snd

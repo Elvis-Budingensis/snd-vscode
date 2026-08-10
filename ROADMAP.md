@@ -44,7 +44,6 @@ had nowhere to draw it.
 - [x] **Find** — a sample predicate, closures included, sharing Snd's own
       `search-procedure`
 - [x] **sync** — grouping sounds for simultaneous editing, shown in the tree
-- [ ] the **wavogram** (`time-graph-type` as `graph-as-wavogram`)
 - [ ] `enved-wave?` in `flt` mode: the filter's actual frequency response
       drawn over the envelope
 
@@ -57,18 +56,18 @@ The three that would change the most, in order:
 
 - [x] **graph-hook and lisp-graph-hook** — user drawing code in a panel
 - [x] **the 3D spectrogram** — Snd's own angles, orthographic, self-occluding
-- [ ] the **wavogram** (`graph-as-wavogram`, `wavo-hop`, `wavo-trace`) — the
+- [x] the **wavogram** (`graph-as-wavogram`, `wavo-hop`, `wavo-trace`) — the
       time-domain counterpart, and the last of Snd's four display types
-- [ ] **hooks** (14 of 27) — `stop-playing-hook` so the playhead knows when a
-      play ended rather than inferring it; `edit-hook` for protected history;
-      `snd-error-hook` into the Problems pane; and `graph-hook` /
-      `lisp-graph-hook`, without which twenty years of user-written drawing
-      code cannot reach these panels
+- [ ] **hooks** (14 of 27) — what is left is `edit-hook` for protected history,
+      `before-exit-hook` for unsaved edits, `before-transform-hook`, and the
+      file-lifecycle ones `autosave.scm` is built on. `stop-playing-hook`,
+      `snd-error-hook`, `graph-hook` and `lisp-graph-hook` are done
 - [ ] **edit lists** (1 of 8) — `save-edit-history`, `edit-list->function`,
       `as-one-edit`. The region and mix commands should already be using
       `as-one-edit`
-- [ ] **files and headers** (2 of 20) — Edit Header, Save As with a header and
-      sample-type choice, `update-sound`, `read-only`, `save-state`
+- [x] **Edit Header** and **save-state**, with the last state target remembered
+- [ ] remaining files/header work — Save As with header/sample-type choice,
+      `update-sound`, `read-only`
 
 ## Infrastructure
 
@@ -77,7 +76,7 @@ The three that would change the most, in order:
 - [x] the variable and constant names in the dialog registry are checked
       against Snd's own index by the gate, so a typo is not indistinguishable
       from a build that lacks the variable
-- [ ] a gate that runs against a **real built Snd**, not stubs: the stubs
+- [x] a gate that runs against a **real built Snd**, not stubs: the stubs
       catch a wrong argument order, not a wrong Snd version
 - [ ] packaging (`vsce`), CI
 - [ ] `snd.mode` detection that reports what the binary actually is before

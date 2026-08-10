@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.1.1
+
+- the s7 sources had gone missing from `third-party/s7` — not by any deliberate
+  exclusion (`.gitignore` still committed them and the test runner still looked
+  there first) but lost in packaging. Without them the s7 gate reports `skip`,
+  not `ok`, and that gate is 315 checks
+- **the real-Snd gate ran, for the first time, against an actual Snd.** Built
+  headless from the snd-26 tarball (`./configure --with-s7 --without-audio`,
+  because the gate needs no DAC) and pointed at `bin/linux-x64/snd`:
+  **20 checks, 0 failures**. Everything in this project up to now had been
+  verified against stubs I wrote, and five real bugs had come from a stub being
+  more optimistic than Snd. This is the gate that closes that gap — 2026-08-09
+
+- **Wavogram** panel: consecutive `wavo-trace`-sized time-domain slices,
+  `wavo-hop` density, and Snd's own spectrogram rotation matrix and six
+  orientation values. Opening it also selects `graph-as-wavogram` in the
+  running Snd, so a Motif window and VS Code cannot disagree.
+- **Edit Header** panel for header/sample type, sample rate, channel count,
+  data location, data size, and comment. The warning and acknowledgement are
+  part of the UI because these changes reinterpret bytes on disk and are not
+  undoable. Unchanged data location is deliberately omitted after a type
+  change so Snd can choose the syntactically correct new value.
+- **save-state** is now a bridge operation rather than raw evaluation, and
+  the command remembers its last file as the next default.
+- a new **real-Snd gate** starts the bundled 26.5 binary and runs 20 checks
+  through the actual pipe: startup/open hooks, waveform, spectrum, sonogram,
+  wavogram and setters, header inspection/no-op apply, and a saved state file.
+  Its first run found the difference between Snd's `#f` for “no comment” and
+  a textarea's empty string; normalising that boundary prevents an empty
+  comment from becoming an unintended header write.
+
 ## 0.1.0 — 2026-08-07
 
 First cut. The session, the REPL, the panels, the tree, the gates.

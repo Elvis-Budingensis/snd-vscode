@@ -1398,6 +1398,239 @@
            'cells (sv-base64 cells))))
 
 ;; ------------------------------------------------------------------
+;; Wavogram
+;;
+;; The fourth of Snd's display types is time-domain data laid out as a
+;; sequence of equally long traces.  The trace length is not cosmetic: as
+;; snd.html says, successive peaks only line up when wavo-trace matches the
+;; period in the material.  Consequently the bridge returns the traces, not
+;; a flattened waveform from which the panel would have to guess the cuts.
+;;
+;; Snd's C renderer reads one trace after another.  wavo-hop is a screen-space
+;; density (pixels between traces), so the webview tells us how many traces
+;; fit at its current height and the bridge leaves their sample boundaries
+;; untouched.  Long traces are sampled evenly for the wire; their start-to-
+;; start distance remains exactly wavo-trace samples.
+;; ------------------------------------------------------------------
+
+(define (sv-wavo-value name snd chn fallback)
+  (if (sv-have? name)
+      (catch #t
+        (lambda () ((symbol->value name) snd chn))
+        (lambda args fallback))
+      fallback))
+
+(define (sv-wavo-trace snd chn start trace-length points)
+  (let* ((data ((symbol->value 'channel->float-vector)
+                start trace-length snd chn))
+         (len (if (float-vector? data) (length data) 0))
+         (count (if (> len 0) (min points len) 0))
+         (out (make-float-vector count 0.0)))
+    (when (> count 0)
+      (do ((i 0 (+ i 1)))
+          ((= i count))
+        (let ((at (if (= count 1)
+                      0
+                      (round (/ (* i (- len 1)) (- count 1))))))
+          (set! (out i) (data at)))))
+    out))
+
+(sv-define-op wavogram (params)
+  (sv-require 'channel->float-vector)
+  (let* ((snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0))
+         (frames ((symbol->value 'framples) snd chn))
+         (trace-length (max 2 (round (sv-wavo-value 'wavo-trace snd chn 64))))
+         (hop (max 1 (round (sv-wavo-value 'wavo-hop snd chn 3))))
+         (wanted (max 4 (min 256 (round (sv-arg params 'traces 64)))))
+         (points (max 16 (min 2048 (round (sv-arg params 'points 512)))))
+         (start (max 0 (min (max 0 (- frames 1))
+                            (round (sv-arg params 'start 0)))))
+         (available (max 0 (- frames start)))
+         (count (if (> available 0)
+                    (min wanted (max 1 (ceiling (/ available trace-length))))
+                    0))
+         (traces ()))
+    (do ((i 0 (+ i 1)))
+        ((= i count))
+      (let ((at (+ start (* i trace-length))))
+        (when (< at frames)
+          (set! traces
+                (cons (sv-wavo-trace snd chn at
+                                     (min trace-length (- frames at)) points)
+                      traces)))))
+    (inlet 'snd snd
+           'chn chn
+           'fileName ((symbol->value 'short-file-name) snd)
+           'srate ((symbol->value 'srate) snd)
+           'frames frames
+           'start start
+           'traceLength trace-length
+           'hop hop
+           'points points
+           'traces (reverse traces)
+           ;; The same six orientation settings used by Snd's spectrogram
+           ;; and wavogram.  One View dialog rotates both displays.
+           'orientation
+           (let ((var (lambda (name fallback)
+                        (if (sv-have? name)
+                            (catch #t
+                              (lambda () (* 1.0 ((symbol->value name))))
+                              (lambda args fallback))
+                            fallback))))
+             (inlet 'xAngle (var 'spectro-x-angle 90.0)
+                    'yAngle (var 'spectro-y-angle 0.0)
+                    'zAngle (var 'spectro-z-angle 358.0)
+                    'xScale (var 'spectro-x-scale 1.0)
+                    'yScale (var 'spectro-y-scale 1.0)
+                    'zScale (var 'spectro-z-scale 0.1))))))
+
+(sv-define-op setwavogram (params)
+  (let* ((snd (sv-arg params 'snd 0))
+         (chn (sv-arg params 'chn 0))
+         (trace (max 2 (min 1048576 (round (sv-arg params 'trace 64)))))
+         (hop (max 1 (min 256 (round (sv-arg params 'hop 3))))))
+    (sv-require 'wavo-trace)
+    (sv-require 'wavo-hop)
+    (sv-require 'time-graph-type)
+    (unless (defined? 'graph-as-wavogram)
+      (error 'sv-unavailable "graph-as-wavogram is not available in this Snd build"))
+    ;; Build setter forms rather than replacing the accessor itself.  The
+    ;; optional sound/channel arguments make the values visible in Snd's own
+    ;; Motif graph immediately as well as in this panel.
+    (eval (list 'set! (list 'wavo-trace snd chn) trace) (rootlet))
+    (eval (list 'set! (list 'wavo-hop snd chn) hop) (rootlet))
+    (eval (list 'set! (list 'time-graph-type snd chn)
+                (symbol->value 'graph-as-wavogram))
+          (rootlet))
+    (inlet 'trace (sv-wavo-value 'wavo-trace snd chn trace)
+           'hop (sv-wavo-value 'wavo-hop snd chn hop)
+           'type ((symbol->value 'time-graph-type) snd chn))))
+
+;; ------------------------------------------------------------------
+;; File header and session state
+;; ------------------------------------------------------------------
+
+(define sv-header-types
+  '(mus-next mus-aifc mus-riff mus-rf64 mus-aiff mus-nist mus-ircam mus-caff mus-raw))
+
+(define sv-sample-types
+  '(mus-lshort mus-bshort mus-lint mus-bint mus-lfloat mus-bfloat
+    mus-ldouble mus-bdouble mus-mulaw mus-alaw mus-ubyte mus-byte))
+
+(define (sv-named-constants names)
+  (let loop ((rest names) (out ()))
+    (if (null? rest)
+        (reverse out)
+        (let ((name (car rest)))
+          (if (and (defined? name) (number? (symbol->value name)))
+              (loop (cdr rest)
+                    (cons (inlet 'name (symbol->string name)
+                                 'value (symbol->value name))
+                          out))
+              (loop (cdr rest) out))))))
+
+(define (sv-sound-edited? snd)
+  (let ((count ((symbol->value 'channels) snd)))
+    (let loop ((chn 0))
+      (and (< chn count)
+           (or (> ((symbol->value 'edit-position) snd chn) 0)
+               (loop (+ chn 1)))))))
+
+(define* (sv-header-info snd (comment-pending #f))
+  (sv-require 'header-type)
+  (sv-require 'sample-type)
+  (inlet 'snd snd
+         'fileName ((symbol->value 'file-name) snd)
+         'shortName ((symbol->value 'short-file-name) snd)
+         'headerType ((symbol->value 'header-type) snd)
+         'sampleType ((symbol->value 'sample-type) snd)
+         'srate ((symbol->value 'srate) snd)
+         'channels ((symbol->value 'channels) snd)
+         'dataLocation ((symbol->value 'data-location) snd)
+         'dataSize ((symbol->value 'data-size) snd)
+         'comment (or ((symbol->value 'comment) snd) "")
+         'edited (sv-sound-edited? snd)
+         'commentPending comment-pending
+         'headerTypes (sv-named-constants sv-header-types)
+         'sampleTypes (sv-named-constants sv-sample-types)))
+
+(sv-define-op headerinfo (params)
+  (sv-header-info (sv-arg params 'snd 0)))
+
+(define (sv-valid-constant? value names)
+  (and (number? value)
+       (let loop ((rest names))
+         (and (pair? rest)
+              (or (and (defined? (car rest))
+                       (= value (symbol->value (car rest))))
+                  (loop (cdr rest)))))))
+
+(define (sv-set-sound-field name snd value)
+  (eval (list 'set! (list name snd) value) (rootlet)))
+
+(sv-define-op editheader (params)
+  ;; These are deliberately Snd's setters.  They alter the header and ask Snd
+  ;; to reinterpret the existing bytes; they do not create an edit or invent
+  ;; an undo history on the extension side.
+  (let* ((snd (sv-arg params 'snd 0))
+         (header (sv-arg params 'headerType ((symbol->value 'header-type) snd)))
+         (sample (sv-arg params 'sampleType ((symbol->value 'sample-type) snd)))
+         (rate (round (sv-arg params 'srate ((symbol->value 'srate) snd))))
+         (chans (round (sv-arg params 'channels ((symbol->value 'channels) snd))))
+         (location (round (sv-arg params 'dataLocation ((symbol->value 'data-location) snd))))
+         (size (round (sv-arg params 'dataSize ((symbol->value 'data-size) snd))))
+         ;; Snd reports "no comment" as #f while an HTML textarea reports it
+         ;; as "".  Those are the same no-op; treating them as different asks
+         ;; Snd to install an empty comment, which some header writers reject.
+         (old-comment (or ((symbol->value 'comment) snd) ""))
+         (comment (sv-arg params 'comment old-comment))
+         (comment-changed (not (equal? comment old-comment)))
+         (had-edits (sv-sound-edited? snd))
+         (set-location (sv-arg params 'setLocation #f))
+         (set-size (sv-arg params 'setSize #f)))
+    (unless (sv-valid-constant? header sv-header-types)
+      (error 'sv-bad-header "unknown or unwritable header type"))
+    (unless (sv-valid-constant? sample sv-sample-types)
+      (error 'sv-bad-header "unknown sample type"))
+    (unless (and (> rate 0) (> chans 0) (>= location 0) (>= size 0))
+      (error 'sv-bad-header "sample rate/channels must be positive; location/size cannot be negative"))
+    ;; Header type first so Snd can choose the syntactically correct default
+    ;; data location.  An unchanged location from the form must not overwrite
+    ;; that choice; only an explicitly edited location is applied afterwards.
+    (unless (= header ((symbol->value 'header-type) snd))
+      (sv-set-sound-field 'header-type snd header))
+    (unless (= sample ((symbol->value 'sample-type) snd))
+      (sv-set-sound-field 'sample-type snd sample))
+    (unless (= rate ((symbol->value 'srate) snd))
+      (sv-set-sound-field 'srate snd rate))
+    (unless (= chans ((symbol->value 'channels) snd))
+      (sv-set-sound-field 'channels snd chans))
+    (when set-location (sv-set-sound-field 'data-location snd location))
+    (when set-size (sv-set-sound-field 'data-size snd size))
+    ;; Snd's public comment setter keeps the value with the open sound and
+    ;; writes it on the next Save Sound.  Unlike save-sound, it never folds
+    ;; unrelated unsaved edits into a header operation behind the user's back.
+    (when comment-changed
+      (sv-set-sound-field 'comment snd comment))
+    ;; With no sample edits to preserve, Save Sound is the public Snd path
+    ;; that commits a changed comment to the header.  With edits present it
+    ;; would also save those edits, which Edit Header explicitly must not do;
+    ;; in that case the comment remains staged and the panel says so.
+    (when (and comment-changed (not had-edits))
+      (sv-require 'save-sound)
+      ((symbol->value 'save-sound) snd))
+    (sv-header-info snd (and comment-changed had-edits))))
+
+(sv-define-op savestate (params)
+  (sv-require 'save-state)
+  (let ((file (sv-arg params 'file "")))
+    (when (= (length file) 0)
+      (error 'sv-bad-state-file "save-state needs a file name"))
+    ((symbol->value 'save-state) file)
+    (inlet 'file file)))
+
+;; ------------------------------------------------------------------
 ;; Regions and mixes
 ;;
 ;; Snd's last two dialogs without a counterpart here. Both are lists of

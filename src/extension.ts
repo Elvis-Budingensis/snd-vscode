@@ -20,6 +20,8 @@ import * as fs from 'fs';
 import { SndReplTerminal } from './replTerminal';
 import { WaveformView, Waveform } from './waveformView';
 import { SpectrumView, Spectrum, Sonogram } from './spectrumView';
+import { WavogramView, Wavogram } from './wavogramView';
+import { HeaderPanel, HeaderInfo } from './headerPanel';
 import { SoundExplorer, Sound, EditHistory, Region, Mix } from './soundExplorer';
 import { SndHelpProvider, StaticIndex } from './helpProvider';
 import { DialogPanel, VariableValue } from './dialogPanel';
@@ -170,6 +172,7 @@ class SndSession {
         this.onSoundsChanged();
         WaveformView.refresh();
         SpectrumView.refresh();
+        WavogramView.refresh();
         // The control panel too: apply-controls moves the edit position,
         // and Snd resets the controls to neutral when it does.
         DialogPanel.refreshAll();
@@ -387,6 +390,48 @@ class SndSession {
     return this.bridge.request('spectrum', params);
   }
 
+  wavogram(params: {
+    snd: number;
+    chn: number;
+    start: number;
+    traces: number;
+    points: number;
+  }): Promise<Wavogram> {
+    return this.bridge.request('wavogram', params);
+  }
+
+  async setWavogram(snd: number, chn: number, trace: number, hop: number): Promise<void> {
+    await this.bridge.request('setwavogram', { snd, chn, trace, hop });
+  }
+
+  headerInfo(snd: number): Promise<HeaderInfo> {
+    return this.bridge.request('headerinfo', { snd });
+  }
+
+  async editHeader(params: {
+    snd: number;
+    headerType: number;
+    sampleType: number;
+    srate: number;
+    channels: number;
+    dataLocation: number;
+    dataSize: number;
+    setLocation: boolean;
+    setSize: boolean;
+    comment: string;
+  }): Promise<HeaderInfo> {
+    const result = await this.bridge.request<HeaderInfo>('editheader', params);
+    this.onSoundsChanged();
+    WaveformView.refresh();
+    SpectrumView.refresh();
+    WavogramView.refresh();
+    return result;
+  }
+
+  async saveState(file: string): Promise<void> {
+    await this.bridge.request('savestate', { file });
+  }
+
   async cursorOf(snd: number, chn: number): Promise<number> {
     const result = await this.bridge.evaluate(`(cursor ${snd} ${chn})`);
     const value = Number(result.value);
@@ -577,6 +622,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
     WaveformView.follow(target);
     SpectrumView.follow(target);
+    WavogramView.follow(target);
   };
 
   session.onSoundsChanged = () => {
@@ -628,6 +674,8 @@ export function activate(context: vscode.ExtensionContext): void {
     // the REPL is invisible to it otherwise. The others follow the edit
     // hooks, which fire on their own.
     EnvelopeView.refresh();
+    WavogramView.refresh();
+    HeaderPanel.refresh();
     explorer.refresh();
   };
 
@@ -691,6 +739,18 @@ export function activate(context: vscode.ExtensionContext): void {
     sonogram: (params: any) => session.bridge.request<Sonogram>('sonogram', params),
     spectrum: (params: any) => session.spectrum(params),
     cursorOf: (snd: number, chn: number) => session.cursorOf(snd, chn),
+  };
+
+  const wavogramHost = {
+    wavogram: (params: any) => session.wavogram(params),
+    setWavogram: (snd: number, chn: number, trace: number, hop: number) =>
+      session.setWavogram(snd, chn, trace, hop),
+    cursorOf: (snd: number, chn: number) => session.cursorOf(snd, chn),
+  };
+
+  const headerHost = {
+    headerInfo: (snd: number) => session.headerInfo(snd),
+    editHeader: (params: any) => session.editHeader(params),
   };
 
   const dialogHost = {
@@ -980,6 +1040,28 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  command('snd.showWavogram', (snd?: number, chn?: number) =>
+    guard(async () => {
+      if (!session.ready()) await session.start();
+      if (snd === undefined) {
+        const chosen = await firstSound();
+        if (chosen === undefined) return;
+        snd = chosen;
+        chn = 0;
+      }
+      WavogramView.show(wavogramHost, snd, chn ?? 0);
+    })
+  );
+
+  command('snd.editHeader', (snd?: number) =>
+    guard(async () => {
+      if (!session.ready()) await session.start();
+      if (snd === undefined) snd = await firstSound();
+      if (snd === undefined) return;
+      HeaderPanel.show(headerHost, snd);
+    })
+  );
+
   command('snd.goToSample', (snd: number, chn: number, sample: number) =>
     guard(async () => {
       await session.setCursor(snd, chn, sample);
@@ -1025,12 +1107,15 @@ export function activate(context: vscode.ExtensionContext): void {
       // survive it: a Scheme file that rebuilds the sounds and their edit
       // history. Offered as a command rather than pretended to be
       // automatic.
+      const previous = context.workspaceState.get<string>('snd.lastStateFile');
       const target = await vscode.window.showSaveDialog({
         filters: { Scheme: ['scm'] },
         saveLabel: 'Save Snd state',
+        defaultUri: previous ? vscode.Uri.file(previous) : undefined,
       });
       if (!target) return;
-      await session.evaluate(`(save-state ${schemeString(target.fsPath)})`);
+      await session.saveState(target.fsPath);
+      await context.workspaceState.update('snd.lastStateFile', target.fsPath);
       void vscode.window.showInformationMessage(`Snd state written to ${target.fsPath}`);
     })
   );

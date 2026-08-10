@@ -215,6 +215,75 @@
 (define (snd-version) "Snd 26.5 (test stub)")
 (define (default-output-srate) 44100)
 
+;; Wavogram and header fields are dilambdas in Snd: getters with optional
+;; sound/channel arguments and setters whose value is last.
+(define *wavo-trace-value* 64)
+(define wavo-trace
+  (dilambda (lambda* ((snd 0) (chn 0)) *wavo-trace-value*)
+            (lambda* ((snd 0) (chn 0) v) (set! *wavo-trace-value* v))))
+(define *wavo-hop-value* 3)
+(define wavo-hop
+  (dilambda (lambda* ((snd 0) (chn 0)) *wavo-hop-value*)
+            (lambda* ((snd 0) (chn 0) v) (set! *wavo-hop-value* v))))
+(define graph-as-wavogram 1)
+(define *time-graph-type-value* 0)
+(define time-graph-type
+  (dilambda (lambda* ((snd 0) (chn 0)) *time-graph-type-value*)
+            (lambda* ((snd 0) (chn 0) v) (set! *time-graph-type-value* v))))
+
+(define mus-next 0)
+(define mus-aifc 1)
+(define mus-riff 2)
+(define mus-rf64 3)
+(define mus-aiff 4)
+(define mus-nist 5)
+(define mus-ircam 6)
+(define mus-caff 7)
+(define mus-raw 8)
+(define mus-lshort 10)
+(define mus-bshort 11)
+(define mus-lint 12)
+(define mus-bint 13)
+(define mus-lfloat 14)
+(define mus-bfloat 15)
+(define mus-ldouble 16)
+(define mus-bdouble 17)
+(define mus-mulaw 18)
+(define mus-alaw 19)
+(define mus-ubyte 20)
+(define mus-byte 21)
+
+(define *header-type-value* mus-next)
+(define header-type
+  (dilambda (lambda* ((snd 0)) *header-type-value*)
+            (lambda* ((snd 0) v) (set! *header-type-value* v))))
+(define *sample-type-value* mus-lshort)
+(define sample-type
+  (dilambda (lambda* ((snd 0)) *sample-type-value*)
+            (lambda* ((snd 0) v) (set! *sample-type-value* v))))
+(define *srate-value* 44100)
+(set! srate
+  (dilambda (lambda* ((snd 0)) *srate-value*)
+            (lambda* ((snd 0) v) (set! *srate-value* v))))
+(define *channels-value* 2)
+(set! channels
+  (dilambda (lambda* ((snd 0)) *channels-value*)
+            (lambda* ((snd 0) v) (set! *channels-value* v))))
+(define *data-location-value* 28)
+(define data-location
+  (dilambda (lambda* ((snd 0)) *data-location-value*)
+            (lambda* ((snd 0) v) (set! *data-location-value* v))))
+(define *data-size-value* 4000)
+(define data-size
+  (dilambda (lambda* ((snd 0)) *data-size-value*)
+            (lambda* ((snd 0) v) (set! *data-size-value* v))))
+(define *comment-value* "test comment")
+(define comment
+  (dilambda (lambda* ((snd 0)) *comment-value*)
+            (lambda* ((snd 0) v) (set! *comment-value* v))))
+(define *saved-state-file* #f)
+(define (save-state file) (set! *saved-state-file* file) #t)
+
 (define (channel->float-vector beg dur . rest)
   ;; Snd's own contract: fewer samples than asked for near the end.
   (let* ((available (max 0 (min dur (- *test-frames* beg))))
@@ -562,6 +631,52 @@
   (check-true "unavailable: names what is missing"
               (string-position "snd-spectrum" ((last-frame) 'error)))
   (set! snd-spectrum saved))
+
+(sv-request "14d" 'wavogram (inlet 'snd 0 'chn 0 'traces 5 'points 32))
+(let ((w ((last-frame) 'value)))
+  (check "wavogram: trace length comes from Snd" 64 (w 'traceLength))
+  (check "wavogram: requested trace count" 5 (length (w 'traces)))
+  (check "wavogram: each trace is reduced for the wire" 32
+         (length (car (w 'traces)))))
+
+(sv-request "14e" 'setwavogram (inlet 'snd 0 'chn 0 'trace 100 'hop 7))
+(check "wavogram: trace setting reaches Snd" 100 (wavo-trace 0 0))
+(check "wavogram: hop setting reaches Snd" 7 (wavo-hop 0 0))
+(check "wavogram: Snd's own graph switches too" graph-as-wavogram
+       (time-graph-type 0 0))
+
+(sv-request "14f" 'headerinfo (inlet 'snd 0))
+(let ((h ((last-frame) 'value)))
+  (check "header: current type" mus-next (h 'headerType))
+  (check "header: sample type choices come from constants" #t
+         (> (length (h 'sampleTypes)) 4))
+  (check "header: comment" "test comment" (h 'comment)))
+
+(sv-request "14g" 'editheader
+            (inlet 'snd 0 'headerType mus-riff 'sampleType mus-lfloat
+                   'srate 48000 'channels 1 'dataLocation 44 'dataSize 1234
+                   'setLocation #t 'setSize #t 'comment "changed"))
+(check "header: type set through accessor" mus-riff (header-type 0))
+(check "header: sample type set through accessor" mus-lfloat (sample-type 0))
+(check "header: rate set" 48000 (srate 0))
+(check "header: channels set" 1 (channels 0))
+(check "header: explicit location set" 44 (data-location 0))
+(check "header: explicit size set" 1234 (data-size 0))
+(check "header: comment staged" "changed" (comment 0))
+(check "header: dirty sound reports staged comment" #t
+       (((last-frame) 'value) 'commentPending))
+;; The rest of this file exercises the original two-channel, 44.1 kHz fixture.
+;; Restore it so this focused mutation cannot change unrelated expectations.
+(set! (header-type 0) mus-next)
+(set! (sample-type 0) mus-lshort)
+(set! (srate 0) 44100)
+(set! (channels 0) 2)
+(set! (data-location 0) 28)
+(set! (data-size 0) 4000)
+(set! (comment 0) "test comment")
+
+(sv-request "14h" 'savestate (inlet 'file "/tmp/session.scm"))
+(check "save-state: calls Snd" "/tmp/session.scm" *saved-state-file*)
 
 ;; A whole request as it arrives on the wire: one balanced line.
 (set! captured ())

@@ -9,8 +9,9 @@ Two things at once, which is the whole point:
   the cursor, Tab completion, `snd-help` on hover. The same key chords as
   `inf-snd.el`, because anyone who already works this way has them in their
   fingers.
-- **Snd's graphs as editor panels**: the channel waveform and the spectrum,
-  drawn in VS Code from numbers Snd computes. Which means they work in a
+- **Snd's graphs as editor panels**: waveform, single spectrum, sonogram,
+  3D spectrogram, wavogram, and the user graph, drawn in VS Code from numbers
+  Snd computes. Which means they work in a
   headless Snd build, over ssh, and beside the file being edited — three
   things Snd's own Motif window cannot do.
 
@@ -108,16 +109,18 @@ extension talk to Snd*, which otherwise fail as one symptom.
 ## Installing from source
 
 ```sh
-npm run gates   # structural checks, tsc, node tests, s7 tests
+npm run gates   # structural checks, tsc, node tests, s7 tests, real Snd
 ```
 
 `npm run gates` needs an `s7` for the Scheme half of the tests, and builds one
 itself on the first run — the sources are in `third-party/s7` (two files,
-0BSD), so a fresh clone runs all 181 s7 checks without downloading anything.
+0BSD), so a fresh clone runs all 314 s7 checks without downloading anything.
 Takes a few seconds, once.
 
-The gate reports `skip`, never `ok`, if that fails for any reason, and prints
-why.
+The final gate starts an actual Snd, opens a temporary copy of `oboe.snd`, and
+drives the bridge end to end. It catches build/version differences the s7
+stubs cannot. A platform with no built Snd reports `skip`, never `ok`, and
+prints every location it checked.
 
 ## Commands
 
@@ -151,6 +154,22 @@ eval-and-print in SLIME and *play* here, `C-c C-t` is trace against *stop
 playing*, `C-c C-e` is an eval prompt against *evaluate definition*. Two
 meanings on one chord is worse than either choice. `"none"` leaves the palette
 only.
+
+The command palette and the Snd Sounds tree also expose:
+
+- **Snd: Show Wavogram** — Snd's time-domain 3D display. `wavo-trace` is the
+  samples per line, `wavo-hop` their screen spacing, and the projection uses
+  Snd's own six Color/Orientation values. Opening it sets
+  `time-graph-type` to `graph-as-wavogram`, so a Motif Snd and VS Code show
+  the same mode immediately.
+- **Snd: Edit Header** — header/sample type, rate, channels, data location,
+  data size, and comment, behind an explicit acknowledgement because these
+  fields rewrite the file header and are outside undo. An unchanged data
+  location is left to Snd to recalculate after a header-type change. A changed
+  comment is committed immediately when there are no pending sample edits;
+  otherwise it stays staged so Edit Header never saves those edits implicitly.
+- **Snd: Save Session State** — writes the complete session as a loadable
+  Scheme program and remembers the last target as the next dialog default.
 
 Everything in the right-hand column stays available as a command whichever
 keymap is on — `Snd: Evaluate Last Expression`, `Snd: Show Source of Symbol`,

@@ -3,11 +3,17 @@ out/
 *.vsix
 *.zip
 
-# The s7 BINARY the test gate builds for itself (the two source files it is
-# built from live in third-party/s7 and are committed), and the full Snd
-# source tree tools/build-snd.sh unpacks — 77 MB of somebody else's code,
-# reproducible with one command.
-s7
+# The s7 BINARY the test gate builds for itself, and the full Snd source tree
+# tools/build-snd.sh unpacks — 77 MB of somebody else's code, reproducible with
+# one command.
+#
+# The leading slash is load-bearing. Written as a bare `s7` this matches at
+# EVERY level, so it also swallowed third-party/s7 — the two source files the
+# gate builds the binary FROM, which are committed. Nothing shows it on a
+# machine that already has them; a fresh clone loses them and the s7 gate
+# fails on a missing file, which is the fault reported one step away from its
+# cause.
+/s7
 .build/
 
 # bin/ is COMMITTED, deliberately: without it a fresh clone falls back to
@@ -17,6 +23,8 @@ s7
 #
 # What is not committed is a build of a platform nobody has tested. Add a
 # directory here per platform as it is built, or leave it out.
+#
+# (No pattern belongs under this paragraph — that is the point of it.)
 
 .vscode-test/
 .DS_Store

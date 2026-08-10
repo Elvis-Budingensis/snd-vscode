@@ -91,7 +91,11 @@ function sources(directory, extension) {
                                'cursor', 'undo', 'redo', 'edits', 'apropos',
                                // writes a file; a stub would only test the stub
                                'saveselection']);
-  const untested = ops.filter(op => !needsRealSnd.has(op) && !tests.includes(`'${op} `));
+  // Whitespace after the quoted op can be a space or a newline.  A long
+  // request laid out over two lines is still the same exercised operation.
+  const untested = ops.filter(
+    op => !needsRealSnd.has(op) && !(new RegExp(`'${op}\\s`)).test(tests)
+  );
   if (untested.length > 0) {
     fail(gate, `no test for: ${untested.join(', ')}`);
   } else {
@@ -782,6 +786,31 @@ if (process.env.RELEASE === '1') {
     fail(gate, '\n' + (result.stdout ?? '') + (result.stderr ?? ''));
   } else {
     const checks = /(\d+) checks, (\d+) failures/.exec(result.stdout ?? '');
+    pass(`${gate} (${checks ? checks[1] : '?'} checks)`);
+  }
+}
+
+// --- gate 9: the bridge in a real Snd -------------------------------
+//
+// Plain s7 catches everything around the calls and deliberately stubs Snd's
+// signatures.  This last gate starts the actual bundled build, so a renamed
+// function, a changed dilambda setter, or an object shape from another Snd
+// version cannot pass merely because the stub says it should.
+{
+  const gate = 'real Snd integration';
+  const result = spawnSync('node', ['tools/run-real-snd-tests.mjs'], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 90000,
+  });
+  if (result.status === 2) {
+    console.log(`skip ${gate}:`);
+    const detail = ((result.stdout ?? '') + (result.stderr ?? '')).trim();
+    for (const line of detail.split('\n')) console.log(`     ${line}`);
+  } else if (result.status !== 0) {
+    fail(gate, '\n' + (result.stdout ?? '') + (result.stderr ?? ''));
+  } else {
+    const checks = /(\d+) real-Snd checks/.exec(result.stdout ?? '');
     pass(`${gate} (${checks ? checks[1] : '?'} checks)`);
   }
 }
