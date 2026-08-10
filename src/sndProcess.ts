@@ -17,6 +17,7 @@
 
 import * as cp from 'child_process';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 export type SndMode = 'auto' | 'nogui' | 'gui';
@@ -31,6 +32,10 @@ export interface SndOptions {
   cwd: string;
   /** Absolute path of scheme/snd-vscode.scm. */
   bridgePath: string;
+  /** UI compatibility loaded before the user's init files. */
+  uiBridgePath?: string;
+  /** Local init files, in Snd's own order. Filled by start when omitted. */
+  initFiles?: string[];
   mode: SndMode;
   /** Sound files to open at startup. */
   files?: string[];
@@ -41,20 +46,51 @@ export interface SndOptions {
  *
  * A pure function, and deliberately so: the argument order is the one
  * thing here that cannot be checked by looking at a running process.
- * -l loads the bridge, and it comes LAST, after the user's own arguments
+ * The UI vocabulary comes first, then the user's init files, while the main
+ * -l bridge still comes LAST, after the user's own arguments
  * and after any file to open -- Snd processes startup arguments in order,
  * so a bridge loaded first would announce itself ready before the files
  * it is supposed to report even exist.
  *
- * -noinit is NOT passed.  It would suppress ~/.snd, and ~/.snd is where a
- * Snd user keeps the things that make Snd theirs.  An editor that
- * silently discards it is not offering the same Snd.
+ * Why -noinit appears when the UI bridge is used: Snd normally reads ~/.snd
+ * before it processes -l. A GUI call in ~/.snd would therefore run before
+ * the compatibility vocabulary existed. We suppress that automatic read,
+ * load the vocabulary, then explicitly load the same files in the same
+ * order. The user's -noinit still wins and loads none of them.
  */
 export function commandLine(options: SndOptions): { command: string; args: string[] } {
-  const args: string[] = [...options.args];
+  const userNoInit = options.args.some(arg => arg === '-noinit' || arg === '--noinit');
+  const args: string[] = [];
+  if (options.uiBridgePath) {
+    if (!userNoInit) args.push('-noinit');
+    args.push('-l', options.uiBridgePath);
+    if (!userNoInit) {
+      for (const file of options.initFiles ?? []) args.push('-l', file);
+    }
+  }
+  args.push(...options.args);
   for (const file of options.files ?? []) args.push(file);
   args.push('-l', options.bridgePath);
   return { command: options.command, args };
+}
+
+/** Snd's s7-specific local init sequence (snd-xen.c:snd_load_init_file). */
+export function localInitFiles(args: {
+  home: string;
+  environmentInit?: string;
+  exists(path: string): boolean;
+}): string[] {
+  const candidates = [
+    path.join(args.home, '.snd_prefs_s7'),
+    path.join(args.home, '.snd_s7'),
+    args.environmentInit || path.join(args.home, '.snd'),
+  ];
+  const seen = new Set<string>();
+  return candidates.filter(candidate => {
+    if (!candidate || seen.has(candidate) || !args.exists(candidate)) return false;
+    seen.add(candidate);
+    return true;
+  });
 }
 
 /**
@@ -170,7 +206,22 @@ export class SndProcess {
       return;
     }
 
-    const { command, args } = commandLine(options);
+    const uiBridgePath =
+      options.uiBridgePath ?? path.join(path.dirname(options.bridgePath), 'snd-vscode-ui.scm');
+    if (!fs.existsSync(uiBridgePath)) {
+      this.setStatus('error', `UI bridge not found: ${uiBridgePath}`);
+      return;
+    }
+
+    const initFiles =
+      options.initFiles ??
+      localInitFiles({
+        home: process.env.HOME || os.homedir(),
+        environmentInit: process.env.SND_INIT_FILE,
+        exists: candidate => fs.existsSync(candidate),
+      });
+
+    const { command, args } = commandLine({ ...options, uiBridgePath, initFiles });
     this.setStatus('starting', `${command} ${args.join(' ')}`);
 
     let child: cp.ChildProcessWithoutNullStreams;

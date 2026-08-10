@@ -41,6 +41,15 @@
 
 (provide 'snd-vscode.scm)
 
+;; Loaded by the process launcher before ~/.snd, but also loaded here when the
+;; bridge is run by hand or by the Scheme tests.  Two paths because plain s7
+;; started in the repository has no SND_PATH, while the packaged Snd gets the
+;; scheme directory on its load path from the extension.
+(unless (provided? 'snd-vscode-ui)
+  (catch #t (lambda () (load "snd-vscode-ui.scm")) (lambda args #f))
+  (unless (provided? 'snd-vscode-ui)
+    (catch #t (lambda () (load "scheme/snd-vscode-ui.scm")) (lambda args #f))))
+
 (define sv-protocol-version 1)
 
 ;; ------------------------------------------------------------------
@@ -2247,6 +2256,27 @@
   (let ((file (sv-arg params 'file "")))
     ((symbol->value 'save-selection) :file file)
     (inlet 'file file)))
+
+;; ------------------------------------------------------------------
+;; The declarative Snd UI
+;;
+;; snd-vscode-ui.scm is intentionally independent of the transport so it can
+;; be loaded before ~/.snd.  These two ops are the narrow join: a complete
+;; snapshot after start, then events addressed by opaque widget ids. Callback
+;; closures never leave s7.
+
+(sv-define-op uiwidgets (params)
+  (if (defined? 'vscode-ui-widgets)
+      ((symbol->value 'vscode-ui-widgets))
+      ()))
+
+(sv-define-op uiaction (params)
+  (if (defined? 'vscode-ui-action)
+      ((symbol->value 'vscode-ui-action)
+       (sv-arg params 'id "")
+       (sv-arg params 'action "click")
+       (sv-arg params 'value #f))
+      (error 'sv-unavailable "snd-vscode-ui.scm is not loaded")))
 
 ;; ------------------------------------------------------------------
 ;; Dispatch

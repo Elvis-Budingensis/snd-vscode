@@ -323,6 +323,24 @@
         "title": "Snd: Refresh Sounds",
         "category": "Snd",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "snd.ui.refresh",
+        "title": "Snd: Refresh Custom UI",
+        "category": "Snd",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "snd.ui.invoke",
+        "title": "Snd: Invoke Custom UI Item",
+        "category": "Snd",
+        "enablement": "false"
+      },
+      {
+        "command": "snd.ui.show",
+        "title": "Snd: Show Custom UI",
+        "category": "Snd",
+        "enablement": "false"
       }
     ],
     "keybindings": [
@@ -472,6 +490,10 @@
         {
           "id": "sndSounds",
           "name": "Snd Sounds"
+        },
+        {
+          "id": "sndCustomUi",
+          "name": "Snd Custom UI"
         }
       ]
     },
@@ -486,6 +508,11 @@
           "command": "snd.saveState",
           "when": "view == sndSounds",
           "group": "navigation@2"
+        },
+        {
+          "command": "snd.ui.refresh",
+          "when": "view == sndCustomUi",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -579,7 +606,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Extra arguments for Snd. The bridge is appended with `-l` afterwards. `~/.snd` is deliberately NOT suppressed — add `-noinit` here if you want a bare session."
+          "markdownDescription": "Extra arguments for Snd. The declarative UI vocabulary is loaded before Snd's local init files and the transport bridge is appended with `-l` afterwards. The normal `~/.snd_prefs_s7`, `~/.snd_s7`, and `SND_INIT_FILE`/`~/.snd` sequence is preserved — add `-noinit` here if you want a bare session."
         },
         "snd.startOnActivation": {
           "type": "boolean",

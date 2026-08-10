@@ -376,7 +376,11 @@ function sources(directory, extension) {
 // the most expensive mistake.
 {
   const gate = 'every Snd name the bridge calls exists';
-  const bridge = fs.readFileSync(path.join(root, 'scheme', 'snd-vscode.scm'), 'utf8');
+  const bridgeFiles = ['snd-vscode.scm', 'snd-vscode-ui.scm'];
+  const bridges = bridgeFiles.map(name =>
+    fs.readFileSync(path.join(root, 'scheme', name), 'utf8')
+  );
+  const bridge = bridges.join('\n');
   let index;
   try {
     index = new Set(
@@ -390,7 +394,10 @@ function sources(directory, extension) {
   if (!index || index.size < 500) {
     console.log(`skip ${gate}: no index — run npm run index -- /path/to/snd-source`);
   } else {
-    // Names the bridge defines itself, and s7 forms that are not Snd's.
+    // Names either half of the bridge defines itself, and s7 forms that are
+    // not Snd's.  The UI vocabulary lives in a separate file because it is
+    // loaded before ~/.snd; treating it as foreign here would make every
+    // intentional call across that internal boundary look like a typo.
     // The character class allows CAPITALS. Snd has min-dB, and a
     // lowercase-only class silently truncated it to "min-d" -- so the gate
     // reported a name that does not exist because it had invented it by

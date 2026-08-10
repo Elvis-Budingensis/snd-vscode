@@ -24,7 +24,7 @@ import * as path from 'path';
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const panels = fs
   .readdirSync(path.join(root, 'src'))
-  .filter(name => /View\.ts$|Panel\.ts$/.test(name));
+  .filter(name => /View\.ts$|Panel\.ts$/.test(name) || name === 'customUi.ts');
 
 let failures = 0;
 

@@ -35,8 +35,11 @@ if (!executable) {
 
 const fixture = path.join(root, 'examples', 'sounds', 'oboe.snd');
 const bridge = path.join(root, 'scheme', 'snd-vscode.scm');
-if (!fs.existsSync(fixture) || !fs.existsSync(bridge)) {
-  console.error('The real-Snd gate needs examples/sounds/oboe.snd and scheme/snd-vscode.scm.');
+const uiBridge = path.join(root, 'scheme', 'snd-vscode-ui.scm');
+if (!fs.existsSync(fixture) || !fs.existsSync(bridge) || !fs.existsSync(uiBridge)) {
+  console.error(
+    'The real-Snd gate needs examples/sounds/oboe.snd and both Scheme bridge files.'
+  );
   process.exit(1);
 }
 
@@ -72,7 +75,10 @@ function inlet(params = {}) {
   return parts.length ? `(inlet ${parts.join(' ')})` : '(inlet)';
 }
 
-const child = spawn(executable, ['-noinit', sound, '-l', bridge], {
+// Match the extension's significant startup order: the declarative UI has to
+// exist before ~/.snd, while the transport is loaded last.  This gate uses
+// -noinit for isolation, so there is no user init between the two here.
+const child = spawn(executable, ['-noinit', '-l', uiBridge, sound, '-l', bridge], {
   cwd: temporary,
   stdio: ['pipe', 'pipe', 'pipe'],
 });
@@ -159,6 +165,26 @@ try {
   const status = await request('status');
   check(status.snd === true, 'status does not see a real Snd');
   check(/Snd/i.test(status.sndVersion), 'status has no Snd version');
+
+  await request('eval', {
+    code: `(begin
+      (define real-ui-fired 0)
+      (define real-ui-menu (add-to-main-menu "Real gate"))
+      (define real-ui-item
+        (add-to-menu real-ui-menu "Fire"
+          (lambda () (set! real-ui-fired (+ real-ui-fired 1)))))
+      #t)`,
+  });
+  const uiWidgets = await request('uiwidgets');
+  check(Array.isArray(uiWidgets), 'real UI snapshot is not an array');
+  const realMenu = uiWidgets.find(widget => widget.label === 'Real gate');
+  const realItem = uiWidgets.find(widget => widget.label === 'Fire');
+  check(realMenu?.kind === 'menu', 'real add-to-main-menu was not registered');
+  check(realItem?.kind === 'menu-item' && realItem.parent === realMenu.id,
+    'real add-to-menu lost its parent');
+  await request('uiaction', { id: realItem.id, action: 'click', value: false });
+  const uiCallback = await request('eval', { code: 'real-ui-fired' });
+  check(uiCallback.value === '1', 'real UI callback did not run inside s7');
 
   const sounds = await request('sounds');
   check(Array.isArray(sounds) && sounds.length === 1, 'startup sound was not opened');

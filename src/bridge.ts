@@ -76,7 +76,20 @@ export function schemeString(text: string): string {
   return out + '"';
 }
 
-export type ParamValue = string | number | boolean | undefined;
+export type ParamValue = string | number | boolean | null | undefined | ParamValue[];
+
+function paramLiteral(value: ParamValue): string | undefined {
+  if (typeof value === 'string') return schemeString(value);
+  if (typeof value === 'boolean') return value ? '#t' : '#f';
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (value === null) return '#f';
+  if (Array.isArray(value)) {
+    const values = value.map(paramLiteral);
+    if (values.some(item => item === undefined)) return undefined;
+    return `(list ${values.join(' ')})`;
+  }
+  return undefined;
+}
 
 /** An (inlet 'k v ...) literal. Undefined values are dropped, not sent as #f. */
 export function inletLiteral(params: Record<string, ParamValue>): string {
@@ -88,10 +101,7 @@ export function inletLiteral(params: Record<string, ParamValue>): string {
     // argument list and rejects wholesale. Found by the gate, and it would
     // have shown up in the wild only as a request that mysteriously fails
     // when a computed number came out NaN.
-    let literal: string | undefined;
-    if (typeof value === 'string') literal = schemeString(value);
-    else if (typeof value === 'boolean') literal = value ? '#t' : '#f';
-    else if (typeof value === 'number' && Number.isFinite(value)) literal = String(value);
+    const literal = paramLiteral(value);
     if (literal === undefined) continue;
     parts.push(`'${key}`, literal);
   }

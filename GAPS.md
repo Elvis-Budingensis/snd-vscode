@@ -2,7 +2,7 @@
 
 Measured against the reference set (snd.html, extsnd.html, sndclm.html,
 sndlib.html, s7.html and the index), not against a wish list. The bridge and
-the variable registry between them touch 192 Snd names; the reference
+the variable and custom-UI registries between them touch about 200 Snd names; the reference
 documents around 1500. Most of that difference is deliberate — see the last
 section — so the list below is the part that is a real gap.
 
@@ -15,7 +15,9 @@ Ordered by what it costs the user, not by how much work it is.
 The largest gap by far, and the one that changes the character of the thing.
 Snd's whole customization model is hooks: *"A hook is a list of callbacks
 invoked whenever its associated event happens."* The bridge installs exactly
-two, `after-edit-hook` and `play-hook`, and both only to keep panels in step.
+eleven event observers. In addition, it watches the channel-specific
+`after-edit-hook`, and uses `play-hook` and `stop-playing-hook` to keep the
+playhead in step. Together those paths touch the 14 hooks counted above.
 
 - **`edit-hook`** — *"if it returns #t, the edit is cancelled"*, which is how
   the reference implements protected regions of the edit history. There is no
@@ -117,10 +119,15 @@ all of them and most are one call. Worth commands of their own:
 
 Not gaps, and worth naming so the count above is not read as a to-do list:
 
-- **The Motif widget layer** — `main-widgets`, `channel-widgets`,
-  `sound-widgets`, `XtAppAddActions`, everything in `snd-motif.scm`. There are
-  no Motif widgets here. Where a function of theirs has a purpose beyond
-  poking a widget, that purpose is what to reach for.
+- **Raw Motif/Xt widget access** — `main-widgets`, `channel-widgets`,
+  `sound-widgets`, `XtAppAddActions`, and arbitrary `XmN*` resources still
+  refer to objects that do not exist in a headless build. High-level intent is
+  covered now: menus, effect dialogs, sliders and variable displays are
+  registered in s7 and rendered by VS Code, including the small `*motif*`
+  helper surface used by the non-X branches of Snd's menu scripts. What
+  remains excluded is code whose purpose is specifically to walk or mutate an
+  Xt widget tree; the bridge deliberately does not provide `snd-motif` and
+  thereby lie to such scripts.
 - **Display state Snd keeps for its own graphs** — `x-bounds`, `y-bounds`,
   `left-sample`, `right-sample`, `graph-style`, `dot-size`. The panels compute
   their own view from the data; adopting Snd's window would make two sources

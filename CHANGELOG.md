@@ -1,18 +1,20 @@
 # Changelog
 
-## 0.1.1
+## 0.1.1 — 2026-08-09
 
-- the s7 sources had gone missing from `third-party/s7` — not by any deliberate
-  exclusion (`.gitignore` still committed them and the test runner still looked
-  there first) but lost in packaging. Without them the s7 gate reports `skip`,
-  not `ok`, and that gate is 315 checks
-- **the real-Snd gate ran, for the first time, against an actual Snd.** Built
-  headless from the snd-26 tarball (`./configure --with-s7 --without-audio`,
-  because the gate needs no DAC) and pointed at `bin/linux-x64/snd`:
-  **20 checks, 0 failures**. Everything in this project up to now had been
-  verified against stubs I wrote, and five real bugs had come from a stub being
-  more optimistic than Snd. This is the gate that closes that gap — 2026-08-09
-
+- **Snd custom UI without Motif.** A declarative Scheme registry is loaded
+  before `~/.snd`; high-level menus, effect dialogs, sliders, toggles, text,
+  selects, envelopes and variable displays are rendered in a new VS Code
+  Explorer view and generic webview. Snd retains widget state and callback
+  closures; VS Code receives only JSON-safe descriptors and opaque ids.
+- headless Snd's inert definitions of `add-to-main-menu`, `add-to-menu`,
+  `change-label`, and the variable-display family are replaced, while real
+  `xm`/`xg` builds keep their native implementations. A deliberately small
+  `*motif*` helper environment supports the non-X branches of the bundled menu
+  scripts without pretending that raw Xt widgets exist.
+- startup now preloads the UI vocabulary, then replays Snd's local init-file
+  order, then opens requested sounds and loads the transport last. A user
+  `-noinit` continues to suppress all local initialization.
 - **Wavogram** panel: consecutive `wavo-trace`-sized time-domain slices,
   `wavo-hop` density, and Snd's own spectrogram rotation matrix and six
   orientation values. Opening it also selects `graph-as-wavogram` in the
@@ -24,7 +26,7 @@
   change so Snd can choose the syntactically correct new value.
 - **save-state** is now a bridge operation rather than raw evaluation, and
   the command remembers its last file as the next default.
-- a new **real-Snd gate** starts the bundled 26.5 binary and runs 20 checks
+- a new **real-Snd gate** starts the bundled 26.5 binary and runs 24 checks
   through the actual pipe: startup/open hooks, waveform, spectrum, sonogram,
   wavogram and setters, header inspection/no-op apply, and a saved state file.
   Its first run found the difference between Snd's `#f` for “no comment” and

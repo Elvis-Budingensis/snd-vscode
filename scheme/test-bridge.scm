@@ -1592,6 +1592,50 @@
 (check "wire: the mark event carries an integer" 4 ((last-frame) 'id))
 (check-true "wire: really an integer" (integer? ((last-frame) 'id)))
 
+;; --- declarative VS Code UI -----------------------------------------
+;;
+;; The callback remains a closure in this s7.  The extension gets only an
+;; opaque id and JSON-safe widget data, then sends the id back on activation.
+
+(define *ui-clicks* 0)
+(define ui-menu (add-to-main-menu "Effects"))
+(define ui-item
+  (add-to-menu ui-menu "Invert" (lambda () (set! *ui-clicks* (+ *ui-clicks* 1)))))
+(check "ui: string labels are not printed with quotes" "Effects" (ui-menu 'label))
+(check "ui: item has its menu as parent" (ui-menu 'id) (ui-item 'parent))
+
+(sv-request "190" 'uiwidgets (inlet))
+(check "ui: snapshot is successful" #t ((last-frame) 'ok))
+(check "ui: snapshot contains both widgets" 2 (length ((last-frame) 'value)))
+
+(sv-request "191" 'uiaction
+            (inlet 'id (ui-item 'id) 'action "click" 'value #f))
+(check "ui: callback runs in s7" 1 *ui-clicks*)
+(check "ui: action returns the addressed widget" (ui-item 'id)
+       (((last-frame) 'value) 'id))
+
+(define *ui-slider-value* 0)
+(define ui-dialog (vscode-ui-dialog "Gain"))
+(define ui-slider
+  (vscode-ui-slider ui-dialog "amount" 0 1 10
+                    (lambda (value) (set! *ui-slider-value* value))))
+(sv-request "192" 'uiaction
+            (inlet 'id (ui-slider 'id) 'action "change" 'value 7))
+(check "ui: change updates Snd-owned state" 7 (ui-slider 'value))
+(check "ui: one-argument callback receives the value" 7 *ui-slider-value*)
+
+(check "ui: dialog begins unmanaged" #f (ui-dialog 'managed))
+(vscode-ui-action (ui-dialog 'id) "open" #f)
+(check "ui: open manages the dialog" #t (ui-dialog 'managed))
+(vscode-ui-action (ui-dialog 'id) "close" #f)
+(check "ui: close unmanages the dialog" #f (ui-dialog 'managed))
+
+(define ui-meter (make-variable-display "instrument" "amplitude" 'meter '(0 2)))
+(variable-display 1.25 ui-meter)
+(check "ui: variable-display keeps its value in Snd" 1.25 (ui-meter 'value))
+(check "ui: variable-display has an instrument parent" "instrument"
+       ((sv-ui-widgets (ui-meter 'parent)) 'label))
+
 (set! sv-emit original-emit)
 
 (format *stdout* "~%~D checks, ~D failures~%" checks failures)

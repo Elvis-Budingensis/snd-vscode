@@ -14,6 +14,7 @@ import {
   enclosingForm,
   precedingForm,
   schemeString,
+  ParamValue,
 } from './bridge';
 import { SndProcess, SndMode, SndStatus, resolveExecutable } from './sndProcess';
 import * as fs from 'fs';
@@ -27,6 +28,7 @@ import { SndHelpProvider, StaticIndex } from './helpProvider';
 import { DialogPanel, VariableValue } from './dialogPanel';
 import { EnvelopeView, EnvelopeState, EnvelopeTarget } from './envelopeView';
 import { UserGraphView, UserGraphState } from './userGraphView';
+import { SndCustomUi, SndUiNode } from './customUi';
 import {
   CONTROLS_DIALOG,
   PREFERENCES_DIALOG,
@@ -55,6 +57,10 @@ class SndSession {
 
   /** Snd said something on its own account. */
   onSndDiagnostic: (severity: 'error' | 'warning', message: string) => void = () => undefined;
+  /** A Scheme-created menu, dialog or control changed. */
+  onUiEvent: (frame: any) => void = () => undefined;
+  /** The process ended; every opaque widget id ended with it. */
+  onUiReset: () => void = () => undefined;
 
   /** Where the binary came from: configured, bundled, or PATH. */
   private binarySource: 'configured' | 'bundled' | 'path' = 'path';
@@ -90,6 +96,7 @@ class SndSession {
         this.rejectReady?.(new Error('Snd ended before it was ready.'));
         this.readyPromise = undefined;
         this.onSoundsChanged();
+        this.onUiReset();
       },
       onStatus: (status, detail) => this.onStatus(status, detail),
     });
@@ -182,14 +189,17 @@ class SndSession {
         UserGraphView.refresh();
         break;
       case 'playing':
-        this.playEvents++;
-        WaveformView.playhead(Number(frame.frame));
+        if (typeof frame.frame === 'number') {
+          this.playEvents++;
+          WaveformView.playhead(frame.frame);
+        } else {
+          // start-playing-hook. Nothing to draw yet -- play-hook supplies the
+          // positions -- but the panel can say that a play is running.
+          WaveformView.playing(true);
+        }
         break;
-      case 'playing':
-        // start-playing-hook. Nothing to draw yet -- play-hook supplies the
-        // positions -- but the panel can say that a play is running, which is
-        // the difference between a still playhead and no playhead.
-        WaveformView.playing(true);
+      case 'ui':
+        this.onUiEvent(frame);
         break;
       case 'markchanged':
       case 'mixmoved':
@@ -577,6 +587,14 @@ class SndSession {
     return this.bridge.request('constants', { names: names.join(' ') });
   }
 
+  uiWidgets(): Promise<SndUiNode[]> {
+    return this.bridge.request('uiwidgets', {});
+  }
+
+  uiAction(id: string, action: string, value?: unknown): Promise<SndUiNode> {
+    return this.bridge.request('uiaction', { id, action, value: value as ParamValue });
+  }
+
   async dialogAction(id: string, snd: number): Promise<string> {
     if (id === 'applycontrols') {
       const result = await this.bridge.request<{ editPosition: number }>('applycontrols', { snd });
@@ -601,7 +619,15 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const explorer = new SoundExplorer(session);
   const tree = vscode.window.createTreeView('sndSounds', { treeDataProvider: explorer });
-  context.subscriptions.push(tree);
+  const customUi = new SndCustomUi({
+    snapshot: () => session.uiWidgets(),
+    action: (id, action, value) => session.uiAction(id, action, value),
+    ready: () => session.ready(),
+  });
+  const uiTree = vscode.window.createTreeView('sndCustomUi', { treeDataProvider: customUi });
+  context.subscriptions.push(tree, uiTree);
+  session.onUiEvent = frame => customUi.handle(frame);
+  session.onUiReset = () => customUi.clear();
 
   // Coalesced: after-edit-hook fires per edit, and refreshing the tree per
   // edit means a request per keystroke of a Scheme loop.
@@ -685,6 +711,11 @@ export function activate(context: vscode.ExtensionContext): void {
     // because the setting can change between them; the bridge refuses to add
     // the same path twice.
     void (async () => {
+      try {
+        await customUi.reload();
+      } catch (error) {
+        session.log.appendLine(`[snd-vscode] custom UI snapshot failed: ${String(error)}`);
+      }
       const configured = vscode.workspace
         .getConfiguration('snd')
         .get<string>('sourcePath', '')
@@ -836,6 +867,12 @@ export function activate(context: vscode.ExtensionContext): void {
       );
     })
   );
+
+  command('snd.ui.refresh', () => guard(() => customUi.reload()));
+  command('snd.ui.invoke', (id: string, action = 'click', value?: unknown) =>
+    guard(() => customUi.invoke(id, action, value))
+  );
+  command('snd.ui.show', (id: string) => customUi.show(id));
 
   // --- evaluation, the inf-snd.el set ---------------------------------
 

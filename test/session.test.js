@@ -8,7 +8,7 @@ const os = require('node:os');
 
 require('./vscode-stub.js').install();
 
-const { commandLine, executableFor } = require('../out/sndProcess.js');
+const { commandLine, executableFor, localInitFiles } = require('../out/sndProcess.js');
 const { symbolAtOffset, callContext, StaticIndex } = require('../out/helpProvider.js');
 const { completionPrefix, commonPrefix } = require('../out/replTerminal.js');
 
@@ -33,11 +33,53 @@ test('the user arguments keep their order', () => {
   assert.deepEqual(line.args.slice(0, 3), ['-p', '2', '-noinit']);
 });
 
-test('-noinit is not added behind the user back', () => {
-  // ~/.snd is where a Snd user keeps what makes Snd theirs. An editor that
-  // silently discards it is not offering the same Snd.
-  const line = commandLine(base);
-  assert.ok(!line.args.includes('-noinit'));
+test('the UI vocabulary is loaded before the explicitly restored init files', () => {
+  // Snd itself reads ~/.snd before it processes -l. Suppressing that read is
+  // safe only because the same files are placed back, in order, after the UI
+  // vocabulary and before every user argument and startup sound.
+  const line = commandLine({
+    ...base,
+    uiBridgePath: '/ext/scheme/snd-vscode-ui.scm',
+    initFiles: ['/home/me/.snd_prefs_s7', '/home/me/.snd_s7', '/home/me/.snd'],
+    args: ['-p', '2'],
+    files: ['/tmp/a.wav'],
+  });
+  assert.deepEqual(line.args, [
+    '-noinit',
+    '-l', '/ext/scheme/snd-vscode-ui.scm',
+    '-l', '/home/me/.snd_prefs_s7',
+    '-l', '/home/me/.snd_s7',
+    '-l', '/home/me/.snd',
+    '-p', '2',
+    '/tmp/a.wav',
+    '-l', '/ext/scheme/snd-vscode.scm',
+  ]);
+});
+
+test('a user supplied -noinit still suppresses every user init file', () => {
+  const line = commandLine({
+    ...base,
+    uiBridgePath: '/ext/scheme/snd-vscode-ui.scm',
+    initFiles: ['/home/me/.snd'],
+    args: ['-noinit'],
+  });
+  assert.deepEqual(line.args, [
+    '-l', '/ext/scheme/snd-vscode-ui.scm',
+    '-noinit',
+    '-l', '/ext/scheme/snd-vscode.scm',
+  ]);
+});
+
+test('the local s7 init files follow Snd\'s own order', () => {
+  const existing = new Set(['/h/.snd_prefs_s7', '/h/.snd_s7', '/custom/init.scm']);
+  assert.deepEqual(
+    localInitFiles({
+      home: '/h',
+      environmentInit: '/custom/init.scm',
+      exists: file => existing.has(file),
+    }),
+    ['/h/.snd_prefs_s7', '/h/.snd_s7', '/custom/init.scm']
+  );
 });
 
 test('the mode picks a binary and an explicit path wins', () => {
@@ -260,6 +302,18 @@ test('the bridge that gets shipped is the one that gets tested', () => {
   assert.ok(!/^scheme\/?$/m.test(ignore), 'scheme/ must ship with the extension');
   assert.ok(!/^data\/?$/m.test(ignore), 'data/ must ship with the extension');
   assert.ok(fs.existsSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm')));
+  assert.ok(fs.existsSync(path.join(__dirname, '..', 'scheme', 'snd-vscode-ui.scm')));
+});
+
+test('the custom Snd UI has a view, a renderer, and two bridge operations', () => {
+  const uiSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'customUi.ts'), 'utf8');
+  const bridge = fs.readFileSync(path.join(__dirname, '..', 'scheme', 'snd-vscode.scm'), 'utf8');
+  const views = manifest.contributes.views.explorer.map(view => view.id);
+  assert.ok(views.includes('sndCustomUi'));
+  assert.match(uiSource, /class SndCustomUi/);
+  assert.match(uiSource, /acquireVsCodeApi/);
+  assert.match(bridge, /sv-define-op uiwidgets/);
+  assert.match(bridge, /sv-define-op uiaction/);
 });
 
 // --- the dialogs -----------------------------------------------------

@@ -106,6 +106,49 @@ If it does not come up, check the channel by hand first: see
 `SMOKETEST.md`. That separates *does Snd talk to the bridge* from *does the
 extension talk to Snd*, which otherwise fail as one symptom.
 
+## Custom Snd UI without Motif
+
+The extension loads `scheme/snd-vscode-ui.scm` before the user's init files.
+This matters: a menu created by `~/.snd` must exist before the main bridge says
+the session is ready. Snd's normal init sequence (`~/.snd_prefs_s7`,
+`~/.snd_s7`, then `SND_INIT_FILE` or `~/.snd`) is preserved; adding `-noinit`
+to `snd.args` still requests a completely bare session.
+
+In a headless Snd, the usual high-level calls now create controls in the
+**Snd Custom UI** Explorer view instead of trying to create Motif widgets:
+
+```scheme
+(define tools-menu (add-to-main-menu "My tools"))
+(add-to-menu tools-menu "Normalize"
+  (lambda () (scale-to 1.0)))
+
+(define meter (make-variable-display "Meters" "Peak" 'meter '(0.0 1.0)))
+(variable-display 0.72 meter)
+```
+
+Menus stay in the tree; dialogs and instrument displays use one generic VS
+Code webview renderer. Slider, toggle, text, select, envelope, meter, graph,
+button and separator descriptors are supported. Callback procedures stay in
+s7 and are addressed by opaque ids — callback source is never copied to or
+evaluated by the webview. Updates made with `change-label`,
+`change-menu-label`, `variable-display`, or `vscode-ui-update` appear live.
+
+For new code, the toolkit-independent constructors are
+`vscode-ui-menu`, `vscode-ui-menu-item`, `vscode-ui-dialog`,
+`vscode-ui-slider`, `vscode-ui-toggle`, `vscode-ui-text`,
+`vscode-ui-select`, and `vscode-ui-envelope`. The small `*motif*` helper
+environment also lets the non-X branches of Snd's menu scripts use
+`make-effect-dialog`, `add-sliders`, `activate-dialog`, `change-label`, and
+`XtSetValues`. See `examples/vscode-ui.scm` for a complete dialog.
+
+This is intent compatibility, not an Xt emulator. Code whose meaning is
+“add this command/control/dialog” is forwarded to VS Code. Code that walks
+raw widget trees with `main-widgets`, `XtAppAddActions`, arbitrary `XmN*`
+resources, or callbacks tied to X events still needs to be rewritten against
+the declarative constructors. There is deliberately no fake `snd-motif`
+feature: claiming it would send raw Xt scripts down a branch that cannot work
+on macOS.
+
 ## Installing from source
 
 ```sh
@@ -114,7 +157,7 @@ npm run gates   # structural checks, tsc, node tests, s7 tests, real Snd
 
 `npm run gates` needs an `s7` for the Scheme half of the tests, and builds one
 itself on the first run — the sources are in `third-party/s7` (two files,
-0BSD), so a fresh clone runs all 314 s7 checks without downloading anything.
+0BSD), so a fresh clone runs all 328 s7 checks without downloading anything.
 Takes a few seconds, once.
 
 The final gate starts an actual Snd, opens a temporary copy of `oboe.snd`, and

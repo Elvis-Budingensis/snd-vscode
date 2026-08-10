@@ -59,6 +59,13 @@ test('inletLiteral drops undefined instead of sending #f', () => {
   assert.equal(inletLiteral({ n: NaN }), '(inlet)');
 });
 
+test('inletLiteral carries nested UI values as Scheme lists', () => {
+  assert.equal(
+    inletLiteral({ value: [0, 0.5, [1, true], 'end'] }),
+    `(inlet 'value (list 0 0.5 (list 1 #t) "end"))`
+  );
+});
+
 test('splitFrames separates frames from ordinary text', () => {
   const result = splitFrames(`noise${RS}{"a":1}${RS}more`);
   assert.deepEqual(result.frames, ['{"a":1}']);
