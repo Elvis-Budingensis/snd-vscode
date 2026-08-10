@@ -8,8 +8,11 @@ s7
 third-party/**
 .build/**
 examples/**
-.build/
+!examples/vscode-ui.scm
 **/*.ts
 tsconfig.json
 ARCHITECTURE.md
 ROADMAP.md
+.gitignore
+.gitattributes
+.github/**
