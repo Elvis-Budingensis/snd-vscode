@@ -991,6 +991,62 @@
 (check-true "play: back to the nogui answer once the toolkit is gone"
             (not (sv-async-play?)))
 
+;; ---- pause, and why the hook must not do it ------------------------------
+;;
+;; pausing is a Snd variable; the stand-in gives it the same set!-able shape
+;; the real one has, so the op is exercised against the form it will meet.
+(define *paused* #f)
+(define (pausing) *paused*)
+(define (set-pausing v) (set! *paused* v))
+(varlet (rootlet) 'pausing pausing)
+(set! (setter (symbol->value 'pausing)) set-pausing)
+
+;; THE DEADLOCK, as a test.  Pausing the DAC in a build whose play blocks also
+;; stops play-hook, and play-hook is the only thing reading stdin for the
+;; duration -- so the resume can never arrive, play never returns, and Snd sits
+;; at 100% CPU.  Observed, after a probe that "proved" pause worked: the probe
+;; scheduled its own resume from inside the handler, so it never needed the way
+;; back in.  Measuring the setting is not measuring the round trip.
+(sv-request "76" 'pause (inlet 'on #t))
+(check "pause: refused where play blocks" #f (((last-frame) 'value) 'paused))
+(check "pause: and says it is unavailable" #f (((last-frame) 'value) 'available))
+(check-true "pause: with a reason"
+            (string? (((last-frame) 'value) 'reason)))
+(check "pause: the variable was not touched" #f *paused*)
+
+;; The other build, where something keeps running.
+(varlet (rootlet) 'main-widgets (lambda () (list 'shell)))
+(sv-request "77" 'pause (inlet 'on #t))
+(check-true "pause: on where a loop exists" (((last-frame) 'value) 'paused))
+(check-true "pause: and the variable followed" *paused*)
+(sv-request "78" 'pause (inlet))
+(check "pause: no argument toggles" #f (((last-frame) 'value) 'paused))
+(sv-request "79" 'pause (inlet))
+(check-true "pause: and toggles back" (((last-frame) 'value) 'paused))
+(sv-request "79b" 'pause (inlet 'on #f))
+(cutlet (rootlet) 'main-widgets)
+
+;; THE HOOK SERVICE recognises stop and nothing else, by name, without running
+;; the reader on the audio path.  Stop is safe because it ENDS the block, so
+;; sv-serve is reading again a moment later.  Pause is not, and must fall
+;; through to the queue like any other request.
+(check "transport: a stop is recognised" 'stop
+       (sv-transport-op "(sv \"1\" 'stop (inlet))"))
+(check "transport: a pause is NOT handled in the hook" #f
+       (sv-transport-op "(sv \"1\" 'pause (inlet))"))
+(check "transport: nor is anything else" #f
+       (sv-transport-op "(sv \"1\" 'scale (inlet 'scale 0.5))"))
+
+;; A line the hook read and did not act on must be QUEUED, never dropped: the
+;; extension is waiting on a reply for it.
+(set! sv-pending-lines ())
+(sv-queue-line "first")
+(sv-queue-line "second")
+(check "transport: the queue keeps the order it was sent in" "first"
+       (sv-take-pending))
+(check "transport: then the next" "second" (sv-take-pending))
+(check "transport: and then nothing" #f (sv-take-pending))
+
 (set! captured ())
 ;; sv-install-hooks already did this. A second install must add nothing:
 ;; Snd calls every handler, so two handlers count every DAC buffer twice and

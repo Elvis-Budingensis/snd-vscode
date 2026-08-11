@@ -296,12 +296,25 @@ export class WaveformView {
         break;
       }
       case 'play':
-        await this.host.play(
-          this.snd,
-          this.chn,
-          Math.round(this.start),
-          Math.round(this.start + this.dur)
-        );
+        // The webview sends selStart/selFrames when the focused channel has
+        // an active selection; that takes priority over the visible view so
+        // "play view" actually plays what is highlighted, not just what is
+        // on screen.
+        if (typeof message.selStart === 'number' && typeof message.selFrames === 'number') {
+          await this.host.play(
+            this.snd,
+            this.chn,
+            Math.round(message.selStart),
+            Math.round(message.selStart + message.selFrames)
+          );
+        } else {
+          await this.host.play(
+            this.snd,
+            this.chn,
+            Math.round(this.start),
+            Math.round(this.start + this.dur)
+          );
+        }
         break;
       case 'stop':
         await this.host.stop();
@@ -781,7 +794,19 @@ document.getElementById('in').onclick = () => vscode.postMessage({ type: 'zoom',
 document.getElementById('out').onclick = () => vscode.postMessage({ type: 'zoom', factor: 0.5, anchor: 0.5 });
 document.getElementById('left').onclick = () => vscode.postMessage({ type: 'pan', by: -0.5 });
 document.getElementById('right').onclick = () => vscode.postMessage({ type: 'pan', by: 0.5 });
-document.getElementById('play').onclick = () => vscode.postMessage({ type: 'play' });
+document.getElementById('play').onclick = () => {
+  // Play the selection if the focused channel has one; otherwise fall back
+  // to the visible view. Without this, "play view" plays the view even
+  // when the user just made a selection to hear -- the selection exists
+  // only as a highlight, never as something the play button reads.
+  const channel = current && current.channels.find(c => c.chn === focusedChannel);
+  const selection = channel && channel.selection;
+  if (selection && selection.active && selection.frames > 0) {
+    vscode.postMessage({ type: 'play', selStart: selection.start, selFrames: selection.frames });
+  } else {
+    vscode.postMessage({ type: 'play' });
+  }
+};
 document.getElementById('stop').onclick = () => vscode.postMessage({ type: 'stop' });
 document.getElementById('undo').onclick = () => vscode.postMessage({ type: 'undo' });
 document.getElementById('redo').onclick = () => vscode.postMessage({ type: 'redo' });
