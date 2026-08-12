@@ -673,7 +673,8 @@
     "package": "vsce package",
     "vscode:prepublish": "npm run compile",
     "package:darwin-arm64": "vsce package --target darwin-arm64",
-    "test:panels": "node tools/check-panels.mjs"
+    "test:panels": "node tools/check-panels.mjs",
+    "test:package": "node tools/check-package.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

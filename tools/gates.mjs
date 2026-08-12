@@ -984,5 +984,34 @@ if (process.env.RELEASE === '1') {
   }
 }
 
+// --- last gate: the package itself --------------------------------------
+//
+// Everything above reads sources. This one builds the VSIX and looks inside it,
+// because four faults in one session lived in the gap between the two: an
+// ignore rule that matched at every level, an exclude that swallowed the one
+// documented example, ignore files shipped to users, and a package built from a
+// stale out/. Each was plain in `unzip -l` and invisible to every other check
+// here.
+//
+// It runs last because it is the slowest, and it skips rather than fails when
+// vsce is absent: a contributor without it should still get a full run of
+// everything that reads sources.
+{
+  const gate = 'the package carries what the user needs';
+  const result = spawnSync('node', ['tools/check-package.mjs'], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 180000,
+  });
+  const output = ((result.stdout ?? '') + (result.stderr ?? '')).trim();
+  if (output.startsWith('skip')) {
+    console.log(output);
+  } else if (result.status !== 0) {
+    fail(gate, '\n' + output.replace(/^FAIL[^:]*:\s*/, ''));
+  } else {
+    console.log(output);
+  }
+}
+
 console.log(failures === 0 ? '\nall gates passed' : `\n${failures} gate(s) failed`);
 process.exit(failures === 0 ? 0 : 1);
