@@ -144,7 +144,16 @@
                (vscode-ui-remove child))))
          (copy sv-ui-order))
         (set! (sv-ui-widgets id) #f)
-        (set! sv-ui-order (remove id sv-ui-order))
+        ;; NICHT (remove id sv-ui-order): `remove` gibt es in s7 nicht.
+        ;; Derselbe Fehler wie load-from-path in snd-vscode.scm -- ein Name, der
+        ;; in anderen Schemes existiert, hier aber nicht, und der erst beim
+        ;; Aufruf auffaellt. Diese Zeile laeuft nur, wenn ein Dialog wirklich
+        ;; entfernt wird, also haette sie beliebig lange stillgehalten.
+        (set! sv-ui-order
+              (let loop ((rest sv-ui-order) (out ()))
+                (cond ((null? rest) (reverse out))
+                      ((equal? (car rest) id) (loop (cdr rest) out))
+                      (else (loop (cdr rest) (cons (car rest) out))))))
         (when (defined? 'sv-emit)
           ((symbol->value 'sv-emit)
            (inlet 'event "ui" 'action "remove" 'id id)))))

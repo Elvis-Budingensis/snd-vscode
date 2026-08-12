@@ -487,6 +487,20 @@ class SndSession {
     await this.bridge.request('stop');
   }
 
+  /**
+   * Pause or resume, with no argument meaning toggle so one command can serve
+   * one button.
+   *
+   * This reaches a RUNNING sound even in a build where play blocks: play-hook
+   * services stdin once per DAC buffer while it does, recognises the pause op
+   * by name, and sets Snd's `pausing` from there. Reply comes back when play
+   * returns.
+   */
+  async pausePlaying(on?: boolean): Promise<boolean> {
+    const reply = await this.bridge.request('pause', on === undefined ? {} : { on });
+    return Boolean(reply && (reply as { paused?: boolean }).paused);
+  }
+
   envelope(snd: number, chn: number): Promise<EnvelopeState> {
     return this.bridge.request('envelope', { snd, chn });
   }
@@ -786,6 +800,7 @@ export function activate(context: vscode.ExtensionContext): void {
     play: (snd: number, chn: number, start: number, end?: number) =>
       session.play(snd, chn, start, end),
     stop: () => session.stopPlaying(),
+    pause: () => session.pausePlaying(),
     undo: (snd: number, chn: number) => session.undo(snd, chn),
     redo: (snd: number, chn: number) => session.redo(snd, chn),
     edit: (action: string, snd: number, chn: number) => session.edit(action, snd, chn),
@@ -1167,6 +1182,11 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   command('snd.stopPlaying', () => guard(() => session.stopPlaying()));
+  command('snd.pausePlaying', () =>
+    guard(async () => {
+      await session.pausePlaying();
+    })
+  );
 
   command('snd.saveSound', () =>
     guard(async () => {

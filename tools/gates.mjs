@@ -81,7 +81,18 @@ function sources(directory, extension) {
 // --- gate 3: every op is reachable and tested ------------------------
 {
   const gate = 'every op in the bridge is exercised by the s7 tests';
-  const bridge = fs.readFileSync(path.join(root, 'scheme', 'snd-vscode.scm'), 'utf8');
+  // EVERY scheme file, not just snd-vscode.scm.  The parity overlay defines
+  // nine ops in a file of its own, and a gate that reads one filename saw
+  // none of them: the coverage number stayed green while the newest and least
+  // exercised code in the project was outside it.  A gate whose scope is a
+  // literal filename silently narrows every time the project grows a file.
+  const opFiles = fs
+    .readdirSync(path.join(root, 'scheme'))
+    .filter(name => name.endsWith('.scm') && name !== 'test-bridge.scm')
+    .sort();
+  const bridge = opFiles
+    .map(name => fs.readFileSync(path.join(root, 'scheme', name), 'utf8'))
+    .join('\n');
   const tests = fs.readFileSync(path.join(root, 'scheme', 'test-bridge.scm'), 'utf8');
   const ops = [...bridge.matchAll(/\(sv-define-op\s+([a-z-]+)/g)].map(match => match[1]);
   // Ops that only make sense against a real audio device or a real file.
@@ -423,6 +434,157 @@ function sources(directory, extension) {
         if (!index.has(name)) unknown.add(name);
       }
     }
+    // AND NAMES CALLED DIRECTLY, which every pattern above misses because all
+    // four are quoted forms. load-from-path was called plainly --
+    // (load-from-path "…") -- and does not exist in Snd's s7 at all. It failed on
+    // the first day, the catch around it turned the failure into an event nobody
+    // reads, and the parity overlay silently never loaded: nine ops missing from
+    // a session that looked healthy. The gate meant to catch invented names could
+    // not see it, because it only looked inside quotes.
+    //
+    // THIS PART READS THE FORMS instead of matching text, and that is not
+    // over-engineering -- it is the fourth attempt. Patterns cannot tell a call
+    // from a binding: `(peak (sv-arg …))` as the second clause of a let* looks
+    // exactly like a call to `peak`. Three regex versions reported between 35
+    // and 200 words of English prose and local variables alongside the one real
+    // answer, and a gate nobody can read is worse than no gate.
+    const forms = (() => {
+      const tokens = [];
+      let i = 0;
+      while (i < bridge.length) {
+        const c = bridge[i];
+        if (c === ';') { while (i < bridge.length && bridge[i] !== '\n') i++; continue; }
+        if (c === '"') {
+          i++;
+          while (i < bridge.length && bridge[i] !== '"') i += bridge[i] === '\\' ? 2 : 1;
+          i++; tokens.push({ atom: '""' }); continue;
+        }
+        if (c === '#' && bridge[i + 1] === '\\') { i += 3; tokens.push({ atom: '#char' }); continue; }
+        if (c === '(') { tokens.push('('); i++; continue; }
+        if (c === ')') { tokens.push(')'); i++; continue; }
+        if (/\s/.test(c)) { i++; continue; }
+        let j = i;
+        while (j < bridge.length && !/[\s()";]/.test(bridge[j])) j++;
+        tokens.push({ atom: bridge.slice(i, j) }); i = j;
+      }
+      // Unbalanced parens are the reader's problem, not this gate's: return what
+      // parsed and let tsc and the s7 tests speak to broken syntax.
+      let pos = 0;
+      const read = () => {
+        const out = [];
+        while (pos < tokens.length) {
+          const token = tokens[pos++];
+          if (token === '(') out.push(read());
+          else if (token === ')') return out;
+          // A quote prefix wraps the NEXT form, and the tokenizer sees it as its
+          // own atom. Without this the bridge's quoted observer table -- rows
+          // like (snd-error-hook snderror (message)) -- reads as calls to
+          // message and to every hook name in it.
+          else if (token.atom === "'" || token.atom === '`') {
+            const next = pos < tokens.length && tokens[pos] === '(' ? (pos++, read()) : tokens[pos++]?.atom;
+            out.push(['quote', next]);
+          } else out.push(token.atom);
+        }
+        return out;
+      };
+      return read();
+    })();
+
+    const BINDERS = new Set(['let', 'let*', 'letrec', 'letrec*', 'do', 'let-temporarily']);
+    const called = new Set();
+    const bound = new Set();
+    // define* and lambda* write an optional parameter as (name default), so a
+    // parameter list holds both strings and pairs. Reading only the strings left
+    // nineteen of them looking like calls -- (activate #f) in a parameter list is
+    // indistinguishable from a call to activate unless you know where you are.
+    const bindParameters = params => {
+      if (typeof params === 'string') { bound.add(params.replace(/^:/, '')); return; }
+      if (!Array.isArray(params)) return;
+      for (const p of params) {
+        if (typeof p === 'string') bound.add(p.replace(/^:/, ''));
+        else if (Array.isArray(p) && typeof p[0] === 'string') bound.add(p[0]);
+      }
+    };
+    const walk = node => {
+      if (!Array.isArray(node)) return;
+      const head = node[0];
+      // A case clause's head is a list of DATUMS, not a call: ((meter) 'meter)
+      // reads exactly like calling meter. Four of these were the last false
+      // positives left.
+      // Quoted data is data. Skipping only the head of a quote form and then
+      // walking into it anyway was the whole of the remaining noise: the
+      // observer table's rows read as calls to every hook name in them.
+      if (head === 'quote') return;
+      if (head === 'case') {
+        walk(node[1]);
+        for (const clause of node.slice(2)) {
+          if (Array.isArray(clause)) for (const body of clause.slice(1)) walk(body);
+        }
+        return;
+      }
+      if (typeof head === 'string') {
+        if (BINDERS.has(head)) {
+          // (let name ((a 1) (b 2)) …) or (let ((a 1)) …)
+          const bindings = Array.isArray(node[1]) ? node[1] : node[2];
+          if (typeof node[1] === 'string') bound.add(node[1]);
+          if (Array.isArray(bindings)) {
+            for (const binding of bindings) {
+              if (Array.isArray(binding) && typeof binding[0] === 'string') bound.add(binding[0]);
+              else if (typeof binding === 'string') bound.add(binding);
+            }
+          }
+        } else if (head === 'lambda' || head === 'lambda*') {
+          bindParameters(node[1]);
+        } else if (head === 'define' || head === 'define*') {
+          const target = node[1];
+          if (Array.isArray(target)) bindParameters(target.slice(1));
+        } else if (head !== 'quote') {
+          called.add(head);
+        }
+      }
+      for (const child of node) walk(child);
+    };
+    walk(forms);
+
+    // The Scheme and s7 vocabulary the bridge legitimately calls plainly. A list
+    // rather than a pattern, because telling language from library by shape is
+    // the mistake this whole block is a correction of.
+    const s7Vocabulary = new Set([
+      'define', 'define*', 'defined?', 'let', 'let*', 'letrec', 'lambda', 'lambda*',
+      'if', 'cond', 'case', 'when', 'unless', 'begin', 'do', 'and', 'or', 'not',
+      'set!', 'quote', 'apply', 'map', 'for-each', 'catch', 'error', 'dilambda',
+      'setter', 'car', 'cdr', 'caar', 'cadr', 'cdar', 'cddr', 'caddr', 'cdddr',
+      'cadddr', 'cons', 'list', 'append', 'reverse', 'length', 'list-ref',
+      'list-tail', 'list->string', 'list->vector', 'string->list', 'vector->list',
+      'assoc', 'member', 'memq', 'null?', 'pair?', 'list?', 'symbol?', 'string?',
+      'number?', 'integer?', 'real?', 'boolean?', 'char?', 'vector?', 'procedure?',
+      'let?', 'eq?', 'eqv?', 'equal?', 'string=?', 'string<?', 'string-ref',
+      'string-length', 'string-append', 'string-copy', 'string->number',
+      'number->string', 'string->symbol', 'symbol->string', 'substring',
+      'string-position', 'format', 'display', 'write', 'write-char', 'newline',
+      'read', 'read-line', 'read-char', 'char-ready?', 'char=?', 'char->integer',
+      'integer->char', 'eof-object?', 'open-input-string', 'with-output-to-string',
+      'flush-output-port', 'load', 'provide', 'require', 'exit', 'getenv',
+      'file-exists?', 'make-hash-table', 'make-vector', 'vector', 'vector-ref',
+      'vector-set!', 'vector-length', 'make-float-vector', 'float-vector?',
+      'float-vector-ref', 'float-vector-set!', 'make-hook', 'hook-push',
+      'hook-remove', 'hook-functions', 'arity', 'inlet', 'varlet', 'cutlet',
+      'rootlet', 'curlet', 'object->string', 'gensym', 'sort!', 'copy', 'fill!',
+      'abs', 'min', 'max', 'floor', 'ceiling', 'round', 'truncate', 'exact',
+      'inexact', 'exact->inexact', 'expt', 'sqrt', 'exp', 'log', 'sin', 'cos',
+      'tan', 'atan', 'quotient', 'remainder', 'modulo', 'nan?', 'infinite?',
+      'even?', 'odd?', 'zero?', 'positive?', 'negative?', 'reverse!', 'list-set!',
+      'let-temporarily', 'symbol', 'values', 'call-with-exit', 'string-upcase',
+      'string-downcase', 'hash-table-ref', 'hash-table-set!', 'else',
+    ]);
+    for (const name of called) {
+      if (bound.has(name) || ours.has(name)) continue;
+      if (name.startsWith('sv-') || name.startsWith('svp-') || name.startsWith('vscode-')) continue;
+      if (s7Vocabulary.has(name) || index.has(name)) continue;
+      if (/^[-0-9:*'#]/.test(name) || name.length < 4) continue;
+      unknown.add(name);
+    }
+
     if (unknown.size > 0) {
       fail(gate, `not in Snd's own index: ${[...unknown].join(', ')}`);
     } else {

@@ -234,7 +234,16 @@ export class SndProcess {
           // Snd looks for its .scm files here. Without it, a bridge that
           // wants (require ...) finds nothing -- and the error says only
           // "can't load", not where it looked.
-          SND_PATH: path.dirname(options.bridgePath) + path.delimiter + (process.env.SND_PATH ?? ''),
+          //
+          // JOINED, not concatenated. Written as `dir + path.delimiter + (env ??
+          // '')` this puts a trailing colon on the value whenever SND_PATH is
+          // unset, which is the normal case. Snd then takes the whole string as
+          // ONE directory named "…/scheme:", and load reports "No such file or
+          // directory" for a file that is sitting right there -- which is how
+          // the parity overlay came to be silently absent from every session.
+          SND_PATH: [path.dirname(options.bridgePath), process.env.SND_PATH]
+            .filter(Boolean)
+            .join(path.delimiter),
         },
       }) as cp.ChildProcessWithoutNullStreams;
     } catch (error) {

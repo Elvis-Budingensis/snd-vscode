@@ -72,11 +72,24 @@ Edit Header and `save-state` are covered. What remains:
 
 **First, the thing that explains the rest of this section.** In a build with no
 toolkit loop, playback is synchronous: `play` returns when the sound is over.
-The DAC writer is scheduled as an idle work procedure through the toolkit's
-`BACKGROUND_ADD`; under `USE_NO_GUI` that macro is an immediate one-shot call
-rather than a scheduler, so `play` is forced down the blocking path and `:wait`
-has nothing left to decide. Setting it to "background" by hand would write the
-first buffer and then underrun.
+Bill Schottstaedt, asked about it: the no-gui version assumes there is no event
+loop, so it can only play the file straight through — there is no point in it
+looking for graphics events. The `NOT_IN_BACKGROUND` case in `snd-dac.c` runs
+
+    while (dac_in_background(NULL) == BACKGROUND_CONTINUE)
+      check_for_event();
+
+so there *is* a loop; it just serves events and nothing else. Elsewhere the DAC
+writer is scheduled as an idle work procedure through the toolkit's
+`BACKGROUND_ADD`, and under `USE_NO_GUI` that macro is an immediate one-shot
+call rather than a scheduler, so `play` takes the blocking path and `:wait` has
+nothing left to decide.
+
+Genuinely asynchronous playback is a change to Snd in C, not something the
+bridge can arrange: Bill's pointer for it is `start_dac` in `snd-dac.c`, tied
+into an outside event loop. His parenthesis in that loop is worth keeping too —
+"need to be able to C-g out of this" — so `kill -INT` is the way out of a stuck
+playback, not `kill`.
 
 **But the output IS running while it blocks, and it can be watched.** Measured
 in this build, playing `oboe.snd`: `play-hook` fired 795 times inside one
@@ -89,12 +102,24 @@ along the way.
 
 So `pausing` and `playing` are not absent state. They are unreachable state:
 for the duration of the sound the bridge is not reading stdin, so nothing can
-be asked or set until `play` comes back. That is a different limit with a
-different remedy — `char-ready?` works here, and 795 hook calls are 795 chances
-to service a waiting request, which would make stop and pause work without an
-event loop. Not built: a request that reaches an edit from inside the hook while
-the DAC is reading is a re-entrancy question, and it deserves measuring before
-code.
+be asked or set until `play` comes back. `char-ready?` works here, and 795 hook
+calls are 795 chances to read a waiting line, so **stop** is serviced from the
+hook: it is recognised by name, without running the reader on the audio path,
+and it ENDS the block, so `sv-serve` is reading again a moment later. Anything
+else the hook reads is queued and answered when `play` returns; a line read and
+dropped would be a request the extension is still waiting on.
+
+**Pause is refused there, and that is not a limitation to work around.**
+Setting `pausing` from the hook does stop the DAC — but a stopped DAC stops
+calling `play-hook`, which is the only thing reading stdin. The resume can then
+never arrive, and the loop above shows what the process does instead:
+`dac_in_background` keeps answering `BACKGROUND_CONTINUE`, `check_for_event()`
+keeps being called with no buffer to write, and Snd sits at 100% CPU with no way
+back in. Observed, after a probe that appeared to prove pause worked — the probe
+scheduled its own resume from inside the handler at buffer 260, so it never
+needed the way back in. Measuring the setting is not measuring the round trip.
+The `pause` op therefore answers `'available #f` with a reason in a build that
+plays synchronously, and works normally in one that does not.
 
 They are registered as variables regardless, because a build whose `play`
 returns early has both, and `sv-async-play?` is the one place that decides which

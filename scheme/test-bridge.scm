@@ -79,7 +79,14 @@
 (define (marks . args) (list 7))
 (define (mark-sample m) 100)
 (define (mark-name m) "start")
-(define (mark-sync m) 0)
+;; A dilambda, because that is what Snd's is: the overlay sets it with
+;; (set! ((symbol->value 'mark-sync) m) v), and a plain procedure makes that an
+;; error rather than a wrong value -- which is how the missing setter showed up
+;; here in the first place.
+(define *mark-syncs* (make-hash-table))
+(define mark-sync
+  (dilambda (lambda (m) (or (*mark-syncs* m) 0))
+            (lambda (m v) (set! (*mark-syncs* m) v) v)))
 ;; The selection, in Snd's own three parts. Written as dilambdas because
 ;; that is what they are -- and because the whole bug was calling a
 ;; set-selection-position that does not exist.
@@ -451,7 +458,56 @@
     (or (*channel-hooks* key)
         (set! (*channel-hooks* key) (make-hook 'snd)))))
 
+
+;; ---- stubs the parity overlay needs --------------------------------------
+;;
+;; Each records HOW it was called, because that is what these tests are for.
+;; The overlay's own comments name two places where a positional order was
+;; wrong and silently did something else: save-marks takes the sound first and
+;; the filename second, and swap-channels takes (snd chn snd other), not
+;; (other ...) alone. A stub that only returned a value would pass either way.
+
+(define *calls* ())
+(define (record! name . args)
+  (set! *calls* (cons (cons name args) *calls*))
+  #t)
+(define (last-call name)
+  (let loop ((rest *calls*))
+    (cond ((null? rest) #f)
+          ((eq? (caar rest) name) (cdar rest))
+          (else (loop (cdr rest))))))
+
+(define (save-sound-as file . rest) (apply record! 'save-sound-as file rest))
+(define (update-sound snd) (record! 'update-sound snd))
+(define *read-only-flag* #t)
+(define (read-only snd) *read-only-flag*)
+(define (auto-update) #f)
+(define (save-edit-history file snd chn) (record! 'save-edit-history file snd chn))
+(define (edit-fragment position snd chn) (list 'fragment position snd chn))
+(define (find-mark needle snd chn) (record! 'find-mark needle snd chn) 42)
+(define (save-marks snd file) (record! 'save-marks snd file))
+(define (mark-properties m) (list 'colour 'red))
+(define (transform-framples snd chn) 4)
+(define (transform-sample bin slice snd chn) (* 0.25 (+ bin 1)))
+(define (reverse-channel . args) (apply record! 'reverse-channel args))
+(define (normalize-channel . args) (apply record! 'normalize-channel args))
+(define (scale-to peak snd) (record! 'scale-to peak snd))
+(define (swap-channels . args) (apply record! 'swap-channels args))
+
 (load "scheme/snd-vscode.scm")
+
+;; ---- the parity overlay ---------------------------------------------------
+;;
+;; Loaded here for the same reason the bridge is: its ops are dispatch,
+;; argument order and error paths, all of which are pure s7. In the product it
+;; is loaded from inside snd-vscode.scm just before (sv-start); here it is
+;; loaded directly, because sv-no-autostart means sv-start never runs.
+;;
+;; Worth stating plainly: until the op-coverage gate was widened to read every
+;; scheme file rather than the one filename it had hard-coded, these nine ops
+;; were invisible to it. The number stayed green while the newest code in the
+;; project sat outside it.
+(load "scheme/snd-vscode-s7-parity-overlay.scm")
 
 ;; ------------------------------------------------------------ JSON
 
@@ -1713,6 +1769,126 @@
 (check "ui: variable-display keeps its value in Snd" 1.25 (ui-meter 'value))
 (check "ui: variable-display has an instrument parent" "instrument"
        ((sv-ui-widgets (ui-meter 'parent)) 'label))
+
+
+;; ---- the parity overlay's ops ---------------------------------------------
+;;
+;; What these are for is argument ORDER and the error paths, not return values.
+;; Two of the overlay's own comments record a positional order that was wrong
+;; and did something else without complaining; these pin both.
+
+(sv-request "p1" 'saveas (inlet 'file "/tmp/x.snd" 'snd 0 'srate 44100
+                                'sampleType "mus-lshort" 'headerType "mus-riff"))
+(check "overlay: saveas answers with the file" "/tmp/x.snd"
+       (((last-frame) 'value) 'file))
+(check "overlay: saveas passes the file first, then keywords" "/tmp/x.snd"
+       (car (last-call 'save-sound-as)))
+(check-true "overlay: saveas uses keywords, not positions"
+            (and (memq :sound (last-call 'save-sound-as))
+                 (memq :srate (last-call 'save-sound-as))
+                 (memq :sample-type (last-call 'save-sound-as))
+                 #t))
+(check-true "overlay: saveas turns a sample-type string into a symbol"
+            (symbol? (list-ref (last-call 'save-sound-as)
+                               (+ 1 (- (length (last-call 'save-sound-as))
+                                       (length (memq :sample-type (last-call 'save-sound-as))))))))
+(sv-request "p2" 'saveas (inlet 'snd 0))
+(check "overlay: saveas without a file is an error frame" #f ((last-frame) 'ok))
+
+(sv-request "p3" 'updatesound (inlet 'snd 0))
+(check-true "overlay: updatesound reports success" (((last-frame) 'value) 'updated))
+
+(sv-request "p4" 'soundaccess (inlet 'snd 0))
+(check-true "overlay: soundaccess reports read-only"
+            (((last-frame) 'value) 'readOnly))
+(check "overlay: and auto-update" #f (((last-frame) 'value) 'autoUpdate))
+
+(sv-request "p5" 'saveedithistory (inlet 'file "/tmp/h.scm" 'snd 0 'chn 0))
+(check "overlay: saveedithistory answers with the file" "/tmp/h.scm"
+       (((last-frame) 'value) 'file))
+(check "overlay: save-edit-history takes the file first" "/tmp/h.scm"
+       (car (last-call 'save-edit-history)))
+(sv-request "p6" 'saveedithistory (inlet 'snd 0))
+(check "overlay: saveedithistory without a file is an error frame" #f
+       ((last-frame) 'ok))
+
+(sv-request "p7" 'editdetails (inlet 'snd 0 'chn 0 'position 1))
+(check-true "overlay: editdetails sends the fragment as TEXT, never as data"
+            (string? (((last-frame) 'value) 'fragment)))
+
+;; SAVE-MARKS TAKES THE SOUND FIRST.  g_save_marks(snd, filename): a swapped
+;; order here wrote nothing and reported success, and save-marks is a plain
+;; typed procedure, so there are no keywords to catch it.
+(sv-request "p8" 'paritymark (inlet 'action "save" 'snd 3 'file "/tmp/m.marks"))
+(check "overlay: mark save passes the sound first" 3 (car (last-call 'save-marks)))
+(check "overlay: and the file second" "/tmp/m.marks" (cadr (last-call 'save-marks)))
+
+(sv-request "p9" 'paritymark (inlet 'action "find" 'needle 100 'snd 0 'chn 0))
+(check-true "overlay: mark find reports a hit" (((last-frame) 'value) 'found))
+(check-true "overlay: and sends the mark as an index, not an object"
+            (integer? (((last-frame) 'value) 'mark)))
+
+(sv-request "p10" 'paritymark (inlet 'action "sync" 'mark 42 'sync 2))
+(check "overlay: mark sync sets the sync value" 2 (((last-frame) 'value) 'sync))
+(sv-request "p11" 'paritymark (inlet 'action "sync"))
+(check "overlay: mark sync without a mark is an error frame" #f ((last-frame) 'ok))
+
+(sv-request "p12" 'paritymark (inlet 'action "properties" 'mark 42))
+(check-true "overlay: mark properties travel as printed data, not code"
+            (string? (((last-frame) 'value) 'properties)))
+(sv-request "p13" 'paritymark (inlet 'action "wobble"))
+(check "overlay: an unknown mark action is an error frame" #f ((last-frame) 'ok))
+
+(sv-request "p14" 'transformdata (inlet 'snd 0 'chn 0 'slice 0))
+(check "overlay: transformdata reports what Snd has" 4
+       (((last-frame) 'value) 'framples))
+(check "overlay: and returns that many values" 4
+       (length (((last-frame) 'value) 'values)))
+(sv-request "p15" 'transformdata (inlet 'snd 0 'chn 0 'count 2))
+(check "overlay: count clamps to what is available" 2
+       (length (((last-frame) 'value) 'values)))
+(sv-request "p16" 'transformdata (inlet 'snd 0 'chn 0 'count 99))
+(check "overlay: and a count past the end does not run off it" 4
+       (length (((last-frame) 'value) 'values)))
+
+;; SWAP-CHANNELS TAKES FOUR ARGUMENTS.  Passing 'other alone as chn0 ignored
+;; the channel from context and swapped a different pair than was asked for.
+(sv-request "p17" 'parityedit (inlet 'action "swap-channels" 'snd 1 'chn 0 'other 1))
+(check "overlay: swap-channels is given all four positions" 4
+       (length (last-call 'swap-channels)))
+(check "overlay: the current channel is one side of the swap" (list 1 0 1 1)
+       (last-call 'swap-channels))
+
+(sv-request "p18" 'parityedit (inlet 'action "reverse-channel" 'snd 0 'chn 0))
+(check-true "overlay: parityedit answers with an edit position"
+            (integer? (((last-frame) 'value) 'editPosition)))
+(sv-request "p19" 'parityedit (inlet 'action "scale-to" 'peak 0.5 'snd 0))
+(check "overlay: scale-to is given the peak first" 0.5 (car (last-call 'scale-to)))
+
+;; THE WHITELIST IS THE POINT: a caller must not be able to name any Snd
+;; symbol and have the bridge call it.
+(sv-request "p20" 'parityedit (inlet 'action "delete-sound"))
+(check "overlay: an edit outside the whitelist is an error frame" #f
+       ((last-frame) 'ok))
+
+(sv-request "p21" 'paritycapabilities (inlet))
+(check-true "overlay: capabilities are a list"
+            (pair? ((last-frame) 'value)))
+(check-true "overlay: each names a Snd function and whether it is there"
+            (let ((first (car ((last-frame) 'value))))
+              (and (string? (first 'name))
+                   (boolean? (first 'available)))))
+(check-true "overlay: a function the build has is reported present"
+            (let loop ((rest ((last-frame) 'value)))
+              (cond ((null? rest) #f)
+                    ((string=? ((car rest) 'name) "save-marks") ((car rest) 'available))
+                    (else (loop (cdr rest))))))
+(check "overlay: one it does not have is reported absent" #f
+       (let loop ((rest ((last-frame) 'value)))
+         (cond ((null? rest) #f)
+               ((string=? ((car rest) 'name) "add-transform") ((car rest) 'available))
+               (else (loop (cdr rest))))))
+
 
 (set! sv-emit original-emit)
 

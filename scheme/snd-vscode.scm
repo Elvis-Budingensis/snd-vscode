@@ -725,6 +725,37 @@
           (sv-play-ended)
           (inlet 'playing #f 'start start 'synchronous #t)))))
 
+(sv-define-op pause (params)
+  ;; `on` absent means toggle, so one command can serve one button.
+  ;;
+  ;; ONLY WHERE SOMETHING ELSE KEEPS RUNNING.  In a build whose play blocks,
+  ;; pausing the DAC also stops play-hook, and play-hook is the only thing
+  ;; reading stdin for the duration -- so the resume could never arrive.  What
+  ;; the process does instead is spin: dac_in_background keeps answering
+  ;; BACKGROUND_CONTINUE and snd-dac.c's loop keeps calling check_for_event()
+  ;; with no buffer to write, at 100% CPU, with no way back in.  Observed.
+  ;;
+  ;; That is not a bug to work around, it is the shape of a build whose loop
+  ;; looks for events and nothing else.
+  ;;
+  ;; Reaching this op at all means sv-serve is reading, so either the build is
+  ;; asynchronous or play has already returned; setting pausing is safe in both
+  ;; cases.  What it must not do is pretend to be useful in the third case, so
+  ;; a nogui build gets a plain answer instead of a paused transport nobody
+  ;; asked for.
+  (if (not (sv-async-play?))
+      (inlet 'paused #f 'available #f
+             'reason "this build plays synchronously: there is nothing running to pause")
+      (let* ((current (catch #t
+                            (lambda () (and (sv-have? 'pausing)
+                                            ((symbol->value 'pausing))))
+                            (lambda args #f)))
+             (wanted (let ((given (sv-arg params 'on #<undefined>)))
+                       (if (eq? given #<undefined>) (not current) (and given #t)))))
+        (if (sv-pause! wanted)
+            (inlet 'paused wanted)
+            (inlet 'paused #f 'available #f)))))
+
 (sv-define-op stop (params)
   (when (sv-have? 'stop-playing) ((symbol->value 'stop-playing)))
   ;; stop-playing-hook fires on its own for a sound that ends by itself, but
@@ -760,8 +791,10 @@
   #t)
 
 (sv-define-op loadpath (params)
-  ;; Put a directory on s7's *load-path*, so (load-from-path "v.scm") finds
-  ;; Snd's own Scheme files.
+  ;; Put a directory on s7's *load-path*, so (load "v.scm") finds Snd's own
+  ;; Scheme -- the fm-violin, clm-ins, dsp, examp. s7's `load` searches
+  ;; *load-path* itself; there is no load-from-path in Snd's s7, and a comment
+  ;; here recommending one is how that call got written in the first place.
   ;;
   ;; This is what makes the fm-violin available -- and the fm-violin is what
   ;; made the .snd files every example in the documentation opens. Those files
@@ -2652,6 +2685,11 @@
 
 (define (sv-play-note-buffer size)
   (set! sv-play-frames (+ sv-play-frames (if (integer? size) size 0)))
+  ;; Only worth doing while play is blocking: with a toolkit loop sv-serve is
+  ;; reading stdin anyway, and taking a line from under it here would be a
+  ;; race against the loop rather than a service to it.
+  (unless (sv-async-play?)
+    (sv-service-transport))
   (when (>= (- sv-play-frames sv-play-emitted) (sv-play-interval))
     (set! sv-play-emitted sv-play-frames)
     (sv-event 'playing
@@ -2672,6 +2710,112 @@
                            'frame (+ sv-play-origin sv-play-frames)))
   (set! sv-play-frames 0)
   (set! sv-play-emitted 0))
+
+;; ------------------------------------------------------------------
+;; TRANSPORT WHILE PLAY BLOCKS
+;;
+;; There IS a loop -- it just does not serve requests. From Bill
+;; Schottstaedt, asked about this: the no-gui version assumes there is no
+;; event loop, so it can only play the file straight through, and the
+;; NOT_IN_BACKGROUND case in snd-dac.c runs
+;;
+;;   while (dac_in_background(NULL) == BACKGROUND_CONTINUE)
+;;     check_for_event();
+;;
+;; So play does not return until the sound is over, and for its whole duration
+;; sv-serve is not reading stdin: a stop has nowhere to arrive. But that loop
+;; writes a buffer per turn and play-hook fires with it -- 795 times for
+;; oboe.snd at dac-size 64, measured. The hook is therefore a place where code
+;; runs, once per buffer, inside the block.
+;;
+;; So the hook reads stdin on Snd's behalf. What it must NOT do is evaluate
+;; anything: a request that reached an edit from here would be running inside
+;; the audio path while the DAC is reading, which is the re-entrancy problem
+;; this deliberately avoids. It recognises one op by name, calls stop-playing,
+;; and hands EVERYTHING ELSE to a queue that sv-serve drains before it goes
+;; back to stdin. A line read here and dropped would be a request the extension
+;; is still waiting on.
+;;
+;; char-ready? is what makes it possible: it answers without blocking, so a
+;; hook that finds nothing waiting costs one call and returns.
+;;
+;; Genuinely asynchronous playback is not reachable from here at all. Bill's
+;; pointer for it is start_dac in snd-dac.c, tied into an outside event loop --
+;; a change to Snd in C, not something the bridge can arrange.
+;; ------------------------------------------------------------------
+
+(define sv-pending-lines ())    ; read during playback, not yet handled
+
+(define (sv-queue-line line)
+  ;; Appended, not pushed: these are requests in the order the extension sent
+  ;; them, and answering them out of order would be worse than answering them
+  ;; late.
+  (set! sv-pending-lines (append sv-pending-lines (list line))))
+
+(define (sv-take-pending)
+  (and (pair? sv-pending-lines)
+       (let ((line (car sv-pending-lines)))
+         (set! sv-pending-lines (cdr sv-pending-lines))
+         line)))
+
+;; Does this line ask for something the hook may do by itself?
+;;
+;; MATCHED AGAINST THE REAL WIRE FORMAT, which is a Scheme form and not JSON:
+;;
+;;   (sv "7" 'stop (inlet))
+;;
+;; The first version of this looked for "op":"stop" -- a shape that never
+;; appears on this pipe. It matched nothing, every line went to the queue, and
+;; stop worked only once play had finished on its own, which is exactly the
+;; symptom it was written to remove. requestLine in bridge.ts is the authority
+;; for this and was not consulted; the same mistake the play op carries a
+;; comment about.
+;;
+;; Matched as text on purpose: parsing the form here would mean running the
+;; reader on the audio path. A false negative only means the line waits in the
+;; queue, which is the behaviour we had before.
+;;
+;; ONLY STOP. Pause looks like it belongs here and must not be: setting
+;; `pausing` from the hook stops the DAC, and a stopped DAC stops calling
+;; play-hook -- which is the only thing reading stdin while play blocks. The
+;; resume can then never arrive, play never returns, and Snd sits at 100% CPU
+;; in a loop nobody can reach. Observed, after a probe that "proved" pause
+;; worked: the probe scheduled its own resume from inside the handler at buffer
+;; 260, so it never needed the way back in. Measuring the setting is not
+;; measuring the round trip.
+;;
+;; Stop is different in the one way that matters: it ENDS the block, so
+;; sv-serve is reading again a moment later.
+;;
+;; Nor is an eval of (stop-playing) from the editor recognised, and it cannot
+;; be: that arrives as 'eval with Scheme in a string, and running it here is
+;; the thing this design refuses to do.
+(define (sv-transport-op line)
+  (and (string-position "'stop " line) 'stop))
+
+(define (sv-pause! on)
+  (catch #t
+         (lambda ()
+           (and (sv-have? 'pausing)
+                (begin (set! ((symbol->value 'pausing)) (and on #t)) #t)))
+         (lambda args #f)))
+
+(define (sv-service-transport)
+  ;; Called from play-hook, once per DAC buffer. Everything here is either a
+  ;; non-blocking test or a variable write.
+  (when (catch #t (lambda () (char-ready? *stdin*)) (lambda args #f))
+    (let ((line (catch #t (lambda () (read-line *stdin* #t)) (lambda args #f))))
+      (when (string? line)
+        (let ((op (sv-transport-op line)))
+          (case op
+            ((stop)
+             ;; The reply for this request is sent by the stop op itself once
+             ;; play has returned and sv-serve reaches the queued line; what
+             ;; happens here is only the stopping.
+             (catch #t (lambda () ((symbol->value 'stop-playing))) (lambda args #f))
+             (sv-queue-line line))
+            (else (sv-queue-line line))))))))
+
 
 (define sv-play-hooks-installed #f)
 
@@ -2761,6 +2905,15 @@
   ;; event loop and exactly wrong with one.
   (sv-event 'ready (list 'mode "nogui" 'protocol sv-protocol-version))
   (let loop ()
+    ;; Lines the play-hook took from stdin while play was blocking. Drained
+    ;; first and to exhaustion: they arrived before anything still waiting on
+    ;; the pipe, and a request answered out of order is worse than one
+    ;; answered late.
+    (let ((queued (sv-take-pending)))
+      (when queued
+        (unless (or (= (length queued) 0) (char=? (string-ref queued 0) #\;))
+          (sv-handle-line queued))
+        (loop)))
     (let ((line (read-line *stdin* #t)))
       (if (eof-object? line)
           (begin
@@ -2804,6 +2957,37 @@
         (sv-event 'ready (list 'mode "gui" 'protocol sv-protocol-version))
         (sv-serve))))
 
+;; Optional s7-Parity-Overlay: additive Ops (saveas, updatesound,
+;; soundaccess, saveedithistory, editdetails, paritymark, transformdata,
+;; parityedit, paritycapabilities), siehe scheme/snd-vscode-s7-parity-overlay.scm.
+;;
+;; `load`, NICHT `load-from-path`: letzteres gibt es in Snds s7 nicht.  Der
+;; Aufruf scheiterte vom ersten Tag an mit "unbound variable load-from-path",
+;; das catch unten fing den Fehler, und das Overlay wurde nie geladen -- weder
+;; im Real-Snd-Gate noch im Produkt.  Neun Ops fehlten in einer Sitzung, die
+;; ansonsten gesund aussah.
+;;
+;; s7s `load` durchsucht *load-path* selbst, ein blanker Dateiname genuegt also.
+;; SND_PATH aus src/sndProcess.ts steht dort an erster Stelle -- gemessen:
+;;   *load-path* => ("…/snd-vscode/scheme" "…/snd-vscode" "/usr/local/share/snd")
+;; Diese Annahme war die einzige an der Stelle, die stimmte; die Funktion, die
+;; sie benutzen sollte, war die falsche.
+;;
+;; Der Fehlerfall nennt jetzt die Datei UND den Namen des Events, weil genau
+;; dieses stumme Event der Grund war, dass der Fehlschlag so lange unbemerkt
+;; blieb.  Ein Fehler, der nur in einem ungelesenen Frame steht, ist keiner,
+;; den jemand findet.
+(define (sv-load-parity-overlay)
+  (catch #t
+    (lambda () (load "snd-vscode-s7-parity-overlay.scm"))
+    (lambda (type info)
+      (sv-emit (inlet 'event "parity-overlay-load-failed"
+                      'file "snd-vscode-s7-parity-overlay.scm"
+                      'loadPath (if (defined? '*load-path*) *load-path* ())
+                      'detail (object->string info))))))
+
 (if (defined? 'sv-no-autostart)
     (sv-event 'loaded (list 'protocol sv-protocol-version))
-    (sv-start))
+    (begin
+      (sv-load-parity-overlay)
+      (sv-start)))

@@ -78,8 +78,30 @@ function inlet(params = {}) {
 // Match the extension's significant startup order: the declarative UI has to
 // exist before ~/.snd, while the transport is loaded last.  This gate uses
 // -noinit for isolation, so there is no user init between the two here.
+//
+// SND_PATH IS PART OF THAT STARTUP, not a convenience.  snd-vscode.scm loads
+// the parity overlay with load-from-path and a bare filename, which only
+// resolves because src/sndProcess.ts puts the bridge's own directory on
+// SND_PATH and Snd merges that into *load-path* before any -l argument is
+// read.  This runner spawns Snd itself, so without the same variable the
+// overlay is simply not there -- load-from-path fails, the catch around it
+// swallows the error into a parity-overlay-load-failed event nobody reads, and
+// nine ops go missing in a session that otherwise looks healthy.  A gate that
+// starts the process differently from the product tests a different product.
 const child = spawn(executable, ['-noinit', '-l', uiBridge, sound, '-l', bridge], {
   cwd: temporary,
+  env: {
+    ...process.env,
+    // JOINED, not concatenated. `dir + path.delimiter + (process.env.SND_PATH ??
+    // '')` puts a trailing colon on the value when the variable is unset, Snd
+    // takes the whole string as ONE directory called "…/scheme:", and load
+    // reports "No such file or directory" for a file that is sitting right
+    // there. The event frame said so exactly; three rounds went by without
+    // reading it, because the frame was being discarded.
+    SND_PATH: [path.dirname(bridge), process.env.SND_PATH]
+      .filter(Boolean)
+      .join(path.delimiter),
+  },
   stdio: ['pipe', 'pipe', 'pipe'],
 });
 child.stdout.setEncoding('utf8');
@@ -101,7 +123,16 @@ function dispatch(frame) {
     readyResolve(frame);
     return;
   }
-  if (frame.event) return;
+  // EVENTS ARE KEPT, not dropped. `if (frame.event) return;` silently discarded
+  // every event frame, including parity-overlay-load-failed -- the one frame
+  // that says why nine ops are missing. A failure that is reported into a sink
+  // is not reported: the gate said "unknown op" and printed no diagnostics at
+  // all, so three rounds went looking for a cause the process had already
+  // stated.
+  if (frame.event) {
+    diagnostics += `[event] ${JSON.stringify(frame)}\n`;
+    return;
+  }
   const waiter = pending.get(frame.id);
   if (!waiter) return;
   pending.delete(frame.id);
@@ -249,6 +280,62 @@ try {
     comment: header.comment,
   });
   check(restoredHeader.srate === header.srate, 'real Edit Header did not restore sample rate');
+
+  // ---- the parity overlay, against a real Snd -----------------------------
+  //
+  // The overlay is loaded by snd-vscode.scm itself, immediately before
+  // sv-start, so a session that answers at all should have it. If it does not,
+  // every check below fails on a missing op rather than on a wrong answer,
+  // which is the distinction the first check makes explicit.
+  //
+  // What only a real Snd can settle: whether these names exist with these
+  // signatures in the C layer. The s7 tests pin the argument ORDER against
+  // stubs; they cannot notice a function Snd does not export, or one whose
+  // arity differs from what the overlay assumes.
+  const capabilities = await request('paritycapabilities');
+  check(Array.isArray(capabilities) && capabilities.length > 0,
+    'the parity overlay did not load into the real session');
+  const has = name => capabilities.find(entry => entry.name === name)?.available === true;
+  check(has('save-marks') && has('find-mark'),
+    'real Snd reports no marks functions, so the overlay was checked against the wrong API');
+
+  const access = await request('soundaccess', { snd });
+  check(typeof access.readOnly === 'boolean' && typeof access.autoUpdate === 'boolean',
+    'real soundaccess did not report both flags');
+
+  const marksFile = path.join(temporary, 'gate.marks');
+  await request('eval', { code: `(add-mark 100 ${snd} 0 "gate")` });
+  const foundMark = await request('paritymark', { action: 'find', needle: 100, snd, chn: 0 });
+  check(foundMark.found === true && Number.isInteger(foundMark.mark),
+    'real mark find did not return an index');
+  // SAVE-MARKS TAKES THE SOUND FIRST. A swapped order writes nothing and
+  // reports success, so the file on disk is the only witness.
+  await request('paritymark', { action: 'save', snd, file: marksFile });
+  check(fs.existsSync(marksFile) && fs.statSync(marksFile).size > 0,
+    'real save-marks wrote no file — check the argument order');
+  const synced = await request('paritymark', {
+    action: 'sync', mark: foundMark.mark, sync: 3,
+  });
+  check(synced.sync === 3, 'real mark-sync did not take the value (integer->mark missing?)');
+
+  const historyFile = path.join(temporary, 'gate-history.scm');
+  await request('saveedithistory', { file: historyFile, snd, chn: 0 });
+  check(fs.existsSync(historyFile) && fs.statSync(historyFile).size > 0,
+    'real save-edit-history wrote no program');
+
+  const details = await request('editdetails', { snd, chn: 0 });
+  check(typeof details.fragment === 'string' && details.fragment.length > 0,
+    'real editdetails sent no fragment');
+
+  // SWAP-CHANNELS needs four positions; the fixture is one channel, so ask for
+  // a swap that cannot happen and require a clean refusal rather than a crash.
+  const beforeEdit = await request('edits', { snd, chn: 0 });
+  const reversed = await request('parityedit', {
+    action: 'reverse-channel', snd, chn: 0,
+  });
+  check(reversed.editPosition > beforeEdit.position,
+    'real reverse-channel did not add an edit');
+  await request('undo', { snd, chn: 0 });
 
   await request('savestate', { file: stateFile });
   check(fs.existsSync(stateFile) && fs.statSync(stateFile).size > 0, 'real save-state wrote no program');

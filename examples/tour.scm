@@ -177,3 +177,21 @@
 ;;   "Snd: Show Spectrum"  -- view: spectrogram (3D), log freq on, size 2048
 ;;                            and the oboe's harmonics stand up as ridges
 ;;   space in the waveform panel, or (play)
+
+(play)
+(stop-playing)
+
+(load "~/snd-vscode/scheme/snd-vscode-s7-parity-overlay.scm")
+
+(define stereo (new-sound "/tmp/stereo-test.snd" 2 44100 mus-bfloat mus-next "" 100))
+(set! (sample 0 stereo 0) 0.25)
+(set! (sample 0 stereo 1) -0.25)
+(list (sample 0 stereo 0) (sample 0 stereo 1))
+
+((sv-ops 'parityedit) (inlet 'action "swap-channels" 'snd stereo 'chn 0 'other 1))
+(list (sample 0 stereo 0) (sample 0 stereo 1))
+
+(add-mark 10 0 0)
+(define m ((sv-ops 'paritymark) (inlet 'action "find" 'needle 10 'snd 0 'chn 0)))
+m
+((sv-ops 'paritymark) (inlet 'action "sync" 'mark (m 'mark) 'sync 3))
