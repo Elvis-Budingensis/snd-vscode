@@ -9,15 +9,71 @@ Two things at once, which is the whole point:
   the cursor, Tab completion, `snd-help` on hover. The same key chords as
   `inf-snd.el`, because anyone who already works this way has them in their
   fingers.
-- **Snd's graphs as editor panels**: waveform, single spectrum, sonogram,
-  3D spectrogram, wavogram, and the user graph, drawn in VS Code from numbers
-  Snd computes. Which means they work in a
-  headless Snd build, over ssh, and beside the file being edited — three
-  things Snd's own Motif window cannot do.
+- **Snd's graphs as editor panels**: waveform, single spectrum, sonogram, 3D
+  spectrogram, wavogram, and the user graph, drawn in VS Code from numbers Snd
+  computes. Which means they work in a headless Snd build, over ssh, and beside
+  the file being edited — three things Snd's own Motif window cannot do.
 
 Snd stays the editor. Every edit happens in Snd, in Scheme, so there is one
 edit history and it is the one that gets saved. The panels set the cursor,
 the selection and the visible range, and ask for a redraw.
+
+## Why
+
+Snd itself is not the fragile part. Its GUI is: Motif, drawn through X11, which
+on macOS means XQuartz — a dependency Apple never carried and nobody else has
+promised to keep working either. Every few releases something in that stack
+shifts and a working installation stops being one, and none of it has anything
+to do with the editor underneath.
+
+So this takes the GUI out of the equation. Snd's own `configure` defaults to no
+GUI at all — Motif is used only with `--with-motif` — and the binary this drives
+has no X dependency whatsoever. What used to be a Motif window is a VS Code
+panel, drawn from numbers Snd computes.
+
+The editing stays where it belongs: in Snd, in s7, with one edit history, the
+one that gets saved.
+
+## The panels
+
+Every picture below is drawn from numbers Snd computed: the reductions come from
+`channel-amp-envs`, the transforms from `snd-spectrum` and Snd's own sonogram and
+spectrogram matrices, the wavogram from the samples themselves. Nothing here is a
+second implementation of Snd's DSP, which is why the displays agree with Snd's
+own and why they keep working in a build with no GUI at all.
+
+**Waveform** — `Snd: Show Waveform`. The min/max reduction Snd uses for its own
+graph, with the transport, the edit operations and the selection beside it.
+`oboe.snd`: the attack, the sustain, the decay.
+
+![The waveform panel](https://raw.githubusercontent.com/Elvis-Budingensis/snd-vscode/main/docs/images/waveform.png)
+
+**Single transform** — `Snd: Show Spectrum`, view `single transform`. One FFT at
+the cursor, in dB, with the oboe's harmonics standing up over the noise floor.
+`size`, `window` and the frequency range are Snd's own variables; the panel sets
+them and reads the result back.
+
+![A single spectrum of oboe.snd](https://raw.githubusercontent.com/Elvis-Budingensis/snd-vscode/main/docs/images/spectrum-single.png)
+
+**Sonogram** — the same panel, view `sonogram`: 1024 transforms of 4096 points,
+time to the right, frequency upward, level as brightness. The harmonics are the
+horizontal lines.
+
+![The sonogram view](https://raw.githubusercontent.com/Elvis-Budingensis/snd-vscode/main/docs/images/spectrum-sonogram.png)
+
+**3D spectrogram** — view `spectrogram (3D)`, the same data as a surface, with
+Snd's `spectro-x-angle`, `-y-angle`, `-z-angle`, `-z-scale` and `-hop` behind it.
+At full Nyquist width a 330 Hz note puts everything of interest in the first few
+percent, as here; `up to` is what makes it readable.
+
+![The 3D spectrogram](https://raw.githubusercontent.com/Elvis-Budingensis/snd-vscode/main/docs/images/spectrogram.png)
+
+**Wavogram** — `Snd: Show Wavogram`. 120 traces of 64 samples, each line one
+trace, painted back to front so that nearer traces hide the ones behind them.
+Setting `trace` to a period aligns successive peaks and the pitch becomes a
+shape.
+
+![The wavogram](https://raw.githubusercontent.com/Elvis-Budingensis/snd-vscode/main/docs/images/wavogram.png)
 
 ## Requirements
 
@@ -539,6 +595,16 @@ than a short one:
 - **The Files, Regions and Mixes dialogs** have no panel. Marks and edit
   history are in the tree; regions and mixes are not.
 - **`ladspa`** is reachable from the REPL only.
+
+## Not affiliated
+
+This is an independent project. It is **not** part of Snd and **not** supported
+by Bill Schottstaedt or by the Snd project — please do not send Snd's author bug
+reports about it. Snd is his work, and so is s7; the questions I put to him about
+`snd-dac.c` were answered generously and are cited where they informed the code,
+which is not the same thing as endorsement.
+
+Issues about this extension belong here.
 
 ## Licence
 
