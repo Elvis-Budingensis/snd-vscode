@@ -43,6 +43,11 @@ const REQUIRED = [
   'extension/examples/vscode-ui.scm',
   'extension/data/snd-index.json',
   'extension/LICENSE.txt',
+  // The marketplace icon has to BE in the package. Unlike the README's
+  // screenshots, which the gallery fetches over their raw.githubusercontent
+  // URLs, this one is read out of the vsix -- so a package.json naming an icon
+  // that was excluded shows the grey placeholder and says nothing about why.
+  'extension/icon.png',
 ];
 
 // Patterns that must NOT appear. Sources and tests are not wrong to ship, only
@@ -137,6 +142,36 @@ for (const { pattern, why } of FORBIDDEN) {
 const binaries = entries.filter(entry => /^extension\/bin\/[^/]+\/snd$/.test(entry));
 if (binaries.length === 0) {
   problems.push('no Snd binary under bin/ — the package will fall back to PATH');
+}
+
+// THE ICON, declared and sized. It arrived as a 1254x1254, 3.3 MB PNG that
+// package.json did not mention at all: the gallery would have shown the grey
+// placeholder while the file rode along in every download. Both halves are
+// checkable here and nowhere else -- tsc has no opinion about PNGs, and the
+// gallery only tells you by looking wrong.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  if (!manifest.icon) {
+    problems.push('package.json names no icon — the gallery shows a placeholder');
+  } else {
+    const icon = path.join(root, manifest.icon);
+    if (!fs.existsSync(icon)) {
+      problems.push(`package.json names ${manifest.icon}, which is not there`);
+    } else {
+      const bytes = fs.statSync(icon).size;
+      // The header is enough: width and height are big-endian at offset 16.
+      const header = fs.readFileSync(icon).subarray(0, 24);
+      const width = header.readUInt32BE(16);
+      const height = header.readUInt32BE(20);
+      if (width !== height) problems.push(`${manifest.icon} is ${width}x${height}, not square`);
+      if (width < 128) problems.push(`${manifest.icon} is ${width}px; 128 is the minimum`);
+      if (bytes > 512 * 1024) {
+        problems.push(
+          `${manifest.icon} is ${Math.round(bytes / 1024)} KB — an icon in every download`
+        );
+      }
+    }
+  }
 }
 
 fs.rmSync(temporary, { recursive: true, force: true });
