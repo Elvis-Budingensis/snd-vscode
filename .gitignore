@@ -27,4 +27,3 @@ out/
 # (No pattern belongs under this paragraph — that is the point of it.)
 
 .vscode-test/
-.DS_Store.claude/
