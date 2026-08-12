@@ -74,7 +74,12 @@ jobs:
             bin/${{ matrix.platform }}-${{ matrix.arch }}/snd
             .build/snd-26.5/COPYING
 
-  # Windows is deliberately not in the matrix above. See WINDOWS.md: the
-  # source has MSVC and MinGW paths and they are old, and audio goes through
-  # waveOut. Claiming a build here that has not been stood up would be worse
-  # than the honest gap.
+  # macOS is the target. That is the point of the project rather than a limit
+  # of it: the extension exists to keep Snd usable on a Mac now that Motif and
+  # XQuartz are the hard part of installing it. Linux is built here too because
+  # it is nearly free and useful under WSL, but a Linux user normally has Snd
+  # from a package -- Planet CCRMA carries it -- and PATH is used then.
+  #
+  # Windows is not built and not claimed. Snd's Windows paths are MSVC and
+  # MinGW, both old, audio goes through waveOut, and nobody has stood any of it
+  # up; a matrix entry would assert otherwise.

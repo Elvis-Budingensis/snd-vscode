@@ -1,9 +1,8 @@
 #!/bin/sh
 # build-snd.sh -- build the headless Snd this extension drives.
 #
-# WHAT THIS AVOIDS.  Installing Snd is painful on macOS and Windows because
-# of MOTIF: XQuartz, libXm, libXt, libXpm, headers wherever Homebrew put
-# them this year.  None of that is needed here.  Snd's own configure
+# WHAT THIS AVOIDS.  Installing Snd is painful on macOS because of MOTIF:
+# XQuartz, libXm, libXt, libXpm, headers wherever Homebrew put them this year.  None of that is needed here.  Snd's own configure
 # defaults to no GUI -- Motif is only used with --with-motif -- and the
 # headless build has no X dependency at all.  sndlib and s7 are in the
 # tarball; the audio backend on macOS is CoreAudio, which is part of the
@@ -39,11 +38,16 @@ if [ ! -f "$ROOT/scheme/snd-vscode.scm" ]; then
   exit 2
 fi
 
+# macOS is the target; Linux builds too and costs nothing, though a Linux user
+# normally has Snd from a package (Planet CCRMA carries it) and needs none of
+# this.  Windows is deliberately absent rather than half-supported: Snd's
+# Windows paths are MSVC and MinGW, both old, audio goes through waveOut, and
+# none of it has been stood up.  A case branch here would be the only claim to
+# the contrary in the project.
 case "$(uname -s)" in
   Darwin) PLATFORM=darwin ;;
   Linux)  PLATFORM=linux ;;
-  MINGW*|MSYS*|CYGWIN*) PLATFORM=win32 ;;
-  *) echo "unknown platform: $(uname -s)"; exit 2 ;;
+  *) echo "unsupported platform: $(uname -s) -- macOS and Linux only"; exit 2 ;;
 esac
 
 case "$(uname -m)" in

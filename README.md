@@ -44,8 +44,11 @@ To skip even that: `.github/workflows/build-snd.yml` builds the same binaries
 in CI for macOS (arm64 and x64) and Linux. Snd's licence permits shipping
 them — "permission to use, copy, modify, distribute, and license … No written
 agreement, license, or royalty fee is required" — so a release can carry them
-and nothing needs building on your machine. Windows is a documented gap;
-see `WINDOWS.md`.
+and nothing needs building on your machine.
+
+Linux needs no bundled binary: Snd is packaged there — Planet CCRMA and most
+distributions carry it — and a Snd on PATH is used as-is. macOS is what the
+bundle is for, and what this extension was written to keep working.
 
 If you already have a Snd you like, including a Motif one, point `snd.path` at
 it and it wins over everything.

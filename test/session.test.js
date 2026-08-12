@@ -520,17 +520,21 @@ test('a platform-only bundle is accepted as a fallback', () => {
   assert.equal(resolved.source, 'bundled');
 });
 
-test('Windows looks for snd.exe', () => {
+test('a bundle is looked for by platform and arch, then by platform', () => {
+  // Windows had a test here for an .exe suffix. It has been removed with the
+  // suffix: macOS is the target, Linux has Snd from a package and uses PATH,
+  // and a test asserting a Windows filename was the only thing in the project
+  // that claimed a Windows build exists.
   const seen = [];
   resolveWith({
-    platform: 'win32',
-    arch: 'x64',
+    platform: 'darwin',
+    arch: 'arm64',
     exists: (candidate) => {
       seen.push(candidate);
       return false;
     },
   });
-  assert.ok(seen.some((candidate) => candidate.endsWith('snd.exe')), seen.join(' '));
+  assert.deepEqual(seen, ['/ext/bin/darwin-arm64/snd', '/ext/bin/darwin/snd']);
 });
 
 test('with nothing bundled it falls back to PATH', () => {

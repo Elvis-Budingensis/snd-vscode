@@ -12,19 +12,16 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const suffix = process.platform === 'win32' ? '.exe' : '';
 const candidates = [
   process.env.SND_BIN,
-  path.join(root, 'bin', `${process.platform}-${process.arch}`, `snd${suffix}`),
-  path.join(root, 'bin', process.platform, `snd${suffix}`),
-  path.join(root, '.build', 'snd-26.5', `snd${suffix}`),
+  path.join(root, 'bin', `${process.platform}-${process.arch}`, 'snd'),
+  path.join(root, 'bin', process.platform, 'snd'),
+  path.join(root, '.build', 'snd-26.5', 'snd'),
 ].filter(Boolean);
 
 let executable = candidates.find(candidate => fs.existsSync(candidate));
 if (!executable) {
-  const found = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['snd'], {
-    encoding: 'utf8',
-  });
+  const found = spawnSync('which', ['snd'], { encoding: 'utf8' });
   if (found.status === 0) executable = found.stdout.trim().split(/\r?\n/)[0];
 }
 

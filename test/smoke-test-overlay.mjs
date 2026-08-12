@@ -40,18 +40,16 @@ function findRoot() {
 }
 
 const root = findRoot();
-const suffix = process.platform === 'win32' ? '.exe' : '';
-
 function findSnd() {
   const candidates = [
     process.env.SND_BIN,
-    path.join(root, 'bin', `${process.platform}-${process.arch}`, `snd${suffix}`),
-    path.join(root, 'bin', process.platform, `snd${suffix}`),
-    path.join(root, '.build', 'snd-26.5', `snd${suffix}`),
+    path.join(root, 'bin', `${process.platform}-${process.arch}`, 'snd'),
+    path.join(root, 'bin', process.platform, 'snd'),
+    path.join(root, '.build', 'snd-26.5', 'snd'),
   ].filter(Boolean);
   let exe = candidates.find(c => fs.existsSync(c));
   if (!exe) {
-    const found = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['snd'], { encoding: 'utf8' });
+    const found = spawnSync('which', ['snd'], { encoding: 'utf8' });
     if (found.status === 0) exe = found.stdout.trim().split(/\r?\n/)[0];
   }
   if (!exe) {

@@ -98,12 +98,17 @@ export function localInitFiles(args: {
  *
  * THE INSTALL PROBLEM, AND WHICH HALF OF IT THIS SOLVES.
  *
- * What makes Snd painful to install on macOS and Windows is not Snd. It is
- * Motif: XQuartz, libXm, libXt, libXpm, headers in places Homebrew moved
- * last year. Snd's own configure defaults to NO GUI -- Motif is only used
- * with --with-motif -- and a headless build has no X dependency at all.
- * sndlib and s7 are in the tarball; the audio backend on macOS is
- * CoreAudio, which is part of the system.
+ * What makes Snd painful to install on macOS is not Snd. It is Motif:
+ * XQuartz, libXm, libXt, libXpm, headers in places Homebrew moved last year.
+ * Snd's own configure defaults to NO GUI -- Motif is only used with
+ * --with-motif -- and a headless build has no X dependency at all. sndlib and
+ * s7 are in the tarball; the audio backend on macOS is CoreAudio, which is
+ * part of the system.
+ *
+ * macOS IS THE TARGET, and that is the project rather than a limit of it.
+ * Linux packages Snd itself -- Planet CCRMA and most distributions carry it --
+ * so a Linux user's own Snd on PATH is the right answer there, and the bundle
+ * is for the platform where installing it is the problem.
  *
  * So: `./configure && make`. That is the whole build, and it is a build we
  * WANT rather than tolerate, because the GUI is exactly the part this
@@ -136,10 +141,13 @@ export function resolveExecutable(args: {
     return { command: configured, source: 'configured' };
   }
 
-  const suffix = platform === 'win32' ? '.exe' : '';
+  // No .exe branch: Windows is not a target. Snd's Windows paths are MSVC and
+  // MinGW, both old, audio goes through waveOut, and none of it has been stood
+  // up -- a suffix here would be the only line in the project pretending
+  // otherwise. If it is ever built, this is where it starts.
   const candidates = [
-    path.join(bundleRoot, `${platform}-${arch}`, `snd${suffix}`),
-    path.join(bundleRoot, platform, `snd${suffix}`),
+    path.join(bundleRoot, `${platform}-${arch}`, 'snd'),
+    path.join(bundleRoot, platform, 'snd'),
   ];
   for (const candidate of candidates) {
     if (exists(candidate)) return { command: candidate, source: 'bundled' };
