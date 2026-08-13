@@ -643,6 +643,20 @@
 (check "sounds: reports which is selected" #t ((car ((last-frame) 'value)) 'selected))
 (check "sounds: reports an empty sound as empty" #f ((car ((last-frame) 'value)) 'empty))
 (check "sounds: short name" "test.snd" ((car ((last-frame) 'value)) 'shortName))
+
+;; READ-ONLY, which is the one property whose absence misleads rather than
+;; merely limits: a read-only sound looks editable, the edit takes, and the
+;; refusal arrives at save time. The stand-in's read-only answers #t, so this
+;; also pins that a true answer survives as a BOOLEAN rather than as whatever
+;; Snd's C returns.
+(check-true "sounds: reports a read-only sound as read-only"
+            (eq? #t ((car ((last-frame) 'value)) 'readOnly)))
+(set! *read-only-flag* #f)
+(sv-request "11b" 'sounds (inlet))
+(check "sounds: and a writable one as writable" #f
+       ((car ((last-frame) 'value)) 'readOnly))
+(set! *read-only-flag* #t)
+(sv-request "11c" 'sounds (inlet))
 ;; An INTEGER on the wire. As the printed object it would come back in the
 ;; next request as the string "#<sound 0>" and be rejected by Snd.
 (check "sounds: index is an integer" 0 ((car ((last-frame) 'value)) 'index))

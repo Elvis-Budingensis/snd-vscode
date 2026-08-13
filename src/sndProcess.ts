@@ -296,31 +296,65 @@ export class SndProcess {
   }
 
   /**
-   * Ends the session.
+   * Ends the session and RESOLVES WHEN THE PROCESS IS ACTUALLY GONE.
    *
-   * Closing stdin first, and only then a signal: the headless bridge
-   * reads until EOF and shuts Snd down itself, which gives Snd the chance
-   * to release the audio device and to ask about unsaved edits in the GUI
-   * case.  SIGKILL leaves a locked sound card behind often enough to be
-   * worth the two hundred milliseconds.
+   * Closing stdin first, and only then a signal: the headless bridge reads
+   * until EOF and shuts Snd down itself, which gives Snd the chance to release
+   * the audio device and to ask about unsaved edits in the GUI case. SIGKILL
+   * leaves a locked sound card behind often enough to be worth the wait.
+   *
+   * But EOF only reaches a Snd that is reading stdin, and there is one state
+   * where it is not: playing. In a no-GUI build play does not return until the
+   * sound is over, and snd-dac.c's loop there is
+   *
+   *   while (dac_in_background(NULL) == BACKGROUND_CONTINUE) check_for_event();
+   *
+   * A pause set from the play hook stops the DAC without ending that loop, so
+   * the process spins at 100% and nothing on stdin will ever be read again.
+   * Six of those were found in Activity Monitor after a day's work, one with
+   * 8:44 hours of CPU time.
+   *
+   * SIGINT is what gets out of it -- Bill's own note beside that loop is "need
+   * to be able to C-g out of this" -- so it comes before SIGTERM rather than
+   * after. And this returns a promise because deactivate() has to be able to
+   * await it: a timer chain does not run once the extension host is tearing
+   * down, which is exactly when this matters most.
    */
-  stop(): void {
+  stop(): Promise<void> {
     const child = this.child;
-    if (!child) return;
-    try {
-      child.stdin.end();
-    } catch {
-      // already gone
-    }
-    setTimeout(() => {
-      if (child.exitCode === null) {
-        try { child.kill('SIGTERM'); } catch { /* gone */ }
-      }
-      setTimeout(() => {
+    if (!child || child.exitCode !== null) return Promise.resolve();
+    return new Promise<void>(resolve => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        for (const timer of timers) clearTimeout(timer);
+        resolve();
+      };
+      child.once('exit', finish);
+      const signal = (name: NodeJS.Signals) => {
         if (child.exitCode === null) {
-          try { child.kill('SIGKILL'); } catch { /* gone */ }
+          try { child.kill(name); } catch { /* gone */ }
         }
-      }, 2000);
-    }, 200);
+      };
+      try {
+        child.stdin.end();
+      } catch {
+        // already gone
+      }
+      const timers = [
+        setTimeout(() => signal('SIGINT'), 200),
+        setTimeout(() => signal('SIGTERM'), 700),
+        // Last resort, and it does happen: a Snd in that spin loop with the
+        // audio device open does not always answer the polite signals.
+        setTimeout(() => signal('SIGKILL'), 1700),
+        // Resolved on the exit event whenever possible, and only given up on
+        // here. Resolving the instant SIGKILL is SENT is not the same as the
+        // process being gone: restart() awaits this, and a second Snd starting
+        // while the first still holds the audio device is the failure that
+        // produces two of them at 100% CPU.
+        setTimeout(finish, 2000),
+      ];
+    });
   }
 }

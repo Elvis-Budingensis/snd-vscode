@@ -24,6 +24,7 @@ export interface Sound {
   srate: number;
   editPosition: number;
   edited: boolean;
+  readOnly?: boolean;
 }
 
 export interface EditHistory {
@@ -98,9 +99,19 @@ export class SoundExplorer implements vscode.TreeDataProvider<Node> {
           (node.sound.edited ? ` · edited (${node.sound.editPosition})` : '') +
           // Shown because a sound edited together with another one otherwise
           // looks possessed: an edit here changes something over there.
-          (node.sound.sync ? ` · sync ${node.sound.sync}` : '');
-        item.tooltip = node.sound.fileName;
-        item.iconPath = new vscode.ThemeIcon(node.sound.edited ? 'circle-filled' : 'file-media');
+          (node.sound.sync ? ` · sync ${node.sound.sync}` : '') +
+          // AND SAID OUT LOUD, because this is the one property whose absence
+          // misleads rather than merely limits. A read-only sound looks
+          // editable: the commands are enabled, an edit appears to take, and
+          // the refusal arrives at save time -- with the work living only in an
+          // edit history that cannot be written back where it came from.
+          (node.sound.readOnly ? ' · read-only' : '');
+        item.tooltip = node.sound.readOnly
+          ? `${node.sound.fileName}\n\nread-only: edits cannot be saved back to this file`
+          : node.sound.fileName;
+        item.iconPath = new vscode.ThemeIcon(
+          node.sound.readOnly ? 'lock' : node.sound.edited ? 'circle-filled' : 'file-media'
+        );
         item.contextValue = 'sndSound';
         item.id = `sound:${node.sound.index}`;
         return item;

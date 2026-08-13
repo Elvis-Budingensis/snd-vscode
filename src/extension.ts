@@ -283,13 +283,15 @@ class SndSession {
     return this.readyPromise;
   }
 
-  stop(): void {
-    this.process.stop();
+  stop(): Promise<void> {
+    return this.process.stop();
   }
 
   async restart(): Promise<void> {
-    this.stop();
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // Awaited now that stop() reports when the process is really gone: the
+    // fixed 800 ms was a guess that a spinning Snd could outlast, and starting
+    // a second one beside it is how you end up with several at 100% CPU.
+    await this.stop();
     this.readyPromise = undefined;
     await this.start();
   }
@@ -1639,11 +1641,29 @@ export function activate(context: vscode.ExtensionContext): void {
     void session.start().catch(() => undefined);
   }
 
-  context.subscriptions.push({ dispose: () => session.stop() });
+  context.subscriptions.push({ dispose: () => void session.stop() });
+  running = session;
 }
 
-export function deactivate(): void {
-  // Nothing: the process is a child and goes with the window. See the
-  // note at the top of sndProcess.ts for why it is deliberately not
-  // detached.
+/**
+ * The session, kept at module scope so deactivate() can reach it.
+ */
+let running: SndSession | undefined;
+
+export function deactivate(): Promise<void> {
+  // THE PROCESS DOES NOT GO WITH THE WINDOW. This used to do nothing, on the
+  // reasoning that a child dies with its parent -- which is not true on POSIX:
+  // it is reparented to launchd and carries on. A Snd left spinning in
+  // snd-dac.c's playback loop then burns a core until the machine is rebooted.
+  // Six were found in Activity Monitor after one day of development, one with
+  // 8:44 hours of CPU time.
+  //
+  // The promise is the other half. VS Code awaits what deactivate returns, and
+  // without that the escalation in SndProcess.stop is a timer chain that never
+  // runs, because the extension host is already tearing down -- so only
+  // stdin.end() would happen, which reaches a Snd that is reading stdin and no
+  // other.
+  const session = running;
+  running = undefined;
+  return session ? session.stop() : Promise.resolve();
 }

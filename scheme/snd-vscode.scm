@@ -468,7 +468,20 @@
                           ;; makes one, and one fills it afterwards -- and
                           ;; hiding it would make the file one just created
                           ;; disappear from the list.
-                          'empty (= 0 ((symbol->value 'framples) s 0))))
+                          'empty (= 0 ((symbol->value 'framples) s 0))
+                          ;; READ-ONLY IS THE ONE GAP THAT MISLEADS.  Everything
+                          ;; else missing from GAPS.md is simply absent: you
+                          ;; reach for it and it is not there.  A read-only
+                          ;; sound instead looks perfectly editable -- the edit
+                          ;; commands are enabled, an edit appears to take, and
+                          ;; the refusal arrives at save time, by which point
+                          ;; the work exists only in an edit history that
+                          ;; cannot be written where it came from.
+                          'readOnly (catch #t
+                                      (lambda ()
+                                        (and (sv-have? 'read-only)
+                                             (and ((symbol->value 'read-only) s) #t)))
+                                      (lambda args #f))))
                  (if (list? sounds) sounds (list sounds)))))))
 
 (sv-define-op waveform (params)

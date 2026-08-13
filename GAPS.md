@@ -51,7 +51,11 @@ Edit Header and `save-state` are covered. What remains:
   whatever the sound already had.
 - **`update-sound`** — re-read a file changed on disk behind Snd's back.
   Related: `auto-update`, and the warning about two conflicting versions.
-- **`read-only`** / the lock icon — a view-only sound looks editable here.
+- ~~**`read-only`**~~ — done. The `sounds` op reports it per sound and the tree
+  shows a lock icon, `read-only` in the description, and why in the tooltip.
+  It was the one gap on this list that MISLED rather than merely limited:
+  everything else absent here is absent visibly, but a read-only sound looked
+  editable, the edit appeared to take, and the refusal arrived at save time.
 - **`sound-loop-info`, `soundfont-info`** — loop points and soundfont regions;
   `mark-loops` in `examp.scm` places marks at them.
 
