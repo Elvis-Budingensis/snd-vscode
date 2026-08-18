@@ -12,17 +12,25 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// '.exe' where the platform needs it. MSYS2's shell resolves the bare name to
+// the .exe, so `ls bin/win32-x64/snd` and `which snd` both succeed -- node does
+// not, and answers existsSync(...'snd') === false, then ENOENT on spawn. Both
+// checked on Windows 11.
+const exe = name => (process.platform === 'win32' && !name.endsWith('.exe') ? `${name}.exe` : name);
+
 const candidates = [
   process.env.SND_BIN,
-  path.join(root, 'bin', `${process.platform}-${process.arch}`, 'snd'),
-  path.join(root, 'bin', process.platform, 'snd'),
-  path.join(root, '.build', 'snd-26.5', 'snd'),
+  exe(path.join(root, 'bin', `${process.platform}-${process.arch}`, 'snd')),
+  exe(path.join(root, 'bin', process.platform, 'snd')),
+  exe(path.join(root, '.build', 'snd-26.5', 'snd')),
 ].filter(Boolean);
 
 let executable = candidates.find(candidate => fs.existsSync(candidate));
 if (!executable) {
   const found = spawnSync('which', ['snd'], { encoding: 'utf8' });
-  if (found.status === 0) executable = found.stdout.trim().split(/\r?\n/)[0];
+  // ...and `which` under MSYS2 answers WITHOUT the suffix, which node cannot
+  // spawn. This was the ENOENT on /ucrt64/bin/snd.
+  if (found.status === 0) executable = exe(found.stdout.trim().split(/\r?\n/)[0]);
 }
 
 if (!executable) {
@@ -170,7 +178,7 @@ function request(op, params = {}) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);
-      reject(new Error(`timeout waiting for real Snd (${op})`));
+      reject(timedOut(`timeout waiting for real Snd (${op})`));
     }, 20000);
     pending.set(id, { resolve, reject, timer });
     child.stdin.write(`(sv ${schemeString(id)} '${op} ${inlet(params)})\n`);
@@ -183,7 +191,23 @@ function check(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-const startupTimer = setTimeout(() => readyReject(new Error('real Snd did not become ready in 20 s')), 20000);
+// WHAT ARRIVED, not just that nothing did.
+//
+// "did not become ready in 20 s" is the same message whether Snd is dead, was
+// never started, wrote something unparseable, or loaded no bridge because -l
+// was handed a path it could not take (see test/windowsload.test.js). All four
+// were guessed at across two machines for an evening before anyone printed the
+// buffer -- which had been collected all along, four lines above.
+const timedOut = (what) =>
+  new Error(
+    `${what}\n--- raw output from Snd (${diagnostics.length} bytes) ---\n` +
+      (diagnostics || '(nothing at all -- Snd wrote neither stdout nor stderr)')
+  );
+
+const startupTimer = setTimeout(
+  () => readyReject(timedOut('real Snd did not become ready in 20 s')),
+  20000
+);
 
 try {
   const announced = await ready;

@@ -46,7 +46,17 @@ function stop(child) {
     try {
       child.stdin.end();
     } catch { /* gone */ }
-    const timers = [
+    const windows = process.platform === 'win32';
+    const killTree = () => {
+      if (child.exitCode !== null || !child.pid) return;
+      try {
+        cp.spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+      } catch { /* gone */ }
+    };
+    const timers = windows ? [
+      setTimeout(killTree, 1500),
+      setTimeout(finish, 2500),
+    ] : [
       setTimeout(() => signal('SIGINT'), 200),
       setTimeout(() => signal('SIGTERM'), 700),
       setTimeout(() => signal('SIGKILL'), 1700),
@@ -83,7 +93,14 @@ test('a process that reads stdin exits on EOF alone', async () => {
   assert.equal(child.exitCode, 0, 'exited but not cleanly');
   // Well under the first signal: EOF did it, so Snd got to release the audio
   // device and ask about unsaved edits rather than being shot.
-  assert.ok(Date.now() - started < 200, `took ${Date.now() - started} ms — the signal did it, not EOF`);
+  // The bound is "before the last resort", not a fixed number: on Windows the
+  // last resort is taskkill at 1500 ms, and node's own startup under emulation
+  // already costs a quarter second.
+  const grace = process.platform === 'win32' ? 1500 : 200;
+  assert.ok(
+    Date.now() - started < grace,
+    `took ${Date.now() - started} ms — the last resort did it, not EOF`
+  );
 });
 
 test('a process that ignores EOF and signals is still gone afterwards', async () => {
@@ -92,7 +109,14 @@ test('a process that ignores EOF and signals is still gone afterwards', async ()
   // the audio device.
   const child = stubborn();
   await stop(child);
-  assert.equal(child.signalCode, 'SIGKILL', 'resolved before the kill was reaped');
+  if (process.platform === 'win32') {
+    // taskkill reports an ordinary exit status, not a signal -- there is no
+    // signal to report. What matters is the same either way: reaped, so
+    // restart() cannot start a second Snd onto a still-held audio device.
+    assert.notEqual(child.exitCode, null, 'resolved before the kill was reaped');
+  } else {
+    assert.equal(child.signalCode, 'SIGKILL', 'resolved before the kill was reaped');
+  }
 });
 
 test('the escalation resolves rather than hanging on an unkillable child', async () => {

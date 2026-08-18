@@ -20,8 +20,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const panels = fs
   .readdirSync(path.join(root, 'src'))
   .filter(name => /View\.ts$|Panel\.ts$/.test(name) || name === 'customUi.ts');

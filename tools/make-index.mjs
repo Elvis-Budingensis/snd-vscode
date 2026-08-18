@@ -19,6 +19,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 const source = process.argv[2] ?? process.env.SND_SOURCE;
 if (!source) {
@@ -160,7 +161,7 @@ const entries = [
     .map(name => ({ name, source: 's7' })),
 ].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 
-const outputDirectory = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'data');
+const outputDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data');
 fs.mkdirSync(outputDirectory, { recursive: true });
 const outputPath = path.join(outputDirectory, 'snd-index.json');
 fs.writeFileSync(

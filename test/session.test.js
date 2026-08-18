@@ -71,14 +71,20 @@ test('a user supplied -noinit still suppresses every user init file', () => {
 });
 
 test('the local s7 init files follow Snd\'s own order', () => {
-  const existing = new Set(['/h/.snd_prefs_s7', '/h/.snd_s7', '/custom/init.scm']);
+  // localInitFiles joins with path.join, so the separator is the running
+  // platform's. Spelling '/h/.snd_s7' out as a literal asserted a separator
+  // rather than the ORDER this test is about, and failed on Windows against
+  // '\\h\\.snd_s7'.
+  const inHome = name => require('node:path').join('/h', name);
+  const wanted = [inHome('.snd_prefs_s7'), inHome('.snd_s7'), '/custom/init.scm'];
+  const existing = new Set(wanted);
   assert.deepEqual(
     localInitFiles({
       home: '/h',
       environmentInit: '/custom/init.scm',
       exists: file => existing.has(file),
     }),
-    ['/h/.snd_prefs_s7', '/h/.snd_s7', '/custom/init.scm']
+    wanted
   );
 });
 
@@ -504,18 +510,24 @@ test('a configured path wins over everything', () => {
   assert.equal(resolved.source, 'configured');
 });
 
+// resolveExecutable builds these with path.join, so the separator is the
+// running platform's. Spelling them out as POSIX literals made every one of
+// these fail on Windows against '\\ext\\bin\\darwin-arm64\\snd' -- a test
+// asserting a separator rather than a decision.
+const bundled = (...parts) => require('node:path').join('/ext/bin', ...parts, 'snd');
+
 test('a bundled binary is preferred over PATH', () => {
   // The whole point: the common case needs no decision and no install.
   const resolved = resolveWith({
-    exists: (candidate) => candidate === '/ext/bin/darwin-arm64/snd',
+    exists: (candidate) => candidate === bundled('darwin-arm64'),
   });
-  assert.equal(resolved.command, '/ext/bin/darwin-arm64/snd');
+  assert.equal(resolved.command, bundled('darwin-arm64'));
   assert.equal(resolved.source, 'bundled');
 });
 
 test('a platform-only bundle is accepted as a fallback', () => {
   const resolved = resolveWith({
-    exists: (candidate) => candidate === '/ext/bin/darwin/snd',
+    exists: (candidate) => candidate === bundled('darwin'),
   });
   assert.equal(resolved.source, 'bundled');
 });
@@ -534,7 +546,7 @@ test('a bundle is looked for by platform and arch, then by platform', () => {
       return false;
     },
   });
-  assert.deepEqual(seen, ['/ext/bin/darwin-arm64/snd', '/ext/bin/darwin/snd']);
+  assert.deepEqual(seen, [bundled('darwin-arm64'), bundled('darwin')]);
 });
 
 test('with nothing bundled it falls back to PATH', () => {

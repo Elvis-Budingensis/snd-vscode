@@ -18,18 +18,24 @@
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+// '.exe' where the platform needs it: cc -o s7 writes s7.exe on Windows, and
+// node's existsSync does not follow MSYS2's bare-name resolution, so the build
+// succeeds and the check that follows it reports "none could be built".
+const exe = name => (process.platform === 'win32' && !name.endsWith('.exe') ? `${name}.exe` : name);
 
 // The project root from the SCRIPT's location, not from the current
 // directory. `npm run gates` from inside .build/ sets the working directory to
 // .build, and then every relative path here points one level too deep --
 // .build/.build/snd-26.5, which does not exist. npm finds package.json by
 // walking up; this script has to be able to do the same.
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const candidates = [
   process.env.S7,
-  path.join(root, 's7'),
-  path.join(root, 'tools', 's7'),
+  exe(path.join(root, 's7')),
+  exe(path.join(root, 'tools', 's7')),
   '/usr/local/bin/s7',
   '/usr/bin/s7',
 ];
@@ -73,7 +79,7 @@ if (!s7) {
       console.error(`${source} has s7.c but no s7.h — not a complete Snd source tree`);
       continue;
     }
-    const target = path.join(root, 's7');
+    const target = exe(path.join(root, 's7'));
     console.error(`no s7 yet — building one from ${source}/s7.c (about 20 s)`);
     const compiler = process.env.CC || (fs.existsSync('/usr/bin/clang') ? '/usr/bin/clang' : 'cc');
     // -DUSE_SND=0, and this is not optional if tools/build-snd.sh has already

@@ -39,6 +39,8 @@ export interface SndOptions {
   mode: SndMode;
   /** Sound files to open at startup. */
   files?: string[];
+  /** process.platform when omitted. Only Windows changes how -l is written. */
+  platform?: string;
 }
 
 /**
@@ -60,18 +62,89 @@ export interface SndOptions {
  */
 export function commandLine(options: SndOptions): { command: string; args: string[] } {
   const userNoInit = options.args.some(arg => arg === '-noinit' || arg === '--noinit');
+  // NO DEFAULT TO process.platform -- same reason as executableFor. With one,
+  // commandLine answered differently for identical arguments depending on the
+  // machine: full paths on macOS, basenames on Windows. start() passes the
+  // real platform; callers that don't pass one get the paths through unchanged.
+  const name = options.platform ? loadArgument(options.platform) : (file: string) => file;
   const args: string[] = [];
   if (options.uiBridgePath) {
     if (!userNoInit) args.push('-noinit');
-    args.push('-l', options.uiBridgePath);
+    args.push('-l', name(options.uiBridgePath));
     if (!userNoInit) {
-      for (const file of options.initFiles ?? []) args.push('-l', file);
+      for (const file of options.initFiles ?? []) args.push('-l', name(file));
     }
   }
   args.push(...options.args);
   for (const file of options.files ?? []) args.push(file);
-  args.push('-l', options.bridgePath);
+  args.push('-l', name(options.bridgePath));
   return { command: options.command, args };
+}
+
+/**
+ * How a file is named to -l.
+ *
+ * WINDOWS CANNOT BE GIVEN AN ABSOLUTE PATH HERE. Snd splits the -l argument
+ * on ':' as a path-list separator, and every absolute Windows path carries a
+ * drive colon, so `C:/tmp/t.scm` is torn into "C" and "/tmp/t.scm" and the
+ * answer is
+ *
+ *   can't load C:/tmp/t.scm: Invalid argument
+ *
+ * -- which is also, exactly, what a missing file says, because the failure
+ * happens before the file is ever opened. Verified against Snd 26 under
+ * MSYS2/UCRT64: `-l t.scm` loads, `-l "$PWD/t.scm"` does not, same file.
+ *
+ * So on Windows the BASENAME goes on the command line and the directory goes
+ * into SND_PATH, which -l does search (also verified: PING from a different
+ * cwd with SND_PATH pointing at the file's directory). cwd is deliberately
+ * NOT used for this -- it belongs to the user as Snd's notion of "current
+ * file", and the -l files span two directories anyway, the extension's own
+ * and the user's home.
+ *
+ * path.win32.basename rather than path.basename so the rule is the same
+ * whichever platform runs the test.
+ */
+export function loadArgument(platform: string): (file: string) => string {
+  if (platform !== 'win32') return file => file;
+  return file => path.win32.basename(file);
+}
+
+/**
+ * SND_PATH: every directory that -l has to find something in.
+ *
+ * JOINED, not concatenated. Written as `dir + delimiter + (env ?? '')` this
+ * puts a trailing separator on the value whenever SND_PATH is unset, which is
+ * the normal case. Snd then takes the whole string as ONE directory named
+ * "…/scheme:", and load reports "No such file or directory" for a file that is
+ * sitting right there -- which is how the parity overlay came to be silently
+ * absent from every session. See test/sndpath.test.js.
+ *
+ * On Windows the directories of the -l files must be here, because the command
+ * line carries only their basenames (see loadArgument). Elsewhere only the
+ * bridge's own directory is needed, for (require ...).
+ */
+export function loadSearchPath(args: {
+  bridgePath: string;
+  uiBridgePath?: string;
+  initFiles?: string[];
+  platform: string;
+  inherited?: string;
+}): string {
+  const p = args.platform === 'win32' ? path.win32 : path.posix;
+  const directories = [p.dirname(args.bridgePath)];
+  if (args.platform === 'win32') {
+    for (const file of [args.uiBridgePath, ...(args.initFiles ?? [])]) {
+      if (file) directories.push(p.dirname(file));
+    }
+  }
+  const seen = new Set<string>();
+  const unique = directories.filter(directory => {
+    if (seen.has(directory)) return false;
+    seen.add(directory);
+    return true;
+  });
+  return [...unique, args.inherited].filter(Boolean).join(p.delimiter);
 }
 
 /** Snd's s7-specific local init sequence (snd-xen.c:snd_load_init_file). */
@@ -141,19 +214,18 @@ export function resolveExecutable(args: {
     return { command: configured, source: 'configured' };
   }
 
-  // No .exe branch: Windows is not a target. Snd's Windows paths are MSVC and
-  // MinGW, both old, audio goes through waveOut, and none of it has been stood
-  // up -- a suffix here would be the only line in the project pretending
-  // otherwise. If it is ever built, this is where it starts.
+  // This is where it started, as the note that used to stand here said it
+  // would. Snd 26.7 builds under MSYS2/UCRT64 and runs; a bundle is snd.exe
+  // plus three DLLs (libdl, libfftw3-3, libwinpthread-1).
   const candidates = [
-    path.join(bundleRoot, `${platform}-${arch}`, 'snd'),
-    path.join(bundleRoot, platform, 'snd'),
+    withExeSuffix(path.join(bundleRoot, `${platform}-${arch}`, 'snd'), platform),
+    withExeSuffix(path.join(bundleRoot, platform, 'snd'), platform),
   ];
   for (const candidate of candidates) {
     if (exists(candidate)) return { command: candidate, source: 'bundled' };
   }
 
-  return { command: executableFor(mode, configured), source: 'path' };
+  return { command: executableFor(mode, configured, platform), source: 'path' };
 }
 
 /**
@@ -166,12 +238,37 @@ export function resolveExecutable(args: {
  * built both.  Which is why the setting is a command name and this is a
  * guess with a fallback, not a promise.
  */
-export function executableFor(mode: SndMode, configured: string): string {
+/**
+ * NO DEFAULT FOR platform. Falling back to process.platform here would make a
+ * pure function answer differently depending on the machine the test runs on:
+ * executableFor('nogui', 'snd') returned 'snd-nogui' on macOS and
+ * 'snd-nogui.exe' on Windows, for the same arguments. The platform is a
+ * PARAMETER everywhere else in this file (see resolveExecutable), and callers
+ * that have one pass it; the PATH lookup is the only caller that does.
+ */
+export function executableFor(mode: SndMode, configured: string, platform?: string): string {
   if (configured && configured !== 'snd') return configured;
-  if (mode === 'nogui') return 'snd-nogui';
-  if (mode === 'gui') return 'snd-motif';
-  return 'snd';
+  const suffix = (name: string) => (platform ? withExeSuffix(name, platform) : name);
+  if (mode === 'nogui') return suffix('snd-nogui');
+  if (mode === 'gui') return suffix('snd-motif');
+  return suffix('snd');
 }
+
+/**
+ * '.exe' where the platform needs it.
+ *
+ * MSYS2 makes this genuinely hard to see: its shell resolves a name without
+ * the suffix to the .exe transparently, so `which snd` answers
+ * /ucrt64/bin/snd and `ls bin/win32-x64/snd` succeeds -- while node, which
+ * does no such translation, reports existsSync('bin/win32-x64/snd') === false
+ * and spawn() fails with ENOENT. Checked both ways on Windows 11: the .exe
+ * name exists and runs, the bare name does neither.
+ */
+export function withExeSuffix(name: string, platform: string): string {
+  if (platform !== 'win32' || name.endsWith('.exe')) return name;
+  return `${name}.exe`;
+}
+
 
 export interface SndEvents {
   onStdout(text: string): void;
@@ -229,7 +326,15 @@ export class SndProcess {
         exists: candidate => fs.existsSync(candidate),
       });
 
-    const { command, args } = commandLine({ ...options, uiBridgePath, initFiles });
+    const platform = options.platform ?? process.platform;
+    const { command, args } = commandLine({ ...options, uiBridgePath, initFiles, platform });
+    const searchPath = loadSearchPath({
+      bridgePath: options.bridgePath,
+      uiBridgePath,
+      initFiles,
+      platform,
+      inherited: process.env.SND_PATH,
+    });
     this.setStatus('starting', `${command} ${args.join(' ')}`);
 
     let child: cp.ChildProcessWithoutNullStreams;
@@ -239,19 +344,9 @@ export class SndProcess {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: {
           ...process.env,
-          // Snd looks for its .scm files here. Without it, a bridge that
-          // wants (require ...) finds nothing -- and the error says only
-          // "can't load", not where it looked.
-          //
-          // JOINED, not concatenated. Written as `dir + path.delimiter + (env ??
-          // '')` this puts a trailing colon on the value whenever SND_PATH is
-          // unset, which is the normal case. Snd then takes the whole string as
-          // ONE directory named "…/scheme:", and load reports "No such file or
-          // directory" for a file that is sitting right there -- which is how
-          // the parity overlay came to be silently absent from every session.
-          SND_PATH: [path.dirname(options.bridgePath), process.env.SND_PATH]
-            .filter(Boolean)
-            .join(path.delimiter),
+          // See loadSearchPath: shape of the value, and why Windows needs
+          // more than one directory in it.
+          SND_PATH: searchPath,
         },
       }) as cp.ChildProcessWithoutNullStreams;
     } catch (error) {
@@ -342,7 +437,29 @@ export class SndProcess {
       } catch {
         // already gone
       }
-      const timers = [
+      // WINDOWS HAS NO SIGNALS, and Node does not pretend otherwise for long:
+      // child.kill(name) there calls TerminateProcess whatever the name says,
+      // so the "polite" step at 200 ms is a HARD kill -- the audio device stays claimed and
+      // unsaved edits are never asked about, which is the opposite of what the
+      // escalation is for. EOF, on the other hand, works everywhere.
+      //
+      // So on Windows: EOF and then WAIT, long enough for a Snd that is
+      // reading stdin to shut itself down (node's own startup under x64
+      // emulation on ARM already costs a quarter second, so 200 ms is not a
+      // measurement of anything). Only after that, taskkill -- with /T,
+      // because a Windows process tree is not reparented and killing the
+      // parent alone can leave children holding the device.
+      const windows = process.platform === 'win32';
+      const killTree = () => {
+        if (child.exitCode !== null || !child.pid) return;
+        try {
+          cp.spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+        } catch { /* gone */ }
+      };
+      const timers = windows ? [
+        setTimeout(killTree, 1500),
+        setTimeout(finish, 2500),
+      ] : [
         setTimeout(() => signal('SIGINT'), 200),
         setTimeout(() => signal('SIGTERM'), 700),
         // Last resort, and it does happen: a Snd in that spin loop with the

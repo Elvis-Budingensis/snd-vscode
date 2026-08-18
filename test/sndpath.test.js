@@ -66,6 +66,12 @@ test('both call sites use the joining form', () => {
   const fs = require('node:fs');
   for (const file of ['src/sndProcess.ts', 'tools/run-real-snd-tests.mjs']) {
     const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    // Comments in both files QUOTE the broken expression in order to explain
+    // it. Strip them, or this test fails on its own documentation.
+    const code = source
+      .split('\n')
+      .filter(line => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .join('\n');
     const site = /SND_PATH:[\s\S]{0,220}?,\n/.exec(source);
     assert.ok(site, `${file} no longer sets SND_PATH`);
     assert.ok(
@@ -73,9 +79,18 @@ test('both call sites use the joining form', () => {
       `${file} concatenates a delimiter instead of joining — this is the bug ` +
         'that hid the parity overlay'
     );
+    // The joining may live in the helper rather than at the call site --
+    // sndProcess.ts delegates to loadSearchPath, which has to build the value
+    // for two platforms. What must stay true is that SOMETHING joins and
+    // NOTHING concatenates, anywhere in the file.
     assert.ok(
-      /\.join\(path\.delimiter\)/.test(site[0]),
-      `${file} does not join its SND_PATH entries`
+      /\.join\((?:path|p)\.delimiter\)/.test(code) ||
+        /loadSearchPath/.test(site[0]),
+      `${file} neither joins its SND_PATH entries nor delegates to loadSearchPath`
+    );
+    assert.ok(
+      !/\+\s*path\.delimiter|path\.delimiter\s*\+/.test(code),
+      `${file} concatenates path.delimiter somewhere — that is the original bug`
     );
   }
 });

@@ -11,8 +11,9 @@
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-const root = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0;
 
 function fail(gate, message) {
@@ -870,7 +871,14 @@ if (process.env.RELEASE === '1') {
 // --- gate 6: tsc ------------------------------------------------------
 {
   const gate = 'tsc';
-  const result = spawnSync('npx', ['tsc', '-p', './'], { cwd: root, encoding: 'utf8' });
+  // NOT `spawnSync('npx', ...)`. On Windows npx is npx.cmd, and spawn without
+  // a shell cannot start a .cmd -- the call comes back with a non-zero status
+  // and NEITHER stdout NOR stderr, so this gate reports "FAIL tsc:" followed
+  // by nothing at all while `npx tsc -p ./` by hand compiles cleanly. Running
+  // the compiler's own entry point through the node we are already in needs no
+  // shell, no .cmd lookup and no PATH.
+  const tsc = path.join(root, 'node_modules', 'typescript', 'bin', 'tsc');
+  const result = spawnSync(process.execPath, [tsc, '-p', './'], { cwd: root, encoding: 'utf8' });
   if (result.status !== 0) {
     fail(gate, '\n' + (result.stdout || '') + (result.stderr || ''));
   } else {
