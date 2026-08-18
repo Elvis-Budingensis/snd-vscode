@@ -1,5 +1,17 @@
 # Changelog
 
+### Windows (groundwork, not yet shippable)
+
+Snd 26.7 builds and runs under MSYS2/UCRT64, and the extension now handles the
+platform: .exe resolution, -l by basename with SND_PATH carrying the
+directories, taskkill instead of the signal escalation node cannot deliver
+there, fileURLToPath in the tools.
+
+Still blocked: Snd cannot open a file given an absolute path on Windows — the
+drive colon fails in mus_expand_filename, for -l, for command-line sound files
+and for open-sound alike. Reported upstream. Until that is fixed there is no
+win32-x64 target.
+
 ## 0.1.1 — 2026-08-09
 
 - **Snd custom UI without Motif.** A declarative Scheme registry is loaded
