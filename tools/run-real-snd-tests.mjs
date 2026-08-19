@@ -38,6 +38,14 @@ if (!executable) {
   process.exit(2);
 }
 
+// WHICH BINARY, said before anything can go wrong with it. The list above
+// prefers a bundled or unpacked build over anything else, so a stale tree under
+// .build -- or a system install found through PATH -- is taken silently while a
+// freshly fixed Snd sits elsewhere. That produced an evening of "did not become
+// ready in 20 s" against a build whose bug had already been fixed upstream. The
+// name is one line and it is the first thing worth knowing.
+console.log(`real Snd gate: ${executable}`);
+
 const fixture = path.join(root, 'examples', 'sounds', 'oboe.snd');
 const bridge = path.join(root, 'scheme', 'snd-vscode.scm');
 const uiBridge = path.join(root, 'scheme', 'snd-vscode-ui.scm');
@@ -106,6 +114,13 @@ const child = spawn(executable, ['-noinit', '-l', uiBridge, sound, '-l', bridge]
     SND_PATH: [path.dirname(bridge), process.env.SND_PATH]
       .filter(Boolean)
       .join(path.delimiter),
+    // TMPDIR IS PART OF THAT STARTUP TOO, on Windows. Snd's get_tmpdir reads
+    // TMPDIR, and Windows sets TMP/TEMP instead; mingw's P_tmpdir is then a bare
+    // backslash, so save-state asked to write "\\/snd_2764_0.snd" and Windows
+    // answered "Invalid argument" -- after every earlier check had passed. The
+    // fixture directory is the right answer anyway: temp files belong beside the
+    // temp sound, and they leave with it.
+    TMPDIR: temporary,
   },
   stdio: ['pipe', 'pipe', 'pipe'],
 });
@@ -200,7 +215,8 @@ function check(condition, message) {
 // buffer -- which had been collected all along, four lines above.
 const timedOut = (what) =>
   new Error(
-    `${what}\n--- raw output from Snd (${diagnostics.length} bytes) ---\n` +
+    `${what}\n--- ${executable} ---\n` +
+      `--- raw output from Snd (${diagnostics.length} bytes) ---\n` +
       (diagnostics || '(nothing at all -- Snd wrote neither stdout nor stderr)')
   );
 

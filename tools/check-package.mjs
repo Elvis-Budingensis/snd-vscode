@@ -28,6 +28,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { buildVsix, defaultTarget, findVsce } from './package.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -98,13 +99,31 @@ if (staleness) {
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'snd-vscode-package-'));
 const target = path.join(temporary, 'gate.vsix');
 
-// --no-dependencies: the extension has no runtime dependencies, and letting
-// vsce resolve them turns a 2 s check into a network call.
-const built = spawnSync(
-  'npx',
-  ['--no-install', 'vsce', 'package', '--no-dependencies', '--target', 'darwin-arm64', '-o', target],
-  { cwd: root, encoding: 'utf8' }
-);
+// WHICH PLATFORM'S PACKAGE. This was pinned to darwin-arm64, so on Windows the
+// gate built the macOS bundle, found bin/darwin-arm64/snd absent from a tree
+// that has bin/win32-x64/snd.exe, and reported a missing binary for a package
+// nobody had asked for. vsce's target names are `${platform}-${arch}` for all
+// three platforms this extension ships to, so the running machine names its own
+// package; VSCE_TARGET overrides it for building someone else's.
+const vsceTarget = process.env.VSCE_TARGET ?? defaultTarget();
+
+// Whether vsce is here at all -- a contributor without it should still get a
+// full run of everything else, so this skips rather than fails. (Why it is not
+// invoked through npx is written down in tools/package.mjs.)
+const vsceEntry = findVsce();
+
+if (!vsceEntry) {
+  console.log('skip the package carries what the user needs: vsce is not installed');
+  fs.rmSync(temporary, { recursive: true, force: true });
+  process.exit(0);
+}
+
+// THE SAME BUILD THE RELEASE USES. This gate used to assemble its own vsce
+// call, which is how the win32 package went out carrying macOS Snd: the
+// exclusion was here, package:<target> in package.json knew nothing about it,
+// and the gate passed by inspecting its own work. buildVsix is now the only
+// way either of them packages anything.
+const { built } = buildVsix({ target: vsceTarget, out: target, directory: temporary });
 
 if (built.status !== 0) {
   const text = `${built.stdout ?? ''}${built.stderr ?? ''}`;
@@ -137,11 +156,31 @@ for (const { pattern, why } of FORBIDDEN) {
   }
 }
 
-// A binary is the point of the bundle on macOS, so its absence is worth saying
-// out loud rather than discovering after installing.
-const binaries = entries.filter(entry => /^extension\/bin\/[^/]+\/snd$/.test(entry));
+// A binary is the point of the bundle, so its absence is worth saying out loud
+// rather than discovering after installing. It has to be THIS target's binary:
+// a vsix carrying some other platform's Snd is as useless as one carrying none,
+// and the earlier `bin/[^/]+/snd` accepted exactly that. '.exe' because Windows
+// names it so -- the same suffix the real-Snd gate has to add before spawning.
+const binaryPattern = new RegExp(`^extension/bin/${vsceTarget}/snd(\\.exe)?$`);
+const binaries = entries.filter(entry => binaryPattern.test(entry));
 if (binaries.length === 0) {
-  problems.push('no Snd binary under bin/ — the package will fall back to PATH');
+  problems.push(
+    `no Snd binary under bin/${vsceTarget}/ — the package will fall back to PATH`
+  );
+}
+
+// AND NOTHING FROM ANOTHER PLATFORM. This check is what caught the dead flag
+// above: the package built, installed and ran, and was merely several megabytes
+// of unusable binary larger. Only the contents can say the exclusion happened,
+// which is why this stays even though the ignore file is written right here.
+const strays = entries.filter(
+  entry => entry.startsWith('extension/bin/') && !entry.startsWith(`extension/bin/${vsceTarget}/`)
+    && /\/(snd|snd\.exe|[^/]+\.dll|[^/]+\.dylib|[^/]+\.so)$/.test(entry)
+);
+if (strays.length > 0) {
+  problems.push(
+    `the ${vsceTarget} package carries another platform's files: ${strays.join(', ')}`
+  );
 }
 
 // THE ICON, declared and sized. It arrived as a 1254x1254, 3.3 MB PNG that
@@ -181,4 +220,4 @@ if (problems.length > 0) {
   console.error(`FAIL ${gate}:\n${problems.map(line => `     ${line}`).join('\n')}`);
   process.exit(1);
 }
-console.log(`ok   ${gate} (${entries.length} entries, ${binaries.join(', ')})`);
+console.log(`ok   ${gate} (${vsceTarget}, ${entries.length} entries, ${binaries.join(', ')})`);

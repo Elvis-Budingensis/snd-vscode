@@ -739,9 +739,15 @@ if (process.env.RELEASE === '1') {
   // A .vsix carrying every platform's binary makes a Linux user download a
   // macOS one. VS Code has platform-specific packages for exactly this, and
   // the moment there is more than one binary the untargeted script is wrong.
+  // 'snd.exe' TOO. Looking only for 'snd' meant Windows did not count as a
+  // binary at all: with bin/darwin-arm64/snd and bin/win32-x64/snd.exe present,
+  // this saw one platform, skipped the whole check, and the win32 package went
+  // out carrying 4.5 MB of macOS Snd -- the exact thing the note above warns of.
   const binaries = fs.existsSync(path.join(root, 'bin'))
     ? fs.readdirSync(path.join(root, 'bin')).filter(name =>
-        fs.existsSync(path.join(root, 'bin', name, 'snd'))
+        ['snd', 'snd.exe'].some(binary =>
+          fs.existsSync(path.join(root, 'bin', name, binary))
+        )
       )
     : [];
   if (binaries.length > 1) {

@@ -901,7 +901,7 @@ test('the test runner looks in the repository before anywhere else', () => {
     path.join(__dirname, '..', 'tools', 'run-scheme-tests.mjs'),
     'utf8'
   );
-  const list = /const sources = \[[\s\S]*?\]/.exec(runner);
+  const list = /const s7Sources = \(\) =>[\s\S]*?\]/.exec(runner);
   assert.ok(list, 'no source list');
   assert.ok(
     list[0].indexOf("'third-party'") < list[0].indexOf("'.build'"),

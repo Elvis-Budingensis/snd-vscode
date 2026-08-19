@@ -40,9 +40,41 @@ const candidates = [
   '/usr/bin/s7',
 ];
 
+// third-party/s7 first: it is in the repository, so a fresh clone can run the
+// s7 gate without downloading fourteen megabytes from ccrma. .build is the
+// fuller tree that tools/build-snd.sh leaves behind, and SND_SOURCE is for a
+// tree kept somewhere else.
+const s7Sources = () =>
+  [
+    path.join(root, 'third-party', 's7'),
+    path.join(root, '.build', 'snd-26.5'),
+    process.env.SND_SOURCE ?? '',
+  ].filter(Boolean);
+
+// A BINARY WE BUILT HAS TO BE NEWER THAN THE SOURCE. One sitting in the tree
+// was used whatever its age: after third-party/s7/s7.c was replaced wholesale
+// -- 3579 lines in, 3390 out -- this suite reported 381 checks, 0 failures
+// without having compiled a line of it. A green run against the previous
+// binary says nothing about the current source, and says it convincingly.
+//
+// Only our own build is judged this way. One named by S7, or found on PATH,
+// belongs to the user, who may well have meant a different s7 entirely.
+const newestSource = () =>
+  s7Sources()
+    .map(source => path.join(source, 's7.c'))
+    .filter(file => fs.existsSync(file))
+    .reduce((newest, file) => Math.max(newest, fs.statSync(file).mtimeMs), 0);
+
+const ourBuilds = new Set([exe(path.join(root, 's7')), exe(path.join(root, 'tools', 's7'))]);
+
 let s7;
 for (const candidate of candidates) {
   if (candidate && fs.existsSync(candidate)) {
+    if (ourBuilds.has(candidate) && fs.statSync(candidate).mtimeMs < newestSource()) {
+      console.error(`${path.basename(candidate)} is older than s7.c — rebuilding it`);
+      fs.rmSync(candidate, { force: true });
+      continue;
+    }
     s7 = candidate;
     break;
   }
@@ -60,16 +92,7 @@ if (!s7) {
 // permanently skipped -- and a skipped gate is the one that was going to
 // catch the next mistake in the bridge.
 if (!s7) {
-  // third-party/s7 first: it is in the repository, so a fresh clone can run
-  // the s7 gate without downloading fourteen megabytes from ccrma. .build is
-  // the fuller tree that tools/build-snd.sh leaves behind, and SND_SOURCE is
-  // for a tree kept somewhere else.
-  const sources = [
-    path.join(root, 'third-party', 's7'),
-    path.join(root, '.build', 'snd-26.5'),
-    process.env.SND_SOURCE ?? '',
-  ].filter(Boolean);
-  for (const source of sources) {
+  for (const source of s7Sources()) {
     // BOTH files. s7.c includes s7.h, so a directory with only the .c
     // compiles for two seconds and then stops on a missing header — and the
     // failure looks like a broken compiler rather than an incomplete
