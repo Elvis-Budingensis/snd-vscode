@@ -1,16 +1,51 @@
 # Changelog
 
-### Windows (groundwork, not yet shippable)
+## 0.1.14 — 2026-08-20
 
-Snd 26.7 builds and runs under MSYS2/UCRT64, and the extension now handles the
-platform: .exe resolution, -l by basename with SND_PATH carrying the
-directories, taskkill instead of the signal escalation node cannot deliver
-there, fileURLToPath in the tools.
+**Windows ships.** Everything the previous entry listed as blocked is fixed
+upstream in Snd 26.7 (20-Aug-2026), so there is a `win32-x64` target and it
+runs on a machine that has never seen MSYS2.
 
-Still blocked: Snd cannot open a file given an absolute path on Windows — the
-drive colon fails in mus_expand_filename, for -l, for command-line sound files
-and for open-sound alike. Reported upstream. Until that is fixed there is no
-win32-x64 target.
+Three faults in Snd, all found by running the integration gate on Windows and
+all now Bill Schottstaedt's code rather than local patches:
+
+- `mus_expand_filename` prepended the working directory to any name not
+  starting with `/`, so `C:/tmp/x.snd` became `C:/cwd/C:/tmp/x.snd` and every
+  absolute path failed with `EINVAL` — for `-l`, for command-line sound files
+  and for `open-sound` alike.
+- `get_tmpdir` read only `TMPDIR`, which Windows does not set, and fell back to
+  mingw's `P_tmpdir` — a bare backslash. Temp names came out as
+  `\/snd_2764_0.snd` and `save-state` could not write them.
+- `creat(name, 0666)` is rejected outright by the Windows runtime, which
+  accepts only `S_IREAD|S_IWRITE` as the mode. `mus_file_create` hit this
+  whenever `save-state` wrote a backed-up edit, and `save-sound-as` with it.
+  The same `#if _MSC_VER || __CYGWIN__` also left mingw without `O_BINARY` in
+  all four of sndlib's open/create functions, so sound data was being written
+  through CRLF translation.
+
+The last one is worth stating as a rule, because it was the root cause three
+times over: `_MSC_VER` is a compiler test, not a platform test.
+
+On this side:
+
+- `bin/win32-x64/` carries `snd.exe` and the three UCRT DLLs it needs
+  (`libdl`, `libfftw3-3`, `libwinpthread-1`). Without them the extension starts
+  nothing on a clean VM and says so only indirectly.
+- **one packaging path.** `tools/package.mjs` is now the only way a `.vsix` is
+  built, used by both the gate and the `package:<target>` scripts. They had
+  drifted, which is how a win32 package shipped 4.5 MB of macOS Snd while every
+  gate reported green — the gate was inspecting its own work. vsce's
+  `--ignore-other-target-folders` is advertised for exactly this and does
+  nothing (3.9.2 parses the flag and never reads it), so the ignore list is
+  generated per target and the package contents are checked afterwards.
+- the real-Snd gate names the binary it chose. It prefers a bundled or unpacked
+  build over anything else, so a stale tree quietly won over a freshly fixed
+  Snd for an evening.
+- the s7 gate rebuilds when `s7.c` or `s7.h` is newer than the binary. After
+  `third-party/s7` was updated wholesale — 3579 lines in, 3390 out — the suite
+  reported 381 checks, 0 failures without having compiled a line of it.
+- `third-party/s7` is upstream again at 20-Aug-2026; the local `uname` patch is
+  in Bill's tree now.
 
 ## 0.1.1 — 2026-08-09
 
