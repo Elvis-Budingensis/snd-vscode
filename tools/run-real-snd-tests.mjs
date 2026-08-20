@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // '.exe' where the platform needs it. MSYS2's shell resolves the bare name to
@@ -92,16 +93,44 @@ function inlet(params = {}) {
 // exist before ~/.snd, while the transport is loaded last.  This gate uses
 // -noinit for isolation, so there is no user init between the two here.
 //
-// SND_PATH IS PART OF THAT STARTUP, not a convenience.  snd-vscode.scm loads
-// the parity overlay with load-from-path and a bare filename, which only
-// resolves because src/sndProcess.ts puts the bridge's own directory on
-// SND_PATH and Snd merges that into *load-path* before any -l argument is
-// read.  This runner spawns Snd itself, so without the same variable the
-// overlay is simply not there -- load-from-path fails, the catch around it
-// swallows the error into a parity-overlay-load-failed event nobody reads, and
-// nine ops go missing in a session that otherwise looks healthy.  A gate that
-// starts the process differently from the product tests a different product.
-const child = spawn(executable, ['-noinit', '-l', uiBridge, sound, '-l', bridge], {
+// THE PRODUCT'S OWN COMMAND LINE, not one assembled here.  This runner used to
+// build the arguments itself, and the comment right above -- "a gate that
+// starts the process differently from the product tests a different product"
+// -- turned out to be describing this very block.  On Windows the extension
+// rewrote each -l argument to a bare basename and put the directories on
+// SND_PATH; SND_PATH does not feed -l (snd_load_file never consults
+// *load-path*), so under VS Code no session could load its own bridge.  This
+// gate passed 33 checks throughout, because it passed full paths of its own.
+//
+// So commandLine and loadSearchPath come from out/sndProcess.js now.  Whatever
+// the extension would do on this platform is what gets tested, including the
+// parts that only exist on one of them.
+//
+// SND_PATH is part of that startup, not a convenience: snd-vscode.scm loads the
+// parity overlay with load-from-path and a bare filename, which resolves only
+// because the bridge's own directory is on *load-path*.  Without it the overlay
+// is silently absent, load-from-path fails, the catch swallows the error into a
+// parity-overlay-load-failed event nobody reads, and nine ops go missing from a
+// session that otherwise looks healthy.
+const { commandLine, loadSearchPath } = createRequire(import.meta.url)(
+  path.join(root, 'out', 'sndProcess.js')
+);
+
+const startup = commandLine({
+  command: executable,
+  args: [],
+  bridgePath: bridge,
+  uiBridgePath: uiBridge,
+  initFiles: [],
+  files: [sound],
+  platform: process.platform,
+});
+
+// cwd IS DELIBERATELY NOT THE DIRECTORY OF ANYTHING BEING LOADED.  A startup
+// that only works when the process happens to sit in the right directory is
+// the fault this gate exists to catch, and the fixture directory is where the
+// user's cwd would be anyway.
+const child = spawn(startup.command, startup.args, {
   cwd: temporary,
   env: {
     ...process.env,
@@ -111,9 +140,13 @@ const child = spawn(executable, ['-noinit', '-l', uiBridge, sound, '-l', bridge]
     // reports "No such file or directory" for a file that is sitting right
     // there. The event frame said so exactly; three rounds went by without
     // reading it, because the frame was being discarded.
-    SND_PATH: [path.dirname(bridge), process.env.SND_PATH]
-      .filter(Boolean)
-      .join(path.delimiter),
+    SND_PATH: loadSearchPath({
+      bridgePath: bridge,
+      uiBridgePath: uiBridge,
+      initFiles: [],
+      platform: process.platform,
+      inherited: process.env.SND_PATH,
+    }),
     // TMPDIR IS PART OF THAT STARTUP TOO, on Windows. Snd's get_tmpdir reads
     // TMPDIR, and Windows sets TMP/TEMP instead; mingw's P_tmpdir is then a bare
     // backslash, so save-state asked to write "\\/snd_2764_0.snd" and Windows

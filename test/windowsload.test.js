@@ -1,24 +1,37 @@
-// windowsload.test.js -- -l takes a NAME on Windows, never a path.
+// windowsload.test.js -- -l takes the full path, on Windows like everywhere.
 //
-// WHY THIS EXISTS. Snd splits the -l argument on ':' as a path-list
-// separator. Every absolute Windows path carries a drive colon, so
+// WHY THIS EXISTS, AND WHY IT ONCE SAID THE OPPOSITE.
 //
-//   ./snd -noglob -noinit -l C:/tmp/t.scm
+// Snd 26 could not be given an absolute Windows path: mus_expand_filename
+// prepended the working directory to any name not starting with '/', so
+// `C:/tmp/t.scm` became `C:/cwd/C:/tmp/t.scm` and the answer was
+//
 //   can't load C:/tmp/t.scm: Invalid argument
 //
-// while `-l t.scm` from that directory prints PING -- same file, readable
-// either way, and no spaces in the failing path, so it is not quoting.
-// Verified against Snd 26 under MSYS2/UCRT64, 17 August 2026.
+// -- which is also, exactly, what a missing file says, because the failure
+// happens before the file is opened. A gate waiting for a bridge that was
+// never loaded reports "Snd did not become ready in 20 s" and looks like a
+// dead binary. That cost an evening across two machines.
 //
-// The trap is the MESSAGE: a missing file says exactly the same thing,
-// because the failure happens before the file is opened. A gate that waits
-// for a bridge which was never loaded therefore reports "Snd did not become
-// ready in 20 s" and looks for all the world like a dead binary or a buffering
-// problem. That cost an evening of guessing across two machines.
+// The workaround was to pass the BASENAME and put the directory in SND_PATH.
+// It was wrong, and this file asserted it for three days:
 //
-// So the rule is pinned here rather than rediscovered: on win32 the basename
-// goes on the command line, and every directory that -l must search goes into
-// SND_PATH.
+//   SND_PATH DOES NOT FEED -l. It feeds *load-path*, which s7's (load ...)
+//   consults. snd_load_file (snd-xen.c) expands the -l argument against the
+//   working directory, probes it, tries the source-file extensions, and gives
+//   up -- *load-path* is never reached.
+//
+// So the basenames resolved only when cwd happened to BE the directory holding
+// them. The integration gate sets exactly that cwd, so 33 checks passed
+// against a mechanism that had never worked; under VS Code, with the user's
+// own cwd, every session failed to load its own bridge. Green tests, dead
+// product, and the tests were the reason nobody looked.
+//
+// Fixed upstream in Snd 26.7 (20-Aug-2026). Verified from an unrelated cwd
+// with the bundled binary: full paths on -l reach {"event":"ready"}.
+//
+// The lesson worth keeping is not about colons. It is that a test which fixes
+// the environment its subject runs in tests the environment, not the subject.
 
 const test = require('node:test');
 const assert = require('node:assert');
@@ -43,26 +56,27 @@ function windowsOptions(extra = {}) {
   };
 }
 
-test('no -l argument on Windows contains a colon', () => {
+test('every -l argument on Windows keeps its full path', () => {
   const { args } = commandLine(windowsOptions());
   const loaded = args.filter((_, i) => args[i - 1] === '-l');
   assert.ok(loaded.length >= 3, 'expected the ui bridge, an init file and the bridge');
   for (const argument of loaded) {
     assert.ok(
-      !argument.includes(':'),
-      `Snd splits on ':' -- ${argument} would be torn at the drive letter`
+      path.win32.isAbsolute(argument),
+      `${argument} is not absolute -- a bare name only resolves when cwd happens to match`
     );
-    assert.equal(argument, path.win32.basename(argument), `${argument} is not a bare name`);
   }
+  assert.ok(loaded.includes(`${WIN_EXT}\\snd-vscode.scm`));
+  assert.ok(loaded.includes(`${WIN_HOME}\\.snd_s7`));
 });
 
 test('the bridge is still loaded LAST', () => {
   const { args } = commandLine(windowsOptions());
   assert.equal(args[args.length - 2], '-l');
-  assert.equal(args[args.length - 1], 'snd-vscode.scm');
+  assert.equal(args[args.length - 1], `${WIN_EXT}\\snd-vscode.scm`);
 });
 
-test('elsewhere the full path is kept', () => {
+test('elsewhere the full path is kept too', () => {
   const { args } = commandLine({
     ...windowsOptions(),
     platform: 'darwin',
@@ -74,24 +88,46 @@ test('elsewhere the full path is kept', () => {
   assert.ok(args.includes('/Users/someone/.snd_s7'));
 });
 
-test('loadArgument only rewrites on win32', () => {
-  assert.equal(loadArgument('darwin')('/a/b/c.scm'), '/a/b/c.scm');
-  assert.equal(loadArgument('linux')('/a/b/c.scm'), '/a/b/c.scm');
-  assert.equal(loadArgument('win32')('C:\\a\\b\\c.scm'), 'c.scm');
-  assert.equal(loadArgument('win32')('C:/a/b/c.scm'), 'c.scm');
+test('loadArgument rewrites nothing, on any platform', () => {
+  for (const platform of ['darwin', 'linux', 'win32']) {
+    assert.equal(loadArgument(platform)('/a/b/c.scm'), '/a/b/c.scm');
+    assert.equal(loadArgument(platform)('C:\\a\\b\\c.scm'), 'C:\\a\\b\\c.scm');
+    assert.equal(loadArgument(platform)('C:/a/b/c.scm'), 'C:/a/b/c.scm');
+  }
 });
 
-test('SND_PATH carries every directory the basenames need', () => {
+test('the -l arguments do not depend on the working directory', () => {
+  // The failure this file is about: identical arguments except for cwd used to
+  // decide whether the session came up at all.
+  const here = commandLine(windowsOptions({ cwd: WIN_EXT }));
+  const elsewhere = commandLine(windowsOptions({ cwd: 'C:\\somewhere\\else' }));
+  assert.deepEqual(here.args, elsewhere.args);
+});
+
+test('SND_PATH is the bridge directory, not a list of -l directories', () => {
+  // It exists for the bridge's own (load ...) calls -- the parity overlay --
+  // and the -l files name themselves in full. Adding their directories here
+  // was the workaround, and it never did anything.
   const value = loadSearchPath({
     bridgePath: `${WIN_EXT}\\snd-vscode.scm`,
     uiBridgePath: `${WIN_EXT}\\snd-vscode-ui.scm`,
     initFiles: [`${WIN_HOME}\\.snd_s7`],
     platform: 'win32',
   });
-  const entries = value.split(';');
-  assert.ok(entries.includes(WIN_EXT), 'the extension scheme directory is missing');
-  assert.ok(entries.includes(WIN_HOME), "the user's home is missing -- .snd_s7 lives there");
-  assert.equal(new Set(entries).size, entries.length, 'a directory is listed twice');
+  assert.equal(value, WIN_EXT);
+  assert.ok(!value.includes(WIN_HOME + ';'), "the user's home has no business here");
+});
+
+test('the Windows delimiter is the semicolon', () => {
+  // ':' cannot separate a list whose entries begin with drive letters. Snd
+  // splits on ':' regardless (snd.c:initialize_load_path) -- patch sent
+  // upstream -- but the value we hand it has to be right either way.
+  const value = loadSearchPath({
+    bridgePath: `${WIN_EXT}\\snd-vscode.scm`,
+    platform: 'win32',
+    inherited: 'D:\\other\\scm',
+  });
+  assert.deepEqual(value.split(';'), [WIN_EXT, 'D:\\other\\scm']);
 });
 
 test('an unset SND_PATH leaves no trailing separator', () => {

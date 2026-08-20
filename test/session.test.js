@@ -1594,7 +1594,17 @@ test('save-state is a bridge operation and remembers its last destination', () =
 test('the final gate starts a real Snd and crosses the actual protocol', () => {
   const runner = fs.readFileSync(path.join(__dirname, '..', 'tools', 'run-real-snd-tests.mjs'), 'utf8');
   const gates = fs.readFileSync(path.join(__dirname, '..', 'tools', 'gates.mjs'), 'utf8');
-  assert.match(runner, /spawn\(executable/);
+  assert.match(runner, /spawn\(/, 'the gate no longer starts a process');
+  // AND IT STARTS IT THE WAY THE EXTENSION DOES. The runner used to assemble
+  // the command line itself, which is how a Windows startup that could never
+  // work passed 33 checks for three days: the extension rewrote each -l
+  // argument to a basename and relied on SND_PATH, SND_PATH does not feed -l,
+  // and the gate never went near either because it passed full paths of its
+  // own. A gate that starts the process differently from the product tests a
+  // different product -- the runner said so in a comment while doing it.
+  assert.match(runner, /commandLine\(/, 'the gate builds its own command line again');
+  assert.match(runner, /loadSearchPath\(/, 'the gate builds its own SND_PATH again');
+  assert.match(runner, /out.{1,3}sndProcess\.js/, 'the startup does not come from the extension');
   for (const op of ['waveforms', 'spectrum', 'sonogram', 'wavogram', 'editheader', 'savestate']) {
     assert.ok(runner.includes(`request('${op}'`), `real-Snd gate does not call ${op}`);
   }

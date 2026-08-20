@@ -66,7 +66,7 @@ export function commandLine(options: SndOptions): { command: string; args: strin
   // commandLine answered differently for identical arguments depending on the
   // machine: full paths on macOS, basenames on Windows. start() passes the
   // real platform; callers that don't pass one get the paths through unchanged.
-  const name = options.platform ? loadArgument(options.platform) : (file: string) => file;
+  const name = loadArgument(options.platform ?? '');
   const args: string[] = [];
   if (options.uiBridgePath) {
     if (!userNoInit) args.push('-noinit');
@@ -82,36 +82,42 @@ export function commandLine(options: SndOptions): { command: string; args: strin
 }
 
 /**
- * How a file is named to -l.
+ * How a file is named to -l: by its full path, on every platform.
  *
- * WINDOWS CANNOT BE GIVEN AN ABSOLUTE PATH HERE. Snd splits the -l argument
- * on ':' as a path-list separator, and every absolute Windows path carries a
- * drive colon, so `C:/tmp/t.scm` is torn into "C" and "/tmp/t.scm" and the
- * answer is
+ * THIS USED TO REWRITE WINDOWS PATHS TO BASENAMES, and the reason is worth
+ * keeping because the workaround was wrong in a way that tested green.
  *
- *   can't load C:/tmp/t.scm: Invalid argument
+ * Snd 26 could not open an absolute Windows path at all: mus_expand_filename
+ * prepended the working directory to any name not starting with '/', so
+ * `C:/tmp/t.scm` became `C:/cwd/C:/tmp/t.scm` and the answer was "Invalid
+ * argument" -- which is also what a missing file says, since the failure came
+ * before the open. So the basename went on the command line and the directory
+ * into SND_PATH.
  *
- * -- which is also, exactly, what a missing file says, because the failure
- * happens before the file is ever opened. Verified against Snd 26 under
- * MSYS2/UCRT64: `-l t.scm` loads, `-l "$PWD/t.scm"` does not, same file.
+ * SND_PATH DOES NOT FEED -l. It feeds *load-path*, which s7's (load ...)
+ * consults; snd_load_file (snd-xen.c) expands the -l argument against the
+ * working directory, probes it, tries the source-file extensions, and gives
+ * up. The basenames therefore resolved only when cwd happened to BE the
+ * directory holding them -- which is exactly what the integration gate does,
+ * so 33 checks passed against a mechanism that never worked. Under VS Code,
+ * with the user's cwd, every session failed to load its own bridge.
  *
- * So on Windows the BASENAME goes on the command line and the directory goes
- * into SND_PATH, which -l does search (also verified: PING from a different
- * cwd with SND_PATH pointing at the file's directory). cwd is deliberately
- * NOT used for this -- it belongs to the user as Snd's notion of "current
- * file", and the -l files span two directories anyway, the extension's own
- * and the user's home.
- *
- * path.win32.basename rather than path.basename so the rule is the same
- * whichever platform runs the test.
+ * Fixed upstream in Snd 26.7 (20-Aug-2026): absolute paths with a drive letter
+ * are left alone, and `-l C:/tmp/t.scm` loads. Verified from an unrelated cwd
+ * with the bundled binary: the bridge reaches {"event":"ready"}. So the
+ * rewrite is gone and every platform passes the path it means.
  */
-export function loadArgument(platform: string): (file: string) => string {
-  if (platform !== 'win32') return file => file;
-  return file => path.win32.basename(file);
+export function loadArgument(_platform: string): (file: string) => string {
+  return file => file;
 }
 
 /**
- * SND_PATH: every directory that -l has to find something in.
+ * SND_PATH: the directories *load-path* has to reach.
+ *
+ * This is for the bridge's own (load ...) calls -- the s7 parity overlay above
+ * all -- and NOT for -l, which never consults it (see loadArgument). The
+ * bridge's directory is therefore the whole of it; the -l files name
+ * themselves in full.
  *
  * JOINED, not concatenated. Written as `dir + delimiter + (env ?? '')` this
  * puts a trailing separator on the value whenever SND_PATH is unset, which is
@@ -120,9 +126,11 @@ export function loadArgument(platform: string): (file: string) => string {
  * sitting right there -- which is how the parity overlay came to be silently
  * absent from every session. See test/sndpath.test.js.
  *
- * On Windows the directories of the -l files must be here, because the command
- * line carries only their basenames (see loadArgument). Elsewhere only the
- * bridge's own directory is needed, for (require ...).
+ * The delimiter follows the platform: ';' on Windows, where ':' cannot
+ * separate a list whose entries begin with drive letters. Snd splits on ':'
+ * regardless (snd.c:initialize_load_path), which tears "C:/x" into "C" and
+ * "/x"; patch sent upstream. Until it lands, the overlay is missing on Windows
+ * and says so in an event rather than failing the session.
  */
 export function loadSearchPath(args: {
   bridgePath: string;
@@ -133,11 +141,6 @@ export function loadSearchPath(args: {
 }): string {
   const p = args.platform === 'win32' ? path.win32 : path.posix;
   const directories = [p.dirname(args.bridgePath)];
-  if (args.platform === 'win32') {
-    for (const file of [args.uiBridgePath, ...(args.initFiles ?? [])]) {
-      if (file) directories.push(p.dirname(file));
-    }
-  }
   const seen = new Set<string>();
   const unique = directories.filter(directory => {
     if (seen.has(directory)) return false;
@@ -344,8 +347,7 @@ export class SndProcess {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: {
           ...process.env,
-          // See loadSearchPath: shape of the value, and why Windows needs
-          // more than one directory in it.
+          // See loadSearchPath: the shape of the value, and what it is for.
           SND_PATH: searchPath,
         },
       }) as cp.ChildProcessWithoutNullStreams;
