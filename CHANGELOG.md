@@ -46,6 +46,35 @@ On this side:
   reported 381 checks, 0 failures without having compiled a line of it.
 - `third-party/s7` is upstream again at 20-Aug-2026; the local `uname` patch is
   in Bill's tree now.
+- **`-l` takes full paths again, and the gate finally tests the product.** The
+  Windows build passed every gate for three days while no VS Code session could
+  load its own bridge. Worth writing out, because nothing here was subtle in
+  hindsight:
+
+  Snd could not open an absolute Windows path, so the extension passed the
+  basename of each `-l` file and put the directories on `SND_PATH`. But
+  `SND_PATH` feeds `*load-path*`, and `-l` never consults it — `snd_load_file`
+  expands its argument against the working directory, probes it, tries the
+  source-file extensions, and gives up. The basenames therefore resolved only
+  when the working directory happened to be the one holding them.
+
+  The real-Snd gate set exactly that directory, and built its own command line
+  besides, so it passed full paths and never touched the rewrite it was meant
+  to cover. Its own comment read "a gate that starts the process differently
+  from the product tests a different product" — three lines above the code that
+  did it.
+
+  Now: `mus_expand_filename` is fixed upstream, so full paths go on the command
+  line on every platform; `SND_PATH` carries the bridge directory alone, for the
+  bridge's own `load-from-path`; and the gate takes `commandLine` and
+  `loadSearchPath` from `out/sndProcess.js`, so whatever the extension would do
+  on this platform is what runs. `test/windowsload.test.js` now pins that the
+  `-l` arguments do not depend on the working directory — the assertion whose
+  absence made all of this invisible.
+
+  One more Snd fault fell out of it: `initialize_load_path` splits `SND_PATH` on
+  `':'`, which tears `C:/x` into `C` and `/x`. Patch sent upstream; the bundled
+  binary carries it.
 
 ## 0.1.1 — 2026-08-09
 
