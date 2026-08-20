@@ -14,6 +14,7 @@ out/
 # fails on a missing file, which is the fault reported one step away from its
 # cause.
 /s7
+/s7.exe
 .build/
 
 # bin/ is COMMITTED, deliberately: without it a fresh clone falls back to
