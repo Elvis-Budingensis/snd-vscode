@@ -793,7 +793,11 @@
 
 (sv-define-op open (params)
   (let ((file (sv-arg params 'file "")))
-    (inlet 'snd ((symbol->value 'open-sound) file))))
+    ;; open-sound returns a Snd OBJECT.  It must not cross the JSON boundary
+    ;; directly: the generic JSON fallback prints it as "#<sound N>", and the
+    ;; next waveform request then hands that text back to Snd as a filename.
+    ;; All sound references on the wire are numeric indices.
+    (inlet 'snd (sv-snd-index ((symbol->value 'open-sound) file)))))
 
 (sv-define-op close (params)
   ((symbol->value 'close-sound) (sv-arg params 'snd 0))

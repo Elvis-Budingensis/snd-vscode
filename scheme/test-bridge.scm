@@ -39,7 +39,7 @@
         ((= i *test-frames*) v)
       (set! (v i) (+ 0.1 (* 0.5 (sin (/ (* 2 pi i) *test-frames*))))))))
 
-(define (open-sound file) 0)
+(define (open-sound file) (make-sound-object 0))
 (define (framples . args)
   ;; Channels of a sound can differ in length as soon as one is edited, and
   ;; that is the case the shared-range logic has to get right.
@@ -967,6 +967,13 @@
        (sv-json->string (sv-var-encode 0)))
 (check "snd: a sound object is never JSON-encoded as text" "0"
        (sv-json->string (sv-var-encode (make-sound-object 0))))
+
+;; open-sound returns a SOUND OBJECT in real Snd.  The open response is used
+;; immediately as the snd argument of the waveform request, so it must carry
+;; the index rather than the object's printed form, "#<sound 0>".
+(sv-request "65-open" 'open (inlet 'file "/tmp/test.snd"))
+(check "open: response carries a numeric sound index" 0
+       (((last-frame) 'value) 'snd))
 
 ;; And on the way in: a string that should have been a number is repaired
 ;; rather than handed to Snd to be rejected.
