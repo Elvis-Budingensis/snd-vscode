@@ -6,6 +6,24 @@
 upstream in Snd 26.7 (20-Aug-2026), so there is a `win32-x64` target and it
 runs on a machine that has never seen MSYS2.
 
+**Installing on Windows.** The Marketplace still serves the macOS build; the
+Windows `.vsix` is distributed separately for now. To install it:
+
+1. Download `snd-vscode-win32-x64-0.1.14.vsix`.
+2. In VS Code: Extensions view → `···` menu → **Install from VSIX…** → select
+   the file. (Or from a shell: `code --install-extension path\to\the.vsix`.)
+3. Restart VS Code completely — quit the application, not just reload the
+   window — so the previous version is not still held in memory.
+4. Open a sound file and check the **Snd** output channel (View → Output,
+   channel "Snd"). `[snd-vscode] ready: Snd is listening` confirms the bundled
+   binary started; anything else is worth reading in full before reporting it,
+   since the message after "can't open" or "Invalid argument" usually names
+   the actual cause.
+
+`snd.exe` and its three DLLs (`libdl`, `libfftw3-3`, `libwinpthread-1`) ship
+inside the extension — nothing else needs to be on the machine, and MSYS2 is
+not required to run it, only to build it.
+
 Three faults in Snd, all found by running the integration gate on Windows and
 all now Bill Schottstaedt's code rather than local patches:
 
@@ -75,6 +93,29 @@ On this side:
   One more Snd fault fell out of it: `initialize_load_path` splits `SND_PATH` on
   `':'`, which tears `C:/x` into `C` and `/x`. Patch sent upstream; the bundled
   binary carries it.
+
+- **`open` handed back the raw sound object, not its index — on every
+  platform.** `open-sound` returns a Snd object, which prints as `"#<sound
+  N>"`. Sent unconverted across the bridge, that string came back on the next
+  request as the `snd` argument, and eventually reached Snd's own file-open
+  code as a literal filename:
+
+      can't open .../snd-vscode/#<sound 0>: Invalid argument
+
+  metadata for the file had already loaded correctly by then (the same
+  `open-sound` call), so the panel showed accurate duration and peak figures
+  while drawing nothing — the failure was one request downstream of its cause,
+  in a different message than the one that would have named it.
+
+  The fix belongs to a rule already established elsewhere in the bridge (see
+  the comment above `sv-object-index` in `snd-vscode.scm`): every sound,
+  region, and mix crossing the wire is an integer, converted at exactly two
+  points. `open` was the one call site that still crossed it unconverted.
+  `test-bridge.scm`'s stub for `open-sound` had been returning a bare integer
+  instead of an object, which is exactly why the 381-check s7 suite never
+  exercised the code path where this broke; the stub now returns an object
+  like real Snd, and a regression test pins the numeric response. Not a
+  Windows bug — Windows testing is what surfaced it.
 
 ## 0.1.1 — 2026-08-09
 
