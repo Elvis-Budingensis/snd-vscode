@@ -18,6 +18,18 @@ Snd stays the editor. Every edit happens in Snd, in Scheme, so there is one
 edit history and it is the one that gets saved. The panels set the cursor,
 the selection and the visible range, and ask for a redraw.
 
+## What is Snd
+
+[Snd](https://ccrma.stanford.edu/software/snd/snd/snd.html) is Bill
+Schottstaedt's sound editor, built at CCRMA and developed there since the
+1990s. Every edit is a Scheme (or Ruby, or Forth) function call, callable
+from a script as freely as from a keystroke, and every display — waveform,
+spectrum, sonogram — is a value some Snd function computed, not a fixed
+widget. `extsnd.html` in the same manual documents the C and Scheme APIs this
+extension is built on; `sndclm.html` covers the signal-processing library
+(`clm`) Snd embeds. None of that changes here — this extension is a second
+front end for the same editor, not a reimplementation of any part of it.
+
 ## Why
 
 Snd itself is not the fragile part. Its GUI is: Motif, drawn through X11, which
@@ -132,6 +144,13 @@ you built; `snd.mode` only decides which name to guess when you leave it at
 
 Whether a build has a GUI is decided when it is compiled. No setting here
 can switch one on.
+
+**Windows** ships as its own build, `bin/win32-x64/`, with the three DLLs
+(`libdl`, `libfftw3-3`, `libwinpthread-1`) Snd needs to start — install from
+the `.vsix` and nothing else needs to be on the machine, no Motif question to
+answer. Building that binary needs [MSYS2](https://www.msys2.org/) with the
+UCRT64 toolchain, which is a build-time requirement only, not a run-time one;
+see `CHANGELOG.md` for the install steps and what changed getting there.
 
 ## Starting it
 
@@ -408,9 +427,8 @@ side of it. An observer must not *write* a result; a caller standing in for
 Snd's own redraw must *read* one, or a user function saying "do not draw this"
 would be ignored while the hook looked supported.
 
-Still missing, and the reason `GAPS.md` still lists hooks: `edit-hook` for
-protected history, and `before-transform-hook`, which the spectrum panel
-ignores because it computes its own transform.
+Still missing: `edit-hook` for protected history, and `before-transform-hook`,
+which the spectrum panel ignores because it computes its own transform.
 
 ## Snd's keyboard, in the waveform panel
 
@@ -586,8 +604,8 @@ waveform; clicking an entry in the edit history moves Snd to that edit.
 Stated plainly, because a feature list that quietly omits things is worse
 than a short one:
 
-- **No editing from the panels.** Deliberate, and explained in
-  `ARCHITECTURE.md`. Edits go through Scheme.
+- **No editing from the panels.** Deliberate: every edit goes through Snd,
+  in Scheme, so there is one edit history and it is the one that gets saved.
 - **No session across a window reload.** The channel is the pipe, so there is
   nothing to reconnect to. `Snd: Save Session State` is what survives it.
 - **No Ruby or Forth.** The bridge is s7 Scheme.
